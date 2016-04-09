@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.graph;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * Unlike {@link FlowGraphWalker}, this iterator does not traverse the entire graph, but only walks backward and outward from one node.
@@ -59,7 +60,7 @@ public class FlowNodeSerialWalker implements Iterable<FlowNode> {
                 } else {
                     List<FlowNode> parents = n.getParents();
                     if (parents.size() != 1) {
-                        throw new IllegalStateException("unexpected " + n + " with parents " + parents);
+                        throw new NoSuchElementException("unexpected " + n + " with parents " + parents);
                     }
                     n = parents.get(0);
                 }
