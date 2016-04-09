@@ -65,6 +65,9 @@ public class FlowNodeSerialWalker implements Iterable<FlowNode> {
                 }
                 return prev;
             }
+            @Override public void remove() {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
