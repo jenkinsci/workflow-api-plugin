@@ -28,7 +28,6 @@ import com.google.inject.Inject;
 import hudson.model.TaskListener;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -51,7 +50,14 @@ public class FlowNodeSerialWalkerTest {
 
     @Test public void labelEnclosing() throws Exception {
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("lE 'start'; parallel one: {lE 'in-one'}, two: {lE 'in-two'}; lE 'middle'; stage 'dev'; lE 'in-dev'; stage 'test'; lE 'in-test'; parallel three: {lE 'in-three'}; lE 'end'", true));
+        p.setDefinition(new CpsFlowDefinition(
+            "lE 'start'; parallel one: {lE 'in-one'}, two: {lE 'in-two'}; lE 'middle'\n" +
+            "stage 'dev'; lE 'in-dev'; stage 'test'; lE 'in-test'\n" +
+            "parallel three: {lE 'in-three'}\n" +
+            "node {writeFile file: 'f1', text: ''; load 'f1'; lE 'after-load'}\n" +
+            "node {writeFile file: 'f2', text: 'lE \"in-load\"'; load 'f2'}\n" +
+            "node {writeFile file: 'f3', text: '{-> lE \"closure-load\"}'; load('f3')()}\n" +
+            "lE 'end'", true));
         WorkflowRun b = r.assertBuildStatusSuccess(p.scheduleBuild2(0));
         r.assertLogContains("start: null", b);
         r.assertLogContains("in-one: Branch: one", b);
@@ -59,7 +65,10 @@ public class FlowNodeSerialWalkerTest {
         r.assertLogContains("middle: null", b);
         r.assertLogContains("in-dev: dev", b);
         r.assertLogContains("in-test: test", b);
-        r.assertLogContains("three: Branch: three", b);
+        r.assertLogContains("in-three: Branch: three", b);
+        r.assertLogContains("after-load: test", b);
+        r.assertLogContains("in-load: f2", b);
+        r.assertLogContains("closure-load: test", b);
         r.assertLogContains("end: test", b);
         p.setDefinition(new CpsFlowDefinition("lE 'start'; stage 'dev'; lE 'in-dev'; stage 'test'; lE 'in-test'", true));
         b = r.assertBuildStatusSuccess(p.scheduleBuild2(0));
@@ -81,10 +90,12 @@ public class FlowNodeSerialWalkerTest {
                 return null;
             }
             private static @CheckForNull String labelEnclosing(@Nonnull FlowNode node) {
-                for (FlowNode n : new FlowNodeSerialWalker(node)) {
-                    LabelAction a = n.getAction(LabelAction.class);
-                    if (a != null) {
-                        return a.getDisplayName();
+                FlowNodeSerialWalker.EnhancedIterator it = new FlowNodeSerialWalker(node).iterator();
+                while (it.hasNext()) {
+                    it.next();
+                    String label = it.currentLabel();
+                    if (label != null) {
+                        return label;
                     }
                 }
                 return null;
