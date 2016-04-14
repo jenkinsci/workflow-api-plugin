@@ -150,7 +150,7 @@ public class FlowScanner {
         @Override
         public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
             if (heads == null || heads.size() == 0) {
-                return null;
+                return Collections.EMPTY_LIST;
             }
 
             HashSet<FlowNode> visited = new HashSet<FlowNode>();
@@ -218,7 +218,7 @@ public class FlowScanner {
         @Override
         public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
             if (heads == null || heads.size() == 0) {
-                return null;
+                return Collections.EMPTY_LIST;
             }
 
             // Do what we need to for fast tests
@@ -285,7 +285,7 @@ public class FlowScanner {
         @Override
         public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
             if (heads == null || heads.size() == 0) {
-                return null;
+                return Collections.EMPTY_LIST;
             }
 
             // Do what we need to for fast tests
