@@ -66,7 +66,7 @@ public class TestFlowScanner {
                 new FlowScanner.BlockHoppingScanner()};
 
         Predicate<FlowNode> echoPredicate = FlowScanner.createPredicateForStepNodeWithDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
-        List<FlowNode> heads = b.getExecution().getCurrentHeads();
+        List<FlowNode> heads = exec.getCurrentHeads();
 
         // Test expected scans with no stop nodes given (different ways of specifying none)
         for (FlowScanner.ScanAlgorithm sa : scans) {
