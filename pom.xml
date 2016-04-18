@@ -48,7 +48,7 @@
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
       <tag>HEAD</tag>
-  </scm>
+    </scm>
     <repositories>
         <repository>
             <id>repo.jenkins-ci.org</id>
@@ -69,6 +69,24 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>workflow-step-api</artifactId>
             <version>1.15</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>workflow-job</artifactId>
+            <version>1.15</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Needed for some of the convenience filter predicates, may make sense to move that to alternate class  -->
+            <groupId>${project.groupId}</groupId>
+            <artifactId>workflow-cps</artifactId>
+            <version>2.2-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>workflow-basic-steps</artifactId>
+            <version>1.15</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

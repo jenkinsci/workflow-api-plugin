@@ -3,7 +3,7 @@ package org.jenkinsci.plugins.workflow.graph;
 /*
  * The MIT License
  *
- * Copyright (c) 2013-2014, CloudBees, Inc.
+ * Copyright (c) 2016, CloudBees, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,6 @@ package org.jenkinsci.plugins.workflow.graph;
  * THE SOFTWARE.
  */
 
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import hudson.model.Action;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
@@ -32,6 +31,7 @@ import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.actions.StageAction;
 import org.jenkinsci.plugins.workflow.actions.WorkspaceAction;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -86,6 +85,20 @@ public class FlowScanner {
     static final Predicate<FlowNode> MATCH_HAS_WORKSPACE = createPredicateWhereActionExists(WorkspaceAction.class);
     static final Predicate<FlowNode> MATCH_HAS_ERROR = createPredicateWhereActionExists(ErrorAction.class);
     static final Predicate<FlowNode> MATCH_HAS_LOG = createPredicateWhereActionExists(LogAction.class);
+
+    public static Predicate<FlowNode> createPredicateForStepNodeWithDescriptor(final String descriptorId) {
+        Predicate<FlowNode> outputPredicate = new Predicate<FlowNode>() {
+            @Override
+            public boolean apply(FlowNode input) {
+                if (input instanceof StepAtomNode) {
+                    StepAtomNode san = (StepAtomNode)input;
+                    return descriptorId.equals(san.getDescriptor().getId());
+                }
+                return false;
+            }
+        };
+        return outputPredicate;
+    }
 
     /** One of many ways to scan the flowgraph */
     public interface ScanAlgorithm {
