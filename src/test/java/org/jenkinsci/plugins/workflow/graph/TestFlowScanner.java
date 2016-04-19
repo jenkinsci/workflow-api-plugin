@@ -89,12 +89,20 @@ public class TestFlowScanner {
 
         // Test with no matches
         for (FlowScanner.ScanAlgorithm sa : scans) {
+            System.out.println("Testing class: "+sa.getClass());
             FlowNode node = sa.findFirstMatch(heads, null, (Predicate)Predicates.alwaysFalse());
             Assert.assertNull(node);
 
             Collection<FlowNode> nodeList = sa.findAllMatches(heads, null, (Predicate)Predicates.alwaysFalse());
             Assert.assertNotNull(nodeList);
             Assert.assertEquals(0, nodeList.size());
+        }
+
+        // Verify we touch head and foot nodes too
+        for (FlowScanner.ScanAlgorithm sa : scans) {
+            System.out.println("Testing class: "+sa.getClass());
+            Collection<FlowNode> nodeList = sa.findAllMatches(heads, null, (Predicate)Predicates.alwaysTrue());
+            Assert.assertEquals(5, nodeList.size());
         }
 
         // Test with a stop node given, sometimes no matches
@@ -131,51 +139,54 @@ public class TestFlowScanner {
             "sleep 1"
         ));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        Predicate<FlowNode> matchEchoStep = FlowScanner.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
 
         // Test blockhopping
         FlowScanner.BlockHoppingScanner blockHoppingScanner = new FlowScanner.BlockHoppingScanner();
-        Collection<FlowNode> matches = blockHoppingScanner.findAllMatches(b.getExecution().getCurrentHeads(), null,
-                FlowScanner.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep"));
+        Collection<FlowNode> matches = blockHoppingScanner.findAllMatches(b.getExecution().getCurrentHeads(), null, matchEchoStep);
 
         // This means we jumped the blocks
         Assert.assertEquals(1, matches.size());
+
+        FlowScanner.DepthFirstScanner depthFirstScanner = new FlowScanner.DepthFirstScanner();
+        matches = depthFirstScanner.findAllMatches(b.getExecution().getCurrentHeads(), null, matchEchoStep);
+
+        // Nodes all covered
+        Assert.assertEquals(3, matches.size());
     }
 
-
+    /** And the parallel case */
     @Test
-    public void testme() throws Exception {
+    public void testParallelScan() throws Exception {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "Convoluted");
         job.setDefinition(new CpsFlowDefinition(
-                "echo 'pre-stage command'\n" +
-                        "sleep 1\n" +
-                        "stage 'first'\n" +
-                        "echo 'I ran'\n" +
-                        "stage 'second'\n" +
-                        "node {\n" +
-                        "    def steps = [:]\n" +
-                        "    steps['2a-dir'] = {\n" +
-                        "        echo 'do 2a stuff'\n" +
-                        "        echo 'do more 2a stuff'\n" +
-                        "        timeout(time: 10, unit: 'SECONDS') {\n" +
-                        "            stage 'invalid'\n" +
-                        "            echo 'time seconds'\n" +
-                        "        }\n" +
-                        "        sleep 15\n" +
-                        "    }\n" +
-                        "    steps['2b'] = {\n" +
-                        "        echo 'do 2b stuff'\n" +
-                        "        sleep 10\n" +
-                        "        echo 'echo_label_me'\n" +
-                        "    }\n" +
-                        "    parallel steps\n" +
-                        "}\n" +
-                        "\n" +
-                        "stage 'final'\n" +
-                        "echo 'ran final 1'\n" +
-                        "echo 'ran final 2'"
+            "echo 'first'\n" +
+            "def steps = [:]\n" +
+            "steps['1'] = {\n" +
+            "    echo 'do 1 stuff'\n" +
+            "}\n" +
+            "steps['2'] = {\n" +
+            "    echo '2a'\n" +
+            "    echo '2b'\n" +
+            "}\n" +
+            "parallel steps\n" +
+            "echo 'final'"
         ));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-        FlowGraphWalker walker = new FlowGraphWalker();
-        walker.addHeads(b.getExecution().getCurrentHeads());
+        Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
+        Predicate<FlowNode> matchEchoStep = FlowScanner.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
+
+        FlowScanner.ScanAlgorithm scanner = new FlowScanner.LinearScanner();
+        Collection<FlowNode> matches = scanner.findAllMatches(heads, null, matchEchoStep);
+        Assert.assertTrue(matches.size() >= 3 && matches.size() <= 4);
+
+        scanner = new FlowScanner.DepthFirstScanner();
+        matches = scanner.findAllMatches(heads, null, matchEchoStep);
+        Assert.assertTrue(matches.size() == 5);
+
+        scanner = new FlowScanner.BlockHoppingScanner();
+        matches = scanner.findAllMatches(heads, null, matchEchoStep);
+        Assert.assertTrue(matches.size() == 2);
     }
+
 }

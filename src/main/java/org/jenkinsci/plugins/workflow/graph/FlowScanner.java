@@ -193,9 +193,12 @@ public class FlowScanner {
             if (heads == null || heads.size() == 0) {
                 return null;
             }
+
             initialize();
-            this.setHeads(heads);
             Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
+            Collection<FlowNode> filteredHeads = new HashSet<FlowNode>(heads);
+            filteredHeads.removeAll(fastEndNodes);
+            this.setHeads(filteredHeads);
 
             while ((_current = next(fastEndNodes)) != null) {
                 if (matchCondition.apply(_current)) {
@@ -213,8 +216,10 @@ public class FlowScanner {
                 return null;
             }
             initialize();
-            this.setHeads(heads);
             Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
+            Collection<FlowNode> filteredHeads = new HashSet<FlowNode>(heads);
+            filteredHeads.removeAll(fastEndNodes);
+            this.setHeads(filteredHeads);
             ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
 
             while ((_current = next(fastEndNodes)) != null) {
@@ -277,10 +282,11 @@ public class FlowScanner {
      * Scans through a single ancestry, does not cover parallel branches
      */
     public static class LinearScanner extends AbstractFlowScanner {
+        protected boolean isFirst = true;
 
         @Override
         protected void initialize() {
-            // no-op for us
+            isFirst = true;
         }
 
         @Override
@@ -294,6 +300,10 @@ public class FlowScanner {
         protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
             if (_current == null) {
                 return null;
+            }
+            if (isFirst) { // Kind of cheating, but works
+                isFirst = false;
+                return _current;
             }
             List<FlowNode> parents = _current.getParents();
             if (parents != null || parents.size() > 0) {
@@ -310,35 +320,7 @@ public class FlowScanner {
     /**
      * Scanner that jumps over nested blocks
      */
-    public static class BlockHoppingScanner extends AbstractFlowScanner {
-
-        @Override
-        public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
-            if (heads == null || heads.size() == 0) {
-                return null;
-            }
-
-            // Do what we need to for fast tests
-            Collection<FlowNode> fastStopNodes = convertToFastCheckable(stopNodes);
-
-            FlowNode current = heads.iterator().next();
-            while (current != null) {
-                if (!(current instanceof BlockEndNode) && matchPredicate.apply(current)) {
-                    return current;
-                } else { // Hop the block
-                    current = ((BlockEndNode) current).getStartNode();
-                }
-                List<FlowNode> parents = current.getParents(); // Parents never null
-                current = null;
-                for (FlowNode p : parents) {
-                    if (!fastStopNodes.contains(p)) {
-                        current = p;
-                        break;
-                    }
-                }
-            }
-            return current;
-        }
+    public static class BlockHoppingScanner extends LinearScanner {
 
         protected FlowNode jumpBlock(FlowNode current) {
             return (current instanceof BlockEndNode) ?
@@ -346,25 +328,25 @@ public class FlowScanner {
         }
 
         @Override
-        protected void initialize() {
-
-        }
-
-        @Override
-        protected void setHeads(@Nonnull Collection<FlowNode> heads) {
-            _queue.addAll(heads);
-        }
-
-        @Override
         protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
             if (_current == null) {
                 return null;
+            }
+            if (isFirst) { // Hax, but solves the problem
+                isFirst = false;
+                return _current;
             }
             List<FlowNode> parents = _current.getParents();
             if (parents != null || parents.size() > 0) {
                 for (FlowNode f : parents) {
                     if (!blackList.contains(f)) {
-                        return f;
+                        FlowNode jumped = jumpBlock(f);
+                        if (jumped != f) {
+                            _current = jumped;
+                            return next(blackList);
+                        } else {
+                            return f;
+                        }
                     }
                 }
             }
