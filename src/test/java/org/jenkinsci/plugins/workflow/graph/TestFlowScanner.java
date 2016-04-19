@@ -49,7 +49,6 @@ public class TestFlowScanner {
 
     @Rule public JenkinsRule r = new JenkinsRule();
 
-
     /** Tests the basic scan algorithm, predicate use, start/stop nodes */
     @Test
     public void testSimpleScan() throws Exception {
@@ -63,13 +62,15 @@ public class TestFlowScanner {
         FlowExecution exec = b.getExecution();
         FlowScanner.ScanAlgorithm[] scans = {new FlowScanner.LinearScanner(),
                 new FlowScanner.DepthFirstScanner(),
-                new FlowScanner.BlockHoppingScanner()};
+                new FlowScanner.BlockHoppingScanner()
+        };
 
-        Predicate<FlowNode> echoPredicate = FlowScanner.createPredicateForStepNodeWithDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
+        Predicate<FlowNode> echoPredicate = FlowScanner.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
         List<FlowNode> heads = exec.getCurrentHeads();
 
         // Test expected scans with no stop nodes given (different ways of specifying none)
         for (FlowScanner.ScanAlgorithm sa : scans) {
+            System.out.println("Testing class: "+sa.getClass());
             FlowNode node = sa.findFirstMatch(heads, null, echoPredicate);
             Assert.assertEquals(exec.getNode("5"), node);
             node = sa.findFirstMatch(heads, Collections.EMPTY_LIST, echoPredicate);
@@ -119,7 +120,7 @@ public class TestFlowScanner {
 
     /** Tests the basic scan algorithm where blocks are involved */
     @Test
-    public void blockScan() throws Exception {
+    public void testBlockScan() throws Exception {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "Convoluted");
         job.setDefinition(new CpsFlowDefinition(
             "echo 'first'\n" +
@@ -130,18 +131,14 @@ public class TestFlowScanner {
             "sleep 1"
         ));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-        FlowScanner.ScanAlgorithm[] scans = {new FlowScanner.LinearScanner(),
-                new FlowScanner.DepthFirstScanner(),
-                new FlowScanner.BlockHoppingScanner()};
-        for (FlowScanner.ScanAlgorithm sa : scans) {
 
-        }
-        FlowGraphWalker walk = new FlowGraphWalker(b.getExecution());
-        ArrayList<FlowNode> flows = new ArrayList<FlowNode>();
-        for (FlowNode f : walk) {
-            flows.add(f);
-        }
+        // Test blockhopping
+        FlowScanner.BlockHoppingScanner blockHoppingScanner = new FlowScanner.BlockHoppingScanner();
+        Collection<FlowNode> matches = blockHoppingScanner.findAllMatches(b.getExecution().getCurrentHeads(), null,
+                FlowScanner.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep"));
 
+        // This means we jumped the blocks
+        Assert.assertEquals(1, matches.size());
     }
 
 

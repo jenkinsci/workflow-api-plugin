@@ -53,17 +53,6 @@ import java.util.Set;
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class FlowScanner {
-    /** Different ways of scannning the flow graph starting from one or more head nodes
-     *  DEPTH_FIRST_ALL_PARENTS is the same as FlowWalker
-     *    - scan through the first parents (depth first search), then come back to visit parallel branches
-     *  BLOCK_SCOPES just skims through the blocks from the inside out, in reverse order
-     *  SINGLE_PARENT only walks through the hierarchy of the first parent in the head (or heads)
-     */
-    public enum ScanType {
-        DEPTH_FIRST_ALL_PARENTS,
-        BLOCK_SCOPES,
-        SINGLE_PARENT
-    }
 
     /**
      * Create a predicate that will match on all FlowNodes having a specific action present
@@ -71,6 +60,7 @@ public class FlowScanner {
      * @param <T> Action type
      * @return Predicate that will match when FlowNode has the action given
      */
+    @Nonnull
     public static <T extends Action>  Predicate<FlowNode> createPredicateWhereActionExists(@Nonnull final Class<T> actionClass) {
         return new Predicate<FlowNode>() {
             @Override
@@ -87,7 +77,7 @@ public class FlowScanner {
     static final Predicate<FlowNode> MATCH_HAS_ERROR = createPredicateWhereActionExists(ErrorAction.class);
     static final Predicate<FlowNode> MATCH_HAS_LOG = createPredicateWhereActionExists(LogAction.class);
 
-    public static Predicate<FlowNode> createPredicateForStepNodeWithDescriptor(final String descriptorId) {
+    public static Predicate<FlowNode> predicateMatchStepDescriptor(final String descriptorId) {
         Predicate<FlowNode> outputPredicate = new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
@@ -141,14 +131,15 @@ public class FlowScanner {
         // Public APIs need to invoke this before searches
         protected abstract void initialize();
 
+        protected abstract void setHeads(@Nonnull Collection<FlowNode> heads);
+
         /**
          * Actual meat of the iteration, get the next node to visit, using & updating state as needed
-         * @param f Node to look for parents of (usually _current)
          * @param blackList Nodes that are not eligible for visiting
          * @return Next node to visit, or null if we've exhausted the node list
          */
         @CheckForNull
-        protected abstract FlowNode next(@CheckForNull FlowNode f, @Nonnull Collection<FlowNode> blackList);
+        protected abstract FlowNode next(@Nonnull Collection<FlowNode> blackList);
 
 
         /** Fast internal scan from start through single-parent (unbranched) nodes until we hit a node with one of the following:
@@ -185,46 +176,50 @@ public class FlowScanner {
             return nodeCollection.size() > 5 ? new HashSet<FlowNode>(nodeCollection) : nodeCollection;
         }
 
+        @CheckForNull
         public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
             return this.findFirstMatch(heads, null, matchPredicate);
         }
 
+        @Nonnull
         public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
             return this.findAllMatches(heads, null, matchPredicate);
         }
 
         // Basic algo impl
-        protected FlowNode findFirstMatchBasic(@CheckForNull Collection<FlowNode> heads,
+        public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
                                                @CheckForNull Collection<FlowNode> endNodes,
                                                Predicate<FlowNode> matchCondition) {
             if (heads == null || heads.size() == 0) {
                 return null;
             }
             initialize();
+            this.setHeads(heads);
             Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
 
-            while((this._current = this.next(_current, fastEndNodes)) != null) {
-                if (matchCondition.apply(this._current)) {
-                    return this._current;
+            while ((_current = next(fastEndNodes)) != null) {
+                if (matchCondition.apply(_current)) {
+                    return _current;
                 }
             }
             return null;
         }
 
         // Basic algo impl
-        protected List<FlowNode> findAllMatchesBasic(@CheckForNull Collection<FlowNode> heads,
+        public List<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads,
                                                @CheckForNull Collection<FlowNode> endNodes,
                                                Predicate<FlowNode> matchCondition) {
             if (heads == null || heads.size() == 0) {
                 return null;
             }
             initialize();
+            this.setHeads(heads);
             Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
             ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
 
-            while((this._current = this.next(_current, fastEndNodes)) != null) {
-                if (matchCondition.apply(this._current)) {
-                    nodes.add(this._current);
+            while ((_current = next(fastEndNodes)) != null) {
+                if (matchCondition.apply(_current)) {
+                    nodes.add(_current);
                 }
             }
             return nodes;
@@ -247,66 +242,34 @@ public class FlowScanner {
         }
 
         @Override
-        protected FlowNode next(@CheckForNull FlowNode f, @Nonnull Collection<FlowNode> blackList) {
-            // Check for visited and stuff?
-            return null;
+        protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+            // Needs to handle blacklist
+            _queue.addAll(heads);
         }
 
         @Override
-        public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
-            if (heads == null || heads.size() == 0) {
-                return null;
-            }
-            initialize();
-
-            HashSet<FlowNode> visited = new HashSet<FlowNode>();
-            ArrayDeque<FlowNode> queue = new ArrayDeque<FlowNode>(heads); // Only used for parallel branches
-            Collection<FlowNode> fastStopNodes = convertToFastCheckable(stopNodes);
-
-            // TODO this will probably be more efficient if we work with the first node
-            // or use a recursive solution for parallel forks
-            while (!queue.isEmpty()) {
-                FlowNode f = queue.pop();
-                if (matchPredicate.apply(f)) {
-                    return f;
-                }
-                visited.add(f);
-                List<FlowNode> parents = f.getParents(); // Parents never null
-                for (FlowNode p : parents) {
-                    if (!visited.contains(p) && !fastStopNodes.contains(p)) {
-                        queue.push(p);
+        protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
+            FlowNode output = null;
+            if (_current != null) {
+                List<FlowNode> parents = _current.getParents();
+                if (parents != null) {
+                    for (FlowNode f : parents) {
+                        if (!blackList.contains(f) && !_visited.contains(f)) {
+                            if (output != null ) {
+                                output = f;
+                            } else {
+                                _queue.push(f);
+                            }
+                        }
                     }
                 }
             }
-            return null;
-        }
 
-        @Override
-        public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
-            if (heads == null || heads.size() == 0) {
-                return Collections.EMPTY_LIST;
+            if (output == null && _queue.size() > 0) {
+                output = _queue.pop();
             }
-
-            HashSet<FlowNode> visited = new HashSet<FlowNode>();
-            ArrayDeque<FlowNode> queue = new ArrayDeque<FlowNode>(heads); // Only used for parallel branches
-            ArrayList<FlowNode> matches = new ArrayList<FlowNode>();
-            Collection<FlowNode> fastStopNodes = convertToFastCheckable(stopNodes);
-
-            // TODO this will probably be more efficient if use a variable for non-parallel flows and don't constantly push/pop array
-            while (!queue.isEmpty()) {
-                FlowNode f = queue.pop();
-                if (matchPredicate.apply(f)) {
-                    matches.add(f);
-                }
-                visited.add(f);
-                List<FlowNode> parents = f.getParents(); // Parents never null
-                for (FlowNode p : parents) {
-                    if (!visited.contains(p) && !fastStopNodes.contains(p)) {
-                        queue.push(p);
-                    }
-                }
-            }
-            return matches;
+            _visited.add(output);
+            return output;
         }
     }
 
@@ -316,64 +279,30 @@ public class FlowScanner {
     public static class LinearScanner extends AbstractFlowScanner {
 
         @Override
-        public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
-            if (heads == null || heads.size() == 0) {
-                return null;
-            }
-
-            Collection<FlowNode> fastStopNodes = convertToFastCheckable(stopNodes);
-
-            FlowNode current = heads.iterator().next();
-            while (current != null) {
-                if (matchPredicate.apply(current)) {
-                    return current;
-                }
-                List<FlowNode> parents = current.getParents(); // Parents never null
-                current = null;
-                for (FlowNode p : parents) {
-                    if (!fastStopNodes.contains(p)) {
-                        current = p;
-                        break;
-                    }
-                }
-            }
-            return current;
-        }
-
-        @Override
-        public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
-            if (heads == null || heads.size() == 0) {
-                return Collections.EMPTY_LIST;
-            }
-
-            // Do what we need to for fast tests
-            Collection<FlowNode> fastStopNodes = convertToFastCheckable(stopNodes);
-            ArrayList<FlowNode> matches = new ArrayList<FlowNode>();
-
-            FlowNode current = heads.iterator().next();
-            while (current != null) {
-                if (matchPredicate.apply(current)) {
-                    matches.add(current);
-                }
-                List<FlowNode> parents = current.getParents(); // Parents never null
-                current = null;
-                for (FlowNode p : parents) {
-                    if (!fastStopNodes.contains(p)) {
-                        current = p;
-                        break;
-                    }
-                }
-            }
-            return matches;
-        }
-
-        @Override
         protected void initialize() {
             // no-op for us
         }
 
         @Override
-        protected FlowNode next(@CheckForNull FlowNode f, @Nonnull Collection<FlowNode> blackList) {
+        protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+            if (heads.size() > 0) {
+                this._current = heads.iterator().next();
+            }
+        }
+
+        @Override
+        protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
+            if (_current == null) {
+                return null;
+            }
+            List<FlowNode> parents = _current.getParents();
+            if (parents != null || parents.size() > 0) {
+                for (FlowNode f : parents) {
+                    if (!blackList.contains(f)) {
+                        return f;
+                    }
+                }
+            }
             return null;
         }
     }
@@ -411,33 +340,9 @@ public class FlowScanner {
             return current;
         }
 
-        @Override
-        public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate) {
-            if (heads == null || heads.size() == 0) {
-                return Collections.EMPTY_LIST;
-            }
-
-            // Do what we need to for fast tests
-            Collection<FlowNode> fastStopNodes = convertToFastCheckable(stopNodes);
-            ArrayList<FlowNode> matches = new ArrayList<FlowNode>();
-
-            FlowNode current = heads.iterator().next();
-            while (current != null) {
-                if (!(current instanceof BlockEndNode) && matchPredicate.apply(current)) {
-                    matches.add(current);
-                } else { // Hop the block
-                    current = ((BlockEndNode) current).getStartNode();
-                }
-                List<FlowNode> parents = current.getParents(); // Parents never null
-                current = null;
-                for (FlowNode p : parents) {
-                    if (!fastStopNodes.contains(p)) {
-                        current = p;
-                        break;
-                    }
-                }
-            }
-            return matches;
+        protected FlowNode jumpBlock(FlowNode current) {
+            return (current instanceof BlockEndNode) ?
+                ((BlockEndNode)current).getStartNode() : current;
         }
 
         @Override
@@ -446,7 +351,23 @@ public class FlowScanner {
         }
 
         @Override
-        protected FlowNode next(@CheckForNull FlowNode f, @Nonnull Collection<FlowNode> blackList) {
+        protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+            _queue.addAll(heads);
+        }
+
+        @Override
+        protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
+            if (_current == null) {
+                return null;
+            }
+            List<FlowNode> parents = _current.getParents();
+            if (parents != null || parents.size() > 0) {
+                for (FlowNode f : parents) {
+                    if (!blackList.contains(f)) {
+                        return f;
+                    }
+                }
+            }
             return null;
         }
     }
