@@ -4,6 +4,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
 import javax.annotation.CheckForNull;
@@ -80,5 +81,36 @@ public class IncrementalFlowAnalysis {
         }
     }
 
-    static Cache<FlowExecution, IncrementalAnalysis> analysisCache = CacheBuilder.newBuilder().initialCapacity(100).build();
+    public static class IncrementalAnalysisCache<T> {
+        Function<FlowNode,T> analysisFunction;
+        Predicate<FlowNode> matchCondition;
+        Cache<String, IncrementalAnalysis<T>> analysisCache = CacheBuilder.newBuilder().initialCapacity(100).build();
+
+        public T getAnalysisValue(@CheckForNull FlowExecution f) {
+            if (f != null) {
+                String url;
+                try {
+                    url = f.getUrl();
+                } catch (IOException ioe) {
+                    throw new IllegalStateException(ioe);
+                }
+                IncrementalAnalysis<T> analysis = analysisCache.getIfPresent(url);
+                if (analysis != null) {
+                    return analysis.getUpdatedValue(f);
+                } else {
+                    IncrementalAnalysis<T> newAnalysis = new IncrementalAnalysis<T>(matchCondition, analysisFunction);
+                    T value = newAnalysis.getUpdatedValue(f);
+                    analysisCache.put(url, newAnalysis);
+                    return value;
+                }
+            }
+
+            return null;
+        }
+
+        public IncrementalAnalysisCache(Predicate<FlowNode> matchCondition, Function<FlowNode,T> analysisFunction) {
+            this.matchCondition = matchCondition;
+            this.analysisFunction = analysisFunction;
+        }
+    }
 }
