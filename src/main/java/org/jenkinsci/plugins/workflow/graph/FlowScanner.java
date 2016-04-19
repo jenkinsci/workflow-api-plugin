@@ -25,7 +25,6 @@ package org.jenkinsci.plugins.workflow.graph;
  */
 
 import com.google.common.base.Predicate;
-import com.sun.tools.javac.comp.Flow;
 import hudson.model.Action;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
@@ -33,6 +32,7 @@ import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.actions.StageAction;
 import org.jenkinsci.plugins.workflow.actions.WorkspaceAction;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -41,7 +41,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -78,13 +77,14 @@ public class FlowScanner {
     static final Predicate<FlowNode> MATCH_HAS_ERROR = createPredicateWhereActionExists(ErrorAction.class);
     static final Predicate<FlowNode> MATCH_HAS_LOG = createPredicateWhereActionExists(LogAction.class);
 
-    public static Predicate<FlowNode> predicateMatchStepDescriptor(final String descriptorId) {
+    public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {
         Predicate<FlowNode> outputPredicate = new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
                 if (input instanceof StepAtomNode) {
                     StepAtomNode san = (StepAtomNode)input;
-                    return descriptorId.equals(san.getDescriptor().getId());
+                    StepDescriptor sd = san.getDescriptor();
+                    return sd != null && descriptorId.equals(sd.getId());
                 }
                 return false;
             }
@@ -226,7 +226,7 @@ public class FlowScanner {
                                                @CheckForNull Collection<FlowNode> endNodes,
                                                Predicate<FlowNode> matchCondition) {
             if (heads == null || heads.size() == 0) {
-                return null;
+                return Collections.EMPTY_LIST;
             }
             initialize();
             Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
@@ -288,7 +288,7 @@ public class FlowScanner {
                 if (parents != null) {
                     for (FlowNode f : parents) {
                         if (!blackList.contains(f) && !_visited.contains(f)) {
-                            if (output != null ) {
+                            if (output == null ) {
                                 output = f;
                             } else {
                                 _queue.push(f);
@@ -334,7 +334,7 @@ public class FlowScanner {
                 return _current;
             }
             List<FlowNode> parents = _current.getParents();
-            if (parents != null || parents.size() > 0) {
+            if (parents != null && parents.size() > 0) {
                 for (FlowNode f : parents) {
                     if (!blackList.contains(f)) {
                         return f;
@@ -365,7 +365,7 @@ public class FlowScanner {
                 return _current;
             }
             List<FlowNode> parents = _current.getParents();
-            if (parents != null || parents.size() > 0) {
+            if (parents != null && parents.size() > 0) {
                 for (FlowNode f : parents) {
                     if (!blackList.contains(f)) {
                         FlowNode jumped = jumpBlock(f);
