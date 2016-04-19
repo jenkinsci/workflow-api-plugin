@@ -77,10 +77,10 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <!-- Needed for some of the convenience filter predicates, may make sense to move that to alternate class  -->
             <groupId>${project.groupId}</groupId>
             <artifactId>workflow-cps</artifactId>
             <version>2.2-SNAPSHOT</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>

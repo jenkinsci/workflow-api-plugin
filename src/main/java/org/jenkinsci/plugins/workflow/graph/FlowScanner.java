@@ -31,8 +31,6 @@ import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.actions.StageAction;
 import org.jenkinsci.plugins.workflow.actions.WorkspaceAction;
-import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -76,21 +74,6 @@ public class FlowScanner {
     static final Predicate<FlowNode> MATCH_HAS_WORKSPACE = createPredicateWhereActionExists(WorkspaceAction.class);
     static final Predicate<FlowNode> MATCH_HAS_ERROR = createPredicateWhereActionExists(ErrorAction.class);
     static final Predicate<FlowNode> MATCH_HAS_LOG = createPredicateWhereActionExists(LogAction.class);
-
-    public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {
-        Predicate<FlowNode> outputPredicate = new Predicate<FlowNode>() {
-            @Override
-            public boolean apply(FlowNode input) {
-                if (input instanceof StepAtomNode) {
-                    StepAtomNode san = (StepAtomNode)input;
-                    StepDescriptor sd = san.getDescriptor();
-                    return sd != null && descriptorId.equals(sd.getId());
-                }
-                return false;
-            }
-        };
-        return outputPredicate;
-    }
 
     public interface FlowNodeVisitor {
         /**

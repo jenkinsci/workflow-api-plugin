@@ -27,9 +27,11 @@ package org.jenkinsci.plugins.workflow.graph;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -49,6 +51,21 @@ public class TestFlowScanner {
     public static BuildWatcher buildWatcher = new BuildWatcher();
 
     @Rule public JenkinsRule r = new JenkinsRule();
+
+    public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {
+        Predicate<FlowNode> outputPredicate = new Predicate<FlowNode>() {
+            @Override
+            public boolean apply(FlowNode input) {
+                if (input instanceof StepAtomNode) {
+                    StepAtomNode san = (StepAtomNode)input;
+                    StepDescriptor sd = san.getDescriptor();
+                    return sd != null && descriptorId.equals(sd.getId());
+                }
+                return false;
+            }
+        };
+        return outputPredicate;
+    }
 
     static final class CollectingVisitor implements FlowScanner.FlowNodeVisitor {
         ArrayList<FlowNode> visited = new ArrayList<FlowNode>();
@@ -84,7 +101,7 @@ public class TestFlowScanner {
                 new FlowScanner.BlockHoppingScanner()
         };
 
-        Predicate<FlowNode> echoPredicate = FlowScanner.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
+        Predicate<FlowNode> echoPredicate = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
         List<FlowNode> heads = exec.getCurrentHeads();
 
         // Test expected scans with no stop nodes given (different ways of specifying none)
@@ -163,7 +180,7 @@ public class TestFlowScanner {
             "sleep 1"
         ));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-        Predicate<FlowNode> matchEchoStep = FlowScanner.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
+        Predicate<FlowNode> matchEchoStep = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
 
         // Test blockhopping
         FlowScanner.BlockHoppingScanner blockHoppingScanner = new FlowScanner.BlockHoppingScanner();
@@ -198,7 +215,7 @@ public class TestFlowScanner {
         ));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
-        Predicate<FlowNode> matchEchoStep = FlowScanner.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
+        Predicate<FlowNode> matchEchoStep = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
 
         FlowScanner.ScanAlgorithm scanner = new FlowScanner.LinearScanner();
         Collection<FlowNode> matches = scanner.findAllMatches(heads, null, matchEchoStep);
