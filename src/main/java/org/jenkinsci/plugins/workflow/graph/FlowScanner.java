@@ -25,6 +25,7 @@ package org.jenkinsci.plugins.workflow.graph;
  */
 
 import com.google.common.base.Predicate;
+import com.sun.tools.javac.comp.Flow;
 import hudson.model.Action;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
@@ -91,6 +92,15 @@ public class FlowScanner {
         return outputPredicate;
     }
 
+    public interface FlowNodeVisitor {
+        /**
+         * Visit the flow node, and indicate if we should continue analysis
+         * @param f Node to visit
+         * @return False if node is done
+         */
+        public boolean visit(@Nonnull FlowNode f);
+    }
+
     /** Interface to be used for scanning/analyzing FlowGraphs with support for different visit orders
      */
     public interface ScanAlgorithm {
@@ -114,6 +124,9 @@ public class FlowScanner {
          */
         @Nonnull
         public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate);
+
+        /** Used for extracting metrics from the flow graph */
+        public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor);
     }
 
     /**
@@ -228,6 +241,21 @@ public class FlowScanner {
                 }
             }
             return nodes;
+        }
+
+        /** Used for extracting metrics from the flow graph */
+        public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor) {
+            if (heads == null || heads.size() == 0) {
+                return;
+            }
+            initialize();
+            this.setHeads(heads);
+            Collection<FlowNode> endNodes = Collections.EMPTY_SET;
+
+            boolean continueAnalysis = true;
+            while (continueAnalysis && (_current = next(endNodes)) != null) {
+                continueAnalysis = visitor.visit(_current);
+            }
         }
     }
 

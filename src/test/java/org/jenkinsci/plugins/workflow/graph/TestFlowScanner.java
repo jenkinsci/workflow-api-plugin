@@ -37,6 +37,7 @@ import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,6 +49,24 @@ public class TestFlowScanner {
     public static BuildWatcher buildWatcher = new BuildWatcher();
 
     @Rule public JenkinsRule r = new JenkinsRule();
+
+    static final class CollectingVisitor implements FlowScanner.FlowNodeVisitor {
+        ArrayList<FlowNode> visited = new ArrayList<FlowNode>();
+
+        @Override
+        public boolean visit(@Nonnull FlowNode f) {
+            visited.add(f);
+            return true;
+        }
+
+        public void reset() {
+            this.visited.clear();
+        }
+
+        public ArrayList<FlowNode> getVisited() {
+            return visited;
+        }
+    };
 
     /** Tests the basic scan algorithm, predicate use, start/stop nodes */
     @Test
@@ -98,11 +117,16 @@ public class TestFlowScanner {
             Assert.assertEquals(0, nodeList.size());
         }
 
+
+        CollectingVisitor vis = new CollectingVisitor();
         // Verify we touch head and foot nodes too
         for (FlowScanner.ScanAlgorithm sa : scans) {
-            System.out.println("Testing class: "+sa.getClass());
+            System.out.println("Testing class: " + sa.getClass());
             Collection<FlowNode> nodeList = sa.findAllMatches(heads, null, (Predicate)Predicates.alwaysTrue());
+            vis.reset();
+            sa.visitAll(heads, vis);
             Assert.assertEquals(5, nodeList.size());
+            Assert.assertEquals(5, vis.getVisited().size());
         }
 
         // Test with a stop node given, sometimes no matches
