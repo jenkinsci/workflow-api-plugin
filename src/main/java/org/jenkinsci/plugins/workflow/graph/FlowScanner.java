@@ -106,7 +106,7 @@ public class FlowScanner {
          * @return All nodes matching condition
          */
         @Nonnull
-        public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate);
+        public Collection<FlowNode> filter(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate);
 
         /** Used for extracting metrics from the flow graph */
         public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor);
@@ -179,7 +179,7 @@ public class FlowScanner {
 
         @Nonnull
         public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
-            return this.findAllMatches(heads, null, matchPredicate);
+            return this.filter(heads, null, matchPredicate);
         }
 
         // Basic algo impl
@@ -205,9 +205,9 @@ public class FlowScanner {
         }
 
         // Basic algo impl
-        public List<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads,
-                                               @CheckForNull Collection<FlowNode> endNodes,
-                                               Predicate<FlowNode> matchCondition) {
+        public List<FlowNode> filter(@CheckForNull Collection<FlowNode> heads,
+                                     @CheckForNull Collection<FlowNode> endNodes,
+                                     Predicate<FlowNode> matchCondition) {
             if (heads == null || heads.size() == 0) {
                 return Collections.EMPTY_LIST;
             }

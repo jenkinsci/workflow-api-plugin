@@ -114,12 +114,12 @@ public class TestFlowScanner {
             node = sa.findFirstMatch(heads, Collections.EMPTY_SET, echoPredicate);
             Assert.assertEquals(exec.getNode("5"), node);
 
-            Collection<FlowNode> nodeList = sa.findAllMatches(heads, null, echoPredicate);
+            Collection<FlowNode> nodeList = sa.filter(heads, null, echoPredicate);
             FlowNode[] expected = new FlowNode[]{exec.getNode("5"), exec.getNode("4")};
             Assert.assertArrayEquals(expected, nodeList.toArray());
-            nodeList = sa.findAllMatches(heads, Collections.EMPTY_LIST, echoPredicate);
+            nodeList = sa.filter(heads, Collections.EMPTY_LIST, echoPredicate);
             Assert.assertArrayEquals(expected, nodeList.toArray());
-            nodeList = sa.findAllMatches(heads, Collections.EMPTY_SET, echoPredicate);
+            nodeList = sa.filter(heads, Collections.EMPTY_SET, echoPredicate);
             Assert.assertArrayEquals(expected, nodeList.toArray());
         }
 
@@ -129,7 +129,7 @@ public class TestFlowScanner {
             FlowNode node = sa.findFirstMatch(heads, null, (Predicate)Predicates.alwaysFalse());
             Assert.assertNull(node);
 
-            Collection<FlowNode> nodeList = sa.findAllMatches(heads, null, (Predicate)Predicates.alwaysFalse());
+            Collection<FlowNode> nodeList = sa.filter(heads, null, (Predicate) Predicates.alwaysFalse());
             Assert.assertNotNull(nodeList);
             Assert.assertEquals(0, nodeList.size());
         }
@@ -139,7 +139,7 @@ public class TestFlowScanner {
         // Verify we touch head and foot nodes too
         for (FlowScanner.ScanAlgorithm sa : scans) {
             System.out.println("Testing class: " + sa.getClass());
-            Collection<FlowNode> nodeList = sa.findAllMatches(heads, null, (Predicate)Predicates.alwaysTrue());
+            Collection<FlowNode> nodeList = sa.filter(heads, null, (Predicate) Predicates.alwaysTrue());
             vis.reset();
             sa.visitAll(heads, vis);
             Assert.assertEquals(5, nodeList.size());
@@ -153,14 +153,14 @@ public class TestFlowScanner {
             FlowNode node = sa.findFirstMatch(heads, noMatchEndNode, echoPredicate);
             Assert.assertNull(node);
 
-            Collection<FlowNode> nodeList = sa.findAllMatches(heads, noMatchEndNode, echoPredicate);
+            Collection<FlowNode> nodeList = sa.filter(heads, noMatchEndNode, echoPredicate);
             Assert.assertNotNull(nodeList);
             Assert.assertEquals(0, nodeList.size());
 
             // Now we try with a stop list the reduces node set for multiple matches
             node = sa.findFirstMatch(heads, singleMatchEndNode, echoPredicate);
             Assert.assertEquals(exec.getNode("5"), node);
-            nodeList = sa.findAllMatches(heads, singleMatchEndNode, echoPredicate);
+            nodeList = sa.filter(heads, singleMatchEndNode, echoPredicate);
             Assert.assertNotNull(nodeList);
             Assert.assertEquals(1, nodeList.size());
             Assert.assertEquals(exec.getNode("5"), nodeList.iterator().next());
@@ -184,13 +184,13 @@ public class TestFlowScanner {
 
         // Test blockhopping
         FlowScanner.BlockHoppingScanner blockHoppingScanner = new FlowScanner.BlockHoppingScanner();
-        Collection<FlowNode> matches = blockHoppingScanner.findAllMatches(b.getExecution().getCurrentHeads(), null, matchEchoStep);
+        Collection<FlowNode> matches = blockHoppingScanner.filter(b.getExecution().getCurrentHeads(), null, matchEchoStep);
 
         // This means we jumped the blocks
         Assert.assertEquals(1, matches.size());
 
         FlowScanner.DepthFirstScanner depthFirstScanner = new FlowScanner.DepthFirstScanner();
-        matches = depthFirstScanner.findAllMatches(b.getExecution().getCurrentHeads(), null, matchEchoStep);
+        matches = depthFirstScanner.filter(b.getExecution().getCurrentHeads(), null, matchEchoStep);
 
         // Nodes all covered
         Assert.assertEquals(3, matches.size());
@@ -218,15 +218,15 @@ public class TestFlowScanner {
         Predicate<FlowNode> matchEchoStep = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
 
         FlowScanner.ScanAlgorithm scanner = new FlowScanner.LinearScanner();
-        Collection<FlowNode> matches = scanner.findAllMatches(heads, null, matchEchoStep);
+        Collection<FlowNode> matches = scanner.filter(heads, null, matchEchoStep);
         Assert.assertTrue(matches.size() >= 3 && matches.size() <= 4);
 
         scanner = new FlowScanner.DepthFirstScanner();
-        matches = scanner.findAllMatches(heads, null, matchEchoStep);
+        matches = scanner.filter(heads, null, matchEchoStep);
         Assert.assertTrue(matches.size() == 5);
 
         scanner = new FlowScanner.BlockHoppingScanner();
-        matches = scanner.findAllMatches(heads, null, matchEchoStep);
+        matches = scanner.filter(heads, null, matchEchoStep);
         Assert.assertTrue(matches.size() == 2);
     }
 
