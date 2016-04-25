@@ -1,3 +1,27 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2016, CloudBees, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 package org.jenkinsci.plugins.workflow.graph;
 
 import com.google.common.base.Function;
@@ -16,7 +40,11 @@ import java.util.List;
  * Provides incremental analysis of flow graphs, where updates are on the head
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public class IncrementalFlowAnalysis {
+public class IncrementalFlowAnalysisCache<T> {
+
+    Function<FlowNode,T> analysisFunction;
+    Predicate<FlowNode> matchCondition;
+    Cache<String, IncrementalAnalysis<T>> analysisCache = CacheBuilder.newBuilder().initialCapacity(100).build();
 
     protected static class IncrementalAnalysis<T> {
         protected List<String> lastHeadIds = new ArrayList<String>();
@@ -80,36 +108,36 @@ public class IncrementalFlowAnalysis {
         }
     }
 
-    public static class IncrementalAnalysisCache<T> {
-        Function<FlowNode,T> analysisFunction;
-        Predicate<FlowNode> matchCondition;
-        Cache<String, IncrementalAnalysis<T>> analysisCache = CacheBuilder.newBuilder().initialCapacity(100).build();
-
-        public T getAnalysisValue(@CheckForNull FlowExecution f) {
-            if (f != null) {
-                String url;
-                try {
-                    url = f.getUrl();
-                } catch (IOException ioe) {
-                    throw new IllegalStateException(ioe);
-                }
-                IncrementalAnalysis<T> analysis = analysisCache.getIfPresent(url);
-                if (analysis != null) {
-                    return analysis.getUpdatedValue(f);
-                } else {
-                    IncrementalAnalysis<T> newAnalysis = new IncrementalAnalysis<T>(matchCondition, analysisFunction);
-                    T value = newAnalysis.getUpdatedValue(f);
-                    analysisCache.put(url, newAnalysis);
-                    return value;
-                }
+    public T getAnalysisValue(@CheckForNull FlowExecution f) {
+        if (f != null) {
+            String url;
+            try {
+                url = f.getUrl();
+            } catch (IOException ioe) {
+                throw new IllegalStateException(ioe);
             }
-
-            return null;
+            IncrementalAnalysis<T> analysis = analysisCache.getIfPresent(url);
+            if (analysis != null) {
+                return analysis.getUpdatedValue(f);
+            } else {
+                IncrementalAnalysis<T> newAnalysis = new IncrementalAnalysis<T>(matchCondition, analysisFunction);
+                T value = newAnalysis.getUpdatedValue(f);
+                analysisCache.put(url, newAnalysis);
+                return value;
+            }
         }
 
-        public IncrementalAnalysisCache(Predicate<FlowNode> matchCondition, Function<FlowNode,T> analysisFunction) {
-            this.matchCondition = matchCondition;
-            this.analysisFunction = analysisFunction;
-        }
+        return null;
+    }
+
+    public IncrementalFlowAnalysisCache(Predicate<FlowNode> matchCondition, Function<FlowNode,T> analysisFunction) {
+        this.matchCondition = matchCondition;
+        this.analysisFunction = analysisFunction;
+    }
+
+    public IncrementalFlowAnalysisCache(Predicate<FlowNode> matchCondition, Function<FlowNode,T> analysisFunction, Cache myCache) {
+        this.matchCondition = matchCondition;
+        this.analysisFunction = analysisFunction;
+        this.analysisCache = myCache;
     }
 }
