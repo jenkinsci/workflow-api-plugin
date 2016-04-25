@@ -27,18 +27,14 @@ package org.jenkinsci.plugins.workflow.graph;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 
-import java.util.Collection;
 
 /**
  * @author svanoort
