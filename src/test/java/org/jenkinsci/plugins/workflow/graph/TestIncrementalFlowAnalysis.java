@@ -28,7 +28,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,7 +56,6 @@ public class TestIncrementalFlowAnalysis {
                 "for (int i=0; i<4; i++) {\n" +
                 "    stage \"stage-$i\"\n" +
                 "    echo \"Doing $i\"\n" +
-                "    semaphore 'wait'\n" +
                 "}"
         ));
 
@@ -69,13 +70,10 @@ public class TestIncrementalFlowAnalysis {
         };
 
         IncrementalFlowAnalysisCache<String> incrementalAnalysis = new IncrementalFlowAnalysisCache<String>(labelledNode, getLabelFunction);
+        WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        FlowExecution exec = b.getExecution();
+        FlowNode test = exec.getNode("4");
 
-        // TODO how the devil do I test this, when SemaphoreStep is part of another repo's test classes?
-    }
-
-    /** Tests analysis where there are multiple heads (parallel excecution blocks) */
-    @Test
-    public void testIncrementalAnalysisParallel() throws Exception {
-       // TODO figure out a case where this is actually a thing?
+        // TODO add tests based on calling incremental analysis from points further along flow, possible in some paralle cases
     }
 }

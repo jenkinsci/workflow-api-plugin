@@ -37,7 +37,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Provides incremental analysis of flow graphs, where updates are on the head
+ *  Provides an efficient way to find the most recent (closest to head) node matching a condition, and get info about it
+ *
+ *  This is useful in cases where we are watching an in-progress pipeline execution.
+ *  It uses caching and only looks at new nodes (the delta since last execution).
+ *  @TODO Thread safety?
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class IncrementalFlowAnalysisCache<T> {
@@ -47,7 +51,7 @@ public class IncrementalFlowAnalysisCache<T> {
     Cache<String, IncrementalAnalysis<T>> analysisCache = CacheBuilder.newBuilder().initialCapacity(100).build();
 
     protected static class IncrementalAnalysis<T> {
-        protected List<String> lastHeadIds = new ArrayList<String>();
+        protected List<String> lastHeadIds = new ArrayList<String>();  // We don't want to hold refs to the actual nodes
         protected T lastValue;
 
         /** Gets value from a flownode */
@@ -73,32 +77,55 @@ public class IncrementalFlowAnalysisCache<T> {
                 return null;
             }
             List<FlowNode> heads = exec.getCurrentHeads();
-            if (heads != null && heads.size() == lastHeadIds.size()) {
-                boolean useCache = false;
+            if (heads == null || heads.size() == 0) {
+                return null;
+            }
+            return getUpdatedValueInternal(exec, heads);
+        }
+
+        @CheckForNull
+        public T getUpdatedValue(@CheckForNull FlowExecution exec, @Nonnull List<FlowNode> heads) {
+            if (exec == null || heads.size() == 0) {
+                return null;
+            }
+            return getUpdatedValueInternal(exec, heads);
+        }
+
+        /**
+         * Internal implementation
+         * @param exec Execution, used in obtaining node instances
+         * @param heads Heads to scan from, cannot be empty
+         * @return Updated value or null if not present
+         */
+        @CheckForNull
+        protected T getUpdatedValueInternal(@Nonnull FlowExecution exec, @Nonnull List<FlowNode> heads) {
+            boolean hasChanged = heads.size() == lastHeadIds.size();
+            if (hasChanged) {
                 for (FlowNode f : heads) {
-                    if (lastHeadIds.contains(f.getId())) {
-                        useCache = true;
+                    if (!lastHeadIds.contains(f.getId())) {
+                        hasChanged = false;
                         break;
                     }
                 }
-                if (!useCache) {
-                    update(exec);
-                }
-                return lastValue;
             }
-            return null;
+            if (!hasChanged) {
+                updateInternal(exec, heads);
+            }
+            return lastValue;
         }
 
-        protected void update(@Nonnull FlowExecution exec) {
-            ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
+        // FlowExecution is used for look
+        protected void updateInternal(@Nonnull FlowExecution exec,  @Nonnull List<FlowNode> heads) {
+            ArrayList<FlowNode> stopNodes = new ArrayList<FlowNode>();
+            // Fetch the actual flow nodes to use as halt conditions
             for (String nodeId : this.lastHeadIds) {
                 try {
-                    nodes.add(exec.getNode(nodeId));
+                    stopNodes.add(exec.getNode(nodeId));
                 } catch (IOException ioe) {
                     throw new IllegalStateException(ioe);
                 }
             }
-            FlowNode matchNode = new FlowScanner.BlockHoppingScanner().findFirstMatch(exec.getCurrentHeads(), nodes, this.nodeMatchCondition);
+            FlowNode matchNode = new FlowScanner.BlockHoppingScanner().findFirstMatch(heads, stopNodes, this.nodeMatchCondition);
             this.lastValue = this.valueExtractor.apply(matchNode);
 
             this.lastHeadIds.clear();
@@ -108,25 +135,39 @@ public class IncrementalFlowAnalysisCache<T> {
         }
     }
 
+    /**
+     * Get the latest value, using the heads of a FlowExecutions
+     * @param f Flow executions
+     * @return Analysis value, or null no nodes match condition/flow has not begun
+     */
+    @CheckForNull
     public T getAnalysisValue(@CheckForNull FlowExecution f) {
-        if (f != null) {
+        if (f == null) {
+            return null;
+        } else {
+            return getAnalysisValue(f, f.getCurrentHeads());
+        }
+    }
+
+    @CheckForNull
+    public T getAnalysisValue(@CheckForNull FlowExecution exec, @CheckForNull List<FlowNode> heads) {
+        if (exec != null && heads == null && heads.size() != 0) {
             String url;
             try {
-                url = f.getUrl();
+                url = exec.getUrl();
             } catch (IOException ioe) {
                 throw new IllegalStateException(ioe);
             }
             IncrementalAnalysis<T> analysis = analysisCache.getIfPresent(url);
             if (analysis != null) {
-                return analysis.getUpdatedValue(f);
+                return analysis.getUpdatedValue(exec, heads);
             } else {
                 IncrementalAnalysis<T> newAnalysis = new IncrementalAnalysis<T>(matchCondition, analysisFunction);
-                T value = newAnalysis.getUpdatedValue(f);
+                T value = newAnalysis.getUpdatedValue(exec, heads);
                 analysisCache.put(url, newAnalysis);
                 return value;
             }
         }
-
         return null;
     }
 
