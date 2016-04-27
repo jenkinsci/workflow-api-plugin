@@ -98,7 +98,7 @@ public class TestFlowScanner {
         FlowExecution exec = b.getExecution();
         FlowScanner.ScanAlgorithm[] scans = {new FlowScanner.LinearScanner(),
                 new FlowScanner.DepthFirstScanner(),
-                new FlowScanner.BlockHoppingScanner()
+                new FlowScanner.LinearBlockHoppingScanner()
         };
 
         Predicate<FlowNode> echoPredicate = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
@@ -183,8 +183,8 @@ public class TestFlowScanner {
         Predicate<FlowNode> matchEchoStep = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
 
         // Test blockhopping
-        FlowScanner.BlockHoppingScanner blockHoppingScanner = new FlowScanner.BlockHoppingScanner();
-        Collection<FlowNode> matches = blockHoppingScanner.filter(b.getExecution().getCurrentHeads(), null, matchEchoStep);
+        FlowScanner.LinearBlockHoppingScanner linearBlockHoppingScanner = new FlowScanner.LinearBlockHoppingScanner();
+        Collection<FlowNode> matches = linearBlockHoppingScanner.filter(b.getExecution().getCurrentHeads(), null, matchEchoStep);
 
         // This means we jumped the blocks
         Assert.assertEquals(1, matches.size());
@@ -225,7 +225,7 @@ public class TestFlowScanner {
         matches = scanner.filter(heads, null, matchEchoStep);
         Assert.assertTrue(matches.size() == 5);
 
-        scanner = new FlowScanner.BlockHoppingScanner();
+        scanner = new FlowScanner.LinearBlockHoppingScanner();
         matches = scanner.filter(heads, null, matchEchoStep);
         Assert.assertTrue(matches.size() == 2);
     }

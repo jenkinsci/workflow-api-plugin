@@ -43,11 +43,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Generified algorithms for scanning flows for information
+ * Generified algorithms for scanning pipeline flow graphs for information
  * Supports a variety of algorithms for searching, and pluggable conditions
- * Worth noting: predicates may be stateful here
+ * Worth noting: predicates may be stateful here, and may see some or all of the nodes, depending on the scan method used.
  *
- * ANALYSIS method will
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class FlowScanner {
@@ -90,7 +89,7 @@ public class FlowScanner {
 
         /**
          * Search for first node (walking from the heads through parents) that matches the condition
-         * @param heads Nodes to start searching from
+         * @param heads Nodes to start searching from, which may be filtered against blackList
          * @param stopNodes Search doesn't go beyond any of these nodes, null or empty will run to end of flow
          * @param matchPredicate Matching condition for search
          * @return First node matching condition, or null if none found
@@ -100,7 +99,7 @@ public class FlowScanner {
 
         /**
          * Search for first node (walking from the heads through parents) that matches the condition
-         * @param heads Nodes to start searching from
+         * @param heads Nodes to start searching from, which may be filtered against a blackList
          * @param stopNodes Search doesn't go beyond any of these nodes, null or empty will run to end of flow
          * @param matchPredicate Matching condition for search
          * @return All nodes matching condition
@@ -124,9 +123,10 @@ public class FlowScanner {
         protected ArrayDeque<FlowNode> _queue;
         protected FlowNode _current;
 
-        // Public APIs need to invoke this before searches
+        /** Public APIs need to invoke this before searches */
         protected abstract void initialize();
 
+        /** Add current head nodes to current processing set */
         protected abstract void setHeads(@Nonnull Collection<FlowNode> heads);
 
         /**
@@ -166,6 +166,8 @@ public class FlowScanner {
         protected Collection<FlowNode> convertToFastCheckable(@CheckForNull Collection<FlowNode> nodeCollection) {
             if (nodeCollection == null || nodeCollection.size()==0) {
                 return Collections.EMPTY_SET;
+            } else  if (nodeCollection.size() == 1) {
+                return Collections.singleton(nodeCollection.iterator().next());
             } else if (nodeCollection instanceof Set) {
                 return nodeCollection;
             }
@@ -194,6 +196,9 @@ public class FlowScanner {
             Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
             Collection<FlowNode> filteredHeads = new HashSet<FlowNode>(heads);
             filteredHeads.removeAll(fastEndNodes);
+            if (filteredHeads.size() == 0) {
+                return null;
+            }
             this.setHeads(filteredHeads);
 
             while ((_current = next(fastEndNodes)) != null) {
@@ -214,6 +219,9 @@ public class FlowScanner {
             initialize();
             Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
             Collection<FlowNode> filteredHeads = new HashSet<FlowNode>(heads);
+            if (filteredHeads.size() == 0) {
+                return Collections.EMPTY_LIST;
+            }
             filteredHeads.removeAll(fastEndNodes);
             this.setHeads(filteredHeads);
             ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
@@ -242,7 +250,9 @@ public class FlowScanner {
         }
     }
 
-    /** Does a simple and efficient depth-first search */
+    /** Does a simple and efficient depth-first search:
+     *   - This will visit each node exactly once, and walks through the first ancestry before revisiting parallel branches
+     */
     public static class DepthFirstScanner extends AbstractFlowScanner {
 
         protected HashSet<FlowNode> _visited = new HashSet<FlowNode>();
@@ -259,13 +269,13 @@ public class FlowScanner {
 
         @Override
         protected void setHeads(@Nonnull Collection<FlowNode> heads) {
-            // Needs to handle blacklist
             _queue.addAll(heads);
         }
 
         @Override
         protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
             FlowNode output = null;
+            // Walk through parents of current node
             if (_current != null) {
                 List<FlowNode> parents = _current.getParents();
                 if (parents != null) {
@@ -284,13 +294,14 @@ public class FlowScanner {
             if (output == null && _queue.size() > 0) {
                 output = _queue.pop();
             }
-            _visited.add(output);
+            _visited.add(output); // No-op if null
             return output;
         }
     }
 
     /**
      * Scans through a single ancestry, does not cover parallel branches
+     * Use case: we don't care about parallel branches
      */
     public static class LinearScanner extends AbstractFlowScanner {
         protected boolean isFirst = true;
@@ -329,9 +340,11 @@ public class FlowScanner {
     }
 
     /**
-     * Scanner that jumps over nested blocks
+     * LinearScanner that jumps over nested blocks
+     * Use case: finding information about enclosing blocks or preceding nodes
+     *   - Ex: finding out the executor workspace used to run a flownode
      */
-    public static class BlockHoppingScanner extends LinearScanner {
+    public static class LinearBlockHoppingScanner extends LinearScanner {
 
         protected FlowNode jumpBlock(FlowNode current) {
             return (current instanceof BlockEndNode) ?
@@ -362,6 +375,128 @@ public class FlowScanner {
                 }
             }
             return null;
+        }
+    }
+
+    /**
+     * Scanner that will scan down forks when we hit parallel blocks.
+     * Think of it as the opposite reverse of {@link org.jenkinsci.plugins.workflow.graph.FlowScanner.DepthFirstScanner}:
+     *   - We visit every node exactly once, but walk through all parallel forks before resuming the main flow
+     *
+     * This is optimal in many cases, since it need only keep minimal state information
+     * It is also very easy to make it branch/block-aware, since we have all the fork information at all times.
+     */
+    public static class ForkScanner extends AbstractFlowScanner {
+
+        /** These are the BlockStartNodes that begin parallel blocks
+         *  There will be one entry for every executing parallel branch in current flow
+         */
+        ArrayDeque<FlowNode> forkStarts = new ArrayDeque<FlowNode>();
+
+        /** FlowNode that will terminate the current parallel block */
+        FlowNode currentParallelStart = null;
+
+        /** How deep are we in parallel branches, if 0 we are linear */
+        protected int parallelDepth = 0;
+
+        @Override
+        protected void initialize() {
+            if (_queue == null) {
+                _queue = new ArrayDeque<FlowNode>();
+            } else {
+                _queue.clear();
+            }
+        }
+
+        @Override
+        protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+            // FIXME handle case where we have multiple heads - we need to do something special to handle the parallel branches
+            // Until they rejoin the head!
+            _current = null;
+            _queue.addAll(heads);
+        }
+
+        /**
+         * Invoked when we start entering a parallel block (walking from head of the flow, so we see the block end first)
+         * @param endNode
+         * @param heads
+         */
+        protected void hitParallelEnd(BlockEndNode endNode, List<FlowNode> heads, Collection<FlowNode> blackList) {
+            int branchesAdded = 0;
+            BlockStartNode start = endNode.getStartNode();
+            for (FlowNode f : heads) {
+                if (!blackList.contains(f)) {
+                    if (branchesAdded == 0) { // We use references because it is more efficient
+                        currentParallelStart = start;
+                    } else {
+                        forkStarts.push(start);
+                    }
+                    branchesAdded++;
+                }
+            }
+            if (branchesAdded > 0) {
+                parallelDepth++;
+            }
+        }
+
+        /**
+         * Invoked when we complete parallel block, walking from the head (so encountered after the end)
+         * @param startNode StartNode for the block,
+         * @param parallelChild Parallel child node that is ending this
+         * @return FlowNode if we're the last node
+         */
+        protected FlowNode hitParallelStart(FlowNode startNode, FlowNode parallelChild) {
+            FlowNode output = null;
+            if (forkStarts.size() > 0) { // More forks (or nested parallel forks) remain
+                FlowNode end = forkStarts.pop();
+                if (end != currentParallelStart) { // Nested parallel branches, and we finished this fork
+                    parallelDepth--;
+                    output = currentParallelStart;
+                }
+                // TODO handle case where we do early exit because we encountered stop node
+
+                // If the current end == currentParallelStart then we are finishing another branch of current flow
+                currentParallelStart = end;
+            } else {  // We're now at the top level of the flow, having finished our last (nested) parallel fork
+                output = currentParallelStart;
+                currentParallelStart = null;
+                parallelDepth--;
+            }
+            return output;
+        }
+
+        @Override
+        protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
+            FlowNode output = null;
+
+            // First we look at the parents of the current node if present
+            if (_current != null) {
+                List<FlowNode> parents = _current.getParents();
+                if (parents == null || parents.size() == 0) {
+                    // welp done with this node, guess we consult the queue?
+                } else if (parents.size() == 1) {
+                    FlowNode p = parents.get(0);
+                    if (p == currentParallelStart) {
+                        // Terminating a parallel scan
+                        FlowNode temp = hitParallelStart(currentParallelStart, p);
+                        if (temp != null) { // Startnode for current parallel block now that it is done
+                            return temp;
+                        }
+                    } else  if (!blackList.contains(p)) {
+                        return p;
+                    }
+                } else if (_current instanceof BlockEndNode && parents.size() > 1) {
+                    // We must be a BlockEndNode that begins this
+                    BlockEndNode end = ((BlockEndNode) _current);
+                    hitParallelEnd(end, parents, blackList);
+                    // Return a node?
+                } else {
+                    throw new IllegalStateException("Found a FlowNode with multiple parents that isn't the end of a block! "+_current.toString());
+                }
+            }
+            // Welp, now we consult the queue since we've not hit a likely candidate among parents
+
+            return output;
         }
     }
 }
