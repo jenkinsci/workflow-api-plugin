@@ -31,6 +31,7 @@ import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.actions.StageAction;
 import org.jenkinsci.plugins.workflow.actions.WorkspaceAction;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -58,7 +59,7 @@ public class FlowScanner {
      * @return Predicate that will match when FlowNode has the action given
      */
     @Nonnull
-    public static <T extends Action>  Predicate<FlowNode> createPredicateWhereActionExists(@Nonnull final Class<T> actionClass) {
+    public static <T extends Action>  Predicate<FlowNode> nodeHasActionPredicate(@Nonnull final Class<T> actionClass) {
         return new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
@@ -68,11 +69,11 @@ public class FlowScanner {
     }
 
     // Default predicates
-    static final Predicate<FlowNode> MATCH_HAS_LABEL = createPredicateWhereActionExists(LabelAction.class);
-    static final Predicate<FlowNode> MATCH_IS_STAGE = createPredicateWhereActionExists(StageAction.class);
-    static final Predicate<FlowNode> MATCH_HAS_WORKSPACE = createPredicateWhereActionExists(WorkspaceAction.class);
-    static final Predicate<FlowNode> MATCH_HAS_ERROR = createPredicateWhereActionExists(ErrorAction.class);
-    static final Predicate<FlowNode> MATCH_HAS_LOG = createPredicateWhereActionExists(LogAction.class);
+    public static final Predicate<FlowNode> MATCH_HAS_LABEL = nodeHasActionPredicate(LabelAction.class);
+    public static final Predicate<FlowNode> MATCH_IS_STAGE = nodeHasActionPredicate(StageAction.class);
+    public static final Predicate<FlowNode> MATCH_HAS_WORKSPACE = nodeHasActionPredicate(WorkspaceAction.class);
+    public static final Predicate<FlowNode> MATCH_HAS_ERROR = nodeHasActionPredicate(ErrorAction.class);
+    public static final Predicate<FlowNode> MATCH_HAS_LOG = nodeHasActionPredicate(LogAction.class);
 
     public interface FlowNodeVisitor {
         /**
@@ -174,15 +175,32 @@ public class FlowScanner {
             return nodeCollection.size() > 5 ? new HashSet<FlowNode>(nodeCollection) : nodeCollection;
         }
 
+        // Polymorphic methods for syntactic sugar
+
         @CheckForNull
         public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
             return this.findFirstMatch(heads, null, matchPredicate);
+        }
+
+        @CheckForNull
+        public FlowNode findFirstMatch(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
+            return this.findFirstMatch(Collections.singleton(head), null, matchPredicate);
+        }
+
+        @CheckForNull
+        public FlowNode findFirstMatch(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
+            if (exec != null && exec.getCurrentHeads() != null) {
+                return this.findFirstMatch(exec.getCurrentHeads(), null, matchPredicate);
+            }
+            return null;
         }
 
         @Nonnull
         public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
             return this.filter(heads, null, matchPredicate);
         }
+
+
 
         // Basic algo impl
         public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
@@ -383,7 +401,7 @@ public class FlowScanner {
      * Think of it as the opposite reverse of {@link org.jenkinsci.plugins.workflow.graph.FlowScanner.DepthFirstScanner}:
      *   - We visit every node exactly once, but walk through all parallel forks before resuming the main flow
      *
-     * This is optimal in many cases, since it need only keep minimal state information
+     * This is near-optimal in many cases, since it keeps minimal state information and explores parallel blocks first
      * It is also very easy to make it branch/block-aware, since we have all the fork information at all times.
      */
     public static class ForkScanner extends AbstractFlowScanner {
