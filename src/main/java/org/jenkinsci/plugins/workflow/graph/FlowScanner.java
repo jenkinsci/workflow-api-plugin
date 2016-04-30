@@ -39,8 +39,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -106,10 +109,76 @@ public class FlowScanner {
          * @return All nodes matching condition
          */
         @Nonnull
-        public Collection<FlowNode> filter(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate);
+        public Collection<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate);
 
         /** Used for extracting metrics from the flow graph */
         public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor);
+    }
+
+    /** Iterator that exposes filtering */
+    public interface Filterator<T> extends Iterator<T> {
+        /** Returns a filtered view of an iterable */
+        @Nonnull
+        public Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
+    }
+
+    /** Filters an iterator against a match predicate */
+    public static class FilteratorImpl<T> implements Filterator<T> {
+        boolean hasNext = false;
+        T nextVal;
+        Iterator<T> wrapped;
+        Predicate<T> matchCondition;
+
+        public FilteratorImpl<T> filter(Predicate<T> matchCondition) {
+            return new FilteratorImpl<T>(this, matchCondition);
+        }
+
+        public FilteratorImpl(@Nonnull Iterator<T> it, @Nonnull Predicate<T> matchCondition) {
+            this.wrapped = it;
+            this.matchCondition = matchCondition;
+
+            while(it.hasNext()) {
+                T val = it.next();
+                if (matchCondition.apply(val)) {
+                    this.nextVal = val;
+                    hasNext = true;
+                    break;
+                }
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            return hasNext;
+        }
+
+        @Override
+        public T next() {
+            T returnVal = nextVal;
+            T nextMatch = null;
+
+            boolean foundMatch = false;
+            while(wrapped.hasNext()) {
+                nextMatch = wrapped.next();
+                if (matchCondition.apply(nextMatch)) {
+                    foundMatch = true;
+                    break;
+                }
+            }
+            if (foundMatch) {
+                this.nextVal = nextMatch;
+                this.hasNext = true;
+            } else {
+                this.nextVal = null;
+                this.hasNext = false;
+            }
+            return returnVal;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /**
@@ -118,14 +187,90 @@ public class FlowScanner {
      * Scans/analysis of graphs is implemented via internal iteration to allow reusing algorithm bodies
      * However internal iteration has access to additional information
      */
-    public static abstract class AbstractFlowScanner implements ScanAlgorithm {
+    public static abstract class AbstractFlowScanner implements ScanAlgorithm, Iterable <FlowNode>, Filterator<FlowNode> {
 
         // State variables, not all need be used
         protected ArrayDeque<FlowNode> _queue;
+
         protected FlowNode _current;
 
+        protected FlowNode _next;
+
+        protected Collection<FlowNode> _blackList = Collections.EMPTY_SET;
+
+        @Override
+        public boolean hasNext() {
+            return _next != null;
+        }
+
+        @Override
+        public FlowNode next() {
+            if (_next == null) {
+                throw new NoSuchElementException();
+            }
+
+            // For computing timings and changes, it may be helpful to keep the previous result
+            // by creating a variable _last and storing _current to it.
+
+//            System.out.println("Current iterator val: " + ((_current == null) ? "null" : _current.getId()));
+//            System.out.println("Next iterator val: " + ((_next == null) ? "null" : _next.getId()));
+            _current = _next;
+            _next = next(_blackList);
+//            System.out.println("New next val: " + ((_next == null) ? "null" : _next.getId()));
+            return _current;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("FlowGraphs are immutable, so FlowScanners can't remove nodes");
+        }
+
+        @Override
+        public Iterator<FlowNode> iterator() {
+            return this;
+        }
+
+        /**
+         * Set up for iteration/analysis on a graph of nodes, initializing the internal state
+         * @param heads The head nodes we start walking from (the most recently executed nodes,
+         *              i.e. FlowExecution.getCurrentHeads()
+         * @param blackList Nodes that we cannot visit or walk past (useful to limit scanning to only nodes after a specific point)
+         * @return True if we can have nodes to work with, otherwise false
+         */
+        public boolean setup(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList) {
+            if (heads == null || heads.size() == 0) {
+                return false;
+            }
+            Collection<FlowNode> fastEndNodes = convertToFastCheckable(blackList);
+            HashSet<FlowNode> filteredHeads = new HashSet<FlowNode>(heads);
+            filteredHeads.removeAll(fastEndNodes);
+
+            if (filteredHeads.size() == 0) {
+                return false;
+            }
+
+            reset();
+            _blackList = fastEndNodes;
+            setHeads(filteredHeads);
+            return true;
+        }
+
+        /**
+         * Set up for iteration/analysis on a graph of nodes, initializing the internal state
+         * @param head The head FlowNode to start walking back from
+         * @param blackList Nodes that we cannot visit or walk past (useful to limit scanning to only nodes after a specific point)
+         *                  null or empty collection means none
+         * @return True if we can have nodes to work with, otherwise false
+         */
+        public boolean setup(@CheckForNull FlowNode head, @CheckForNull Collection<FlowNode> blackList) {
+            if (head == null) {
+                return false;
+            }
+            return setup(Collections.singleton(head), blackList);
+        }
+
         /** Public APIs need to invoke this before searches */
-        protected abstract void initialize();
+        protected abstract void reset();
 
         /** Add current head nodes to current processing set */
         protected abstract void setHeads(@Nonnull Collection<FlowNode> heads);
@@ -137,30 +282,6 @@ public class FlowScanner {
          */
         @CheckForNull
         protected abstract FlowNode next(@Nonnull Collection<FlowNode> blackList);
-
-
-        /** Fast internal scan from start through single-parent (unbranched) nodes until we hit a node with one of the following:
-         *      - Multiple parents
-         *      - No parents
-         *      - Satisfies the endCondition predicate
-         *
-         * @param endCondition Predicate that ends search
-         * @return Node satisfying condition
-         */
-        @CheckForNull
-        protected static FlowNode linearScanUntil(@Nonnull FlowNode start, @Nonnull Predicate<FlowNode> endCondition) {
-            while(true) {
-                if (endCondition.apply(start)){
-                    break;
-                }
-                List<FlowNode> parents = start.getParents();
-                if (parents == null || parents.size() == 0 || parents.size() > 1) {
-                    break;
-                }
-                start = parents.get(0);
-            }
-            return start;
-        }
 
         /** Convert stop nodes to a collection that can efficiently be checked for membership, handling nulls if needed */
         @Nonnull
@@ -196,8 +317,8 @@ public class FlowScanner {
         }
 
         @Nonnull
-        public Collection<FlowNode> findAllMatches(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
-            return this.filter(heads, null, matchPredicate);
+        public Collection<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
+            return this.filteredNodes(heads, null, matchPredicate);
         }
 
 
@@ -206,64 +327,51 @@ public class FlowScanner {
         public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
                                                @CheckForNull Collection<FlowNode> endNodes,
                                                Predicate<FlowNode> matchCondition) {
-            if (heads == null || heads.size() == 0) {
+            if (!setup(heads, endNodes)) {
                 return null;
             }
 
-            initialize();
-            Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
-            Collection<FlowNode> filteredHeads = new HashSet<FlowNode>(heads);
-            filteredHeads.removeAll(fastEndNodes);
-            if (filteredHeads.size() == 0) {
-                return null;
-            }
-            this.setHeads(filteredHeads);
-
-            while ((_current = next(fastEndNodes)) != null) {
-                if (matchCondition.apply(_current)) {
-                    return _current;
+            for (FlowNode f : this) {
+                if (matchCondition.apply(f)) {
+                    return f;
                 }
             }
             return null;
         }
 
         // Basic algo impl
-        public List<FlowNode> filter(@CheckForNull Collection<FlowNode> heads,
-                                     @CheckForNull Collection<FlowNode> endNodes,
-                                     Predicate<FlowNode> matchCondition) {
-            if (heads == null || heads.size() == 0) {
+        @Nonnull
+        public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads,
+                                            @CheckForNull Collection<FlowNode> endNodes,
+                                            Predicate<FlowNode> matchCondition) {
+            if (!setup(heads, endNodes)) {
                 return Collections.EMPTY_LIST;
             }
-            initialize();
-            Collection<FlowNode> fastEndNodes = convertToFastCheckable(endNodes);
-            Collection<FlowNode> filteredHeads = new HashSet<FlowNode>(heads);
-            if (filteredHeads.size() == 0) {
-                return Collections.EMPTY_LIST;
-            }
-            filteredHeads.removeAll(fastEndNodes);
-            this.setHeads(filteredHeads);
-            ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
 
-            while ((_current = next(fastEndNodes)) != null) {
-                if (matchCondition.apply(_current)) {
-                    nodes.add(_current);
+            ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
+            for (FlowNode f : this) {
+                if (matchCondition.apply(f)) {
+                    nodes.add(f);
                 }
             }
             return nodes;
         }
 
+        public Filterator<FlowNode> filter(Predicate<FlowNode> filterCondition) {
+            return new FilteratorImpl<FlowNode>(this, filterCondition);
+        }
+
         /** Used for extracting metrics from the flow graph */
+        @Nonnull
         public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor) {
-            if (heads == null || heads.size() == 0) {
+            if (!setup(heads, Collections.EMPTY_SET)) {
                 return;
             }
-            initialize();
-            this.setHeads(heads);
-            Collection<FlowNode> endNodes = Collections.EMPTY_SET;
-
-            boolean continueAnalysis = true;
-            while (continueAnalysis && (_current = next(endNodes)) != null) {
-                continueAnalysis = visitor.visit(_current);
+            for (FlowNode f : this) {
+                boolean canContinue = visitor.visit(f);
+                if (!canContinue) {
+                    break;
+                }
             }
         }
     }
@@ -275,7 +383,7 @@ public class FlowScanner {
 
         protected HashSet<FlowNode> _visited = new HashSet<FlowNode>();
 
-        protected void initialize() {
+        protected void reset() {
             if (this._queue == null) {
                 this._queue = new ArrayDeque<FlowNode>();
             } else {
@@ -287,7 +395,15 @@ public class FlowScanner {
 
         @Override
         protected void setHeads(@Nonnull Collection<FlowNode> heads) {
-            _queue.addAll(heads);
+            Iterator<FlowNode> it = heads.iterator();
+            if (it.hasNext()) {
+                FlowNode f = it.next();
+                _current = f;
+                _next = f;
+            }
+            while (it.hasNext()) {
+                _queue.add(it.next());
+            }
         }
 
         @Override
@@ -322,17 +438,19 @@ public class FlowScanner {
      * Use case: we don't care about parallel branches
      */
     public static class LinearScanner extends AbstractFlowScanner {
-        protected boolean isFirst = true;
 
         @Override
-        protected void initialize() {
-            isFirst = true;
+        protected void reset() {
+            this._current = null;
+            this._next = null;
+            this._blackList = Collections.EMPTY_SET;
         }
 
         @Override
         protected void setHeads(@Nonnull Collection<FlowNode> heads) {
             if (heads.size() > 0) {
                 this._current = heads.iterator().next();
+                this._next = this._current;
             }
         }
 
@@ -340,10 +458,6 @@ public class FlowScanner {
         protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
             if (_current == null) {
                 return null;
-            }
-            if (isFirst) { // Kind of cheating, but works
-                isFirst = false;
-                return _current;
             }
             List<FlowNode> parents = _current.getParents();
             if (parents != null && parents.size() > 0) {
@@ -361,12 +475,56 @@ public class FlowScanner {
      * LinearScanner that jumps over nested blocks
      * Use case: finding information about enclosing blocks or preceding nodes
      *   - Ex: finding out the executor workspace used to run a flownode
+     * Caveats:
+     *   - If you start on the last node of a completed flow, it will jump straight to start (by design)
+     *   - Will only consider the first branch in a parallel case
      */
     public static class LinearBlockHoppingScanner extends LinearScanner {
 
-        protected FlowNode jumpBlock(FlowNode current) {
-            return (current instanceof BlockEndNode) ?
-                ((BlockEndNode)current).getStartNode() : current;
+        @Override
+        public boolean setup(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList) {
+            boolean possiblyStartable = super.setup(heads, blackList);
+            return possiblyStartable && _current != null;  // In case we start at an end block
+        }
+
+        @Override
+        protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+            if (heads.size() > 0) {
+                this._current = jumpBlockScan(heads.iterator().next(), _blackList);
+                this._next = this._current;
+            }
+        }
+
+        /** Keeps jumping over blocks until we hit the first node preceding a block */
+        @CheckForNull
+        protected FlowNode jumpBlockScan(@CheckForNull FlowNode node, @Nonnull Collection<FlowNode> blacklistNodes) {
+            boolean isDone = false;
+            FlowNode candidate = node;
+
+            // Find the first candidate node preceding a block... and filtering by blacklist
+            while (candidate != null && node instanceof BlockEndNode) {
+                candidate = ((BlockEndNode) candidate).getStartNode();
+                if (blacklistNodes.contains(candidate)) {
+                    return null;
+                }
+                List<FlowNode> parents = candidate.getParents();
+                if (parents == null || parents.size() == 0) {
+                    return null;
+                }
+                // NULLABLE OPTION
+                boolean foundNode = false;
+                for (FlowNode f : parents) {
+                    if (!blacklistNodes.contains(f)) {
+                        candidate = f;  // Loop again b/c could be BlockEndNode
+                        foundNode = true;
+                    }
+                }
+                if (!foundNode) {
+                    return null;
+                }
+            }
+
+            return candidate;
         }
 
         @Override
@@ -374,21 +532,11 @@ public class FlowScanner {
             if (_current == null) {
                 return null;
             }
-            if (isFirst) { // Hax, but solves the problem
-                isFirst = false;
-                return _current;
-            }
             List<FlowNode> parents = _current.getParents();
             if (parents != null && parents.size() > 0) {
                 for (FlowNode f : parents) {
                     if (!blackList.contains(f)) {
-                        FlowNode jumped = jumpBlock(f);
-                        if (jumped != f) {
-                            _current = jumped;
-                            return next(blackList);
-                        } else {
-                            return f;
-                        }
+                        return jumpBlockScan(f, blackList);
                     }
                 }
             }
@@ -398,7 +546,7 @@ public class FlowScanner {
 
     /**
      * Scanner that will scan down forks when we hit parallel blocks.
-     * Think of it as the opposite reverse of {@link org.jenkinsci.plugins.workflow.graph.FlowScanner.DepthFirstScanner}:
+     * Think of it as the opposite of {@link org.jenkinsci.plugins.workflow.graph.FlowScanner.DepthFirstScanner}:
      *   - We visit every node exactly once, but walk through all parallel forks before resuming the main flow
      *
      * This is near-optimal in many cases, since it keeps minimal state information and explores parallel blocks first
@@ -418,20 +566,39 @@ public class FlowScanner {
         protected int parallelDepth = 0;
 
         @Override
-        protected void initialize() {
+        protected void reset() {
             if (_queue == null) {
                 _queue = new ArrayDeque<FlowNode>();
             } else {
                 _queue.clear();
             }
+            forkStarts.clear();
+            parallelDepth =0;
+            currentParallelStart = null;
+            _current = null;
+            _next = null;
         }
 
         @Override
         protected void setHeads(@Nonnull Collection<FlowNode> heads) {
             // FIXME handle case where we have multiple heads - we need to do something special to handle the parallel branches
             // Until they rejoin the head!
-            _current = null;
+            _current = null; // Somehow set head like linearhoppoingflowscanner
             _queue.addAll(heads);
+            _current = _queue.poll();
+            _next = _current;
+
+            // If we fork this to a separate plugin, we can try doing this via
+            // StepExecution.applyAll(ParallelStepExecution.class, Function)
+            // using execution.getContext().get(FlowNode.class) to fetch the FlowNodes for parallel execution (the BlockStartNodes)
+            // But we will need to filter the nodes by which pipeline run is occurring
+
+            LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
+
+            HashMap<FlowNode,FlowNode> parallelStarts = new HashMap<FlowNode,FlowNode>();
+            // Resolve all the heads to the roots
+
+            // I guess we can only walk the graph until the heads share a common ancestor?
         }
 
         /**
@@ -491,7 +658,7 @@ public class FlowScanner {
             if (_current != null) {
                 List<FlowNode> parents = _current.getParents();
                 if (parents == null || parents.size() == 0) {
-                    // welp done with this node, guess we consult the queue?
+                    // welp do  ne with this node, guess we consult the queue?
                 } else if (parents.size() == 1) {
                     FlowNode p = parents.get(0);
                     if (p == currentParallelStart) {
@@ -511,6 +678,10 @@ public class FlowScanner {
                 } else {
                     throw new IllegalStateException("Found a FlowNode with multiple parents that isn't the end of a block! "+_current.toString());
                 }
+            }
+            if (_queue.size() > 0) {
+                output = _queue.pop();
+                currentParallelStart = forkStarts.pop();
             }
             // Welp, now we consult the queue since we've not hit a likely candidate among parents
 
