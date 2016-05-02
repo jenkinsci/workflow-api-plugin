@@ -603,7 +603,7 @@ public class FlowScanner {
                 // TODO We need to implement this using filterableEnclosingBlocks
                 // and add nodes to with the start of their parallel branches
             }
-            _current = null; // Somehow set head like linearhoppoingflowscanner
+            _current = null;
             _queue.addAll(heads);
             _current = _queue.poll();
             _next = _current;
@@ -613,15 +613,19 @@ public class FlowScanner {
          * Invoked when we start entering a parallel block (walking from head of the flow, so we see the block end first)
          * @param endNode
          * @param heads
+         * @return FlowNode next node to visit
          */
-        protected void hitParallelEnd(BlockEndNode endNode, List<FlowNode> heads, Collection<FlowNode> blackList) {
+        protected FlowNode hitParallelEnd(BlockEndNode endNode, List<FlowNode> heads, Collection<FlowNode> blackList) {
             int branchesAdded = 0;
             BlockStartNode start = endNode.getStartNode();
+            FlowNode output = null;
             for (FlowNode f : heads) {
                 if (!blackList.contains(f)) {
                     if (branchesAdded == 0) { // We use references because it is more efficient
                         currentParallelStart = start;
+                        output = f;
                     } else {
+                        _queue.push(f);
                         forkStarts.push(start);
                     }
                     branchesAdded++;
@@ -630,6 +634,7 @@ public class FlowScanner {
             if (branchesAdded > 0) {
                 parallelDepth++;
             }
+            return output;
         }
 
         /**
@@ -641,7 +646,7 @@ public class FlowScanner {
         protected FlowNode hitParallelStart(FlowNode startNode, FlowNode parallelChild) {
             FlowNode output = null;
             if (forkStarts.size() > 0) { // More forks (or nested parallel forks) remain
-                FlowNode end = forkStarts.pop();
+                FlowNode end = forkStarts.peek();
                 if (end != currentParallelStart) { // Nested parallel branches, and we finished this fork
                     parallelDepth--;
                     output = currentParallelStart;
@@ -666,7 +671,7 @@ public class FlowScanner {
             if (_current != null) {
                 List<FlowNode> parents = _current.getParents();
                 if (parents == null || parents.size() == 0) {
-                    // welp do  ne with this node, guess we consult the queue?
+                    // welp done with this node, guess we consult the queue?
                 } else if (parents.size() == 1) {
                     FlowNode p = parents.get(0);
                     if (p == currentParallelStart) {
@@ -681,8 +686,10 @@ public class FlowScanner {
                 } else if (_current instanceof BlockEndNode && parents.size() > 1) {
                     // We must be a BlockEndNode that begins this
                     BlockEndNode end = ((BlockEndNode) _current);
-                    hitParallelEnd(end, parents, blackList);
-                    // Return a node?
+                    FlowNode possibleOutput = hitParallelEnd(end, parents, blackList); // What if output is block but other branches aren't?
+                    if (possibleOutput != null) {
+                        return possibleOutput;
+                    }
                 } else {
                     throw new IllegalStateException("Found a FlowNode with multiple parents that isn't the end of a block! "+_current.toString());
                 }
@@ -691,7 +698,6 @@ public class FlowScanner {
                 output = _queue.pop();
                 currentParallelStart = forkStarts.pop();
             }
-            // Welp, now we consult the queue since we've not hit a likely candidate among parents
 
             return output;
         }
