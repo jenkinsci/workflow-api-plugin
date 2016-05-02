@@ -25,6 +25,7 @@ package org.jenkinsci.plugins.workflow.graph;
  */
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import hudson.model.Action;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
@@ -77,6 +78,7 @@ public class FlowScanner {
     public static final Predicate<FlowNode> MATCH_HAS_WORKSPACE = nodeHasActionPredicate(WorkspaceAction.class);
     public static final Predicate<FlowNode> MATCH_HAS_ERROR = nodeHasActionPredicate(ErrorAction.class);
     public static final Predicate<FlowNode> MATCH_HAS_LOG = nodeHasActionPredicate(LogAction.class);
+    public static final Predicate<FlowNode> MATCH_BLOCK_START = (Predicate)Predicates.instanceOf(BlockStartNode.class);
 
     public interface FlowNodeVisitor {
         /**
@@ -113,6 +115,12 @@ public class FlowScanner {
 
         /** Used for extracting metrics from the flow graph */
         public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor);
+    }
+
+    public static Filterator<FlowNode> filterableEnclosingBlocks(FlowNode f) {
+        LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
+        scanner.setup(f);
+        return scanner.filter(MATCH_BLOCK_START);
     }
 
     /** Iterator that exposes filtering */
@@ -269,11 +277,18 @@ public class FlowScanner {
             return setup(Collections.singleton(head), blackList);
         }
 
+        public boolean setup(@CheckForNull FlowNode head) {
+            if (head == null) {
+                return false;
+            }
+            return setup(Collections.singleton(head), Collections.EMPTY_SET);
+        }
+
         /** Public APIs need to invoke this before searches */
         protected abstract void reset();
 
-        /** Add current head nodes to current processing set */
-        protected abstract void setHeads(@Nonnull Collection<FlowNode> heads);
+        /** Add current head nodes to current processing set, after filtering by blackList */
+        protected abstract void setHeads(@Nonnull Collection<FlowNode> filteredHeads);
 
         /**
          * Actual meat of the iteration, get the next node to visit, using & updating state as needed
@@ -317,11 +332,14 @@ public class FlowScanner {
         }
 
         @Nonnull
-        public Collection<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
+        public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
             return this.filteredNodes(heads, null, matchPredicate);
         }
 
-
+        @Nonnull
+        public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
+            return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
+        }
 
         // Basic algo impl
         public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
@@ -498,11 +516,10 @@ public class FlowScanner {
         /** Keeps jumping over blocks until we hit the first node preceding a block */
         @CheckForNull
         protected FlowNode jumpBlockScan(@CheckForNull FlowNode node, @Nonnull Collection<FlowNode> blacklistNodes) {
-            boolean isDone = false;
             FlowNode candidate = node;
 
             // Find the first candidate node preceding a block... and filtering by blacklist
-            while (candidate != null && node instanceof BlockEndNode) {
+            while (candidate != null && candidate instanceof BlockEndNode) {
                 candidate = ((BlockEndNode) candidate).getStartNode();
                 if (blacklistNodes.contains(candidate)) {
                     return null;
@@ -511,12 +528,12 @@ public class FlowScanner {
                 if (parents == null || parents.size() == 0) {
                     return null;
                 }
-                // NULLABLE OPTION
                 boolean foundNode = false;
                 for (FlowNode f : parents) {
                     if (!blacklistNodes.contains(f)) {
                         candidate = f;  // Loop again b/c could be BlockEndNode
                         foundNode = true;
+                        break;
                     }
                 }
                 if (!foundNode) {
@@ -536,7 +553,7 @@ public class FlowScanner {
             if (parents != null && parents.size() > 0) {
                 for (FlowNode f : parents) {
                     if (!blackList.contains(f)) {
-                        return jumpBlockScan(f, blackList);
+                        return (f instanceof BlockEndNode) ? jumpBlockScan(f, blackList) : f;
                     }
                 }
             }
@@ -581,24 +598,15 @@ public class FlowScanner {
 
         @Override
         protected void setHeads(@Nonnull Collection<FlowNode> heads) {
-            // FIXME handle case where we have multiple heads - we need to do something special to handle the parallel branches
-            // Until they rejoin the head!
+            if (heads.size() > 1) {
+                throw new IllegalArgumentException("ForkedFlowScanner can't handle multiple head nodes yet");
+                // TODO We need to implement this using filterableEnclosingBlocks
+                // and add nodes to with the start of their parallel branches
+            }
             _current = null; // Somehow set head like linearhoppoingflowscanner
             _queue.addAll(heads);
             _current = _queue.poll();
             _next = _current;
-
-            // If we fork this to a separate plugin, we can try doing this via
-            // StepExecution.applyAll(ParallelStepExecution.class, Function)
-            // using execution.getContext().get(FlowNode.class) to fetch the FlowNodes for parallel execution (the BlockStartNodes)
-            // But we will need to filter the nodes by which pipeline run is occurring
-
-            LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
-
-            HashMap<FlowNode,FlowNode> parallelStarts = new HashMap<FlowNode,FlowNode>();
-            // Resolve all the heads to the roots
-
-            // I guess we can only walk the graph until the heads share a common ancestor?
         }
 
         /**

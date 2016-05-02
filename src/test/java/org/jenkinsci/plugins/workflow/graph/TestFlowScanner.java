@@ -96,11 +96,19 @@ public class TestFlowScanner {
                 "echo 'donothing'\n" +
                 "echo 'doitagain'"
         ));
+
+        /** Flow structure (ID - type)
+         2 - FlowStartNode
+         3 - SleepStep
+         4 - EchoStep
+         5 - EchoStep
+         6 - FlowEndNode
+         */
+
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         FlowExecution exec = b.getExecution();
         FlowScanner.AbstractFlowScanner[] scans = {new FlowScanner.LinearScanner(),
-                new FlowScanner.DepthFirstScanner(),
-                new FlowScanner.LinearBlockHoppingScanner()
+                new FlowScanner.DepthFirstScanner()
 //                new FlowScanner.ForkScanner()
         };
 
@@ -121,6 +129,15 @@ public class TestFlowScanner {
             Assert.assertFalse(scan.hasNext());
             Assert.assertEquals("2", f2.getId());
         }
+
+        // Block Hopping tests
+        FlowScanner.LinearBlockHoppingScanner scanner = new FlowScanner.LinearBlockHoppingScanner();
+        Assert.assertFalse("BlockHopping scanner jumps over the flow when started at end", scanner.setup(heads, Collections.EMPTY_SET));
+        List<FlowNode> collectedNodes = scanner.filteredNodes(Collections.singleton(exec.getNode("5")), null, (Predicate)Predicates.alwaysTrue());
+        Assert.assertEquals(exec.getNode("5"), collectedNodes.get(0));
+        Assert.assertEquals(exec.getNode("4"), collectedNodes.get(1));
+        Assert.assertEquals(exec.getNode("3"), collectedNodes.get(2));
+        Assert.assertEquals(exec.getNode("2"), collectedNodes.get(3));
 
         // Test expected scans with no stop nodes given (different ways of specifying none)
         for (FlowScanner.ScanAlgorithm sa : scans) {
@@ -187,7 +204,7 @@ public class TestFlowScanner {
 
     /** Tests the basic scan algorithm where blocks are involved */
     @Test
-    public void testBlockScan() throws Exception {
+    public void testBasicScanWithBlock() throws Exception {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "Convoluted");
         job.setDefinition(new CpsFlowDefinition(
             "echo 'first'\n" +
@@ -197,26 +214,43 @@ public class TestFlowScanner {
             "}\n" +
             "sleep 1"
         ));
+        /** Flow structure (ID - type)
+         2 - FlowStartNode
+         3 - EchoStep
+         4 - TimeoutStep
+         5 - TimeoutStep with BodyInvocationAction
+         6 - EchoStep
+         7 - EchoStep
+         8 - StepEndNode (BlockEndNode), startId=5
+         9 - StepEndNode (BlockEndNode), startId = 4
+         10 - SleepStep
+         11 - FlowEndNode
+         */
+
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         Predicate<FlowNode> matchEchoStep = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
+        FlowExecution exec = b.getExecution();
+
+        // Linear analysis
+        FlowScanner.LinearScanner linearScanner = new FlowScanner.LinearScanner();
+        Assert.assertEquals(3, linearScanner.filteredNodes(exec.getCurrentHeads(), null, matchEchoStep).size());
+        Assert.assertEquals(3, linearScanner.filteredNodes(exec.getNode("7"), matchEchoStep).size());
 
         // Test blockhopping
         FlowScanner.LinearBlockHoppingScanner linearBlockHoppingScanner = new FlowScanner.LinearBlockHoppingScanner();
-        Collection<FlowNode> matches = linearBlockHoppingScanner.filteredNodes(b.getExecution().getCurrentHeads(), null, matchEchoStep);
+        Assert.assertEquals(0, linearBlockHoppingScanner.filteredNodes(exec.getCurrentHeads(), null, matchEchoStep).size()); //Hopped
+        Assert.assertEquals(1, linearBlockHoppingScanner.filteredNodes(exec.getNode("8"), matchEchoStep).size());
+        Assert.assertEquals(3, linearBlockHoppingScanner.filteredNodes(exec.getNode("7"), matchEchoStep).size());
 
-        // This means we jumped the blocks
-        Assert.assertEquals(1, matches.size());
-
+        // Prove we covered all
         FlowScanner.DepthFirstScanner depthFirstScanner = new FlowScanner.DepthFirstScanner();
-        matches = depthFirstScanner.filteredNodes(b.getExecution().getCurrentHeads(), null, matchEchoStep);
-
-        // Nodes all covered
-        Assert.assertEquals(3, matches.size());
+        Assert.assertEquals(3, depthFirstScanner.filteredNodes(exec.getCurrentHeads(), null, matchEchoStep).size());
+        Assert.assertEquals(3, depthFirstScanner.filteredNodes(exec.getNode("7"), matchEchoStep).size());
     }
 
     @Test
     public void blockJumpTest() throws Exception {
-        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "Convoluted");
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "BlockUsing");
         job.setDefinition(new CpsFlowDefinition(
                 "echo 'sample'\n" +
                 "node {\n" +
@@ -241,15 +275,22 @@ public class TestFlowScanner {
 
         FlowScanner.LinearBlockHoppingScanner hopper = new FlowScanner.LinearBlockHoppingScanner();
         FlowNode headCandidate = exec.getNode("7");
-        hopper.setup(headCandidate, null);
-        List<FlowNode> filtered = hopper.filteredNodes(Collections.singleton(headCandidate), null, MATCH_ECHO_STEP);
+        Assert.assertEquals(exec.getNode("4"), hopper.jumpBlockScan(headCandidate, Collections.EMPTY_SET));
+        Assert.assertTrue("Setup should return true if we can iterate", hopper.setup(headCandidate, null));
+
+        headCandidate = exec.getNode("6");
+        List<FlowNode> filtered = hopper.filteredNodes(headCandidate, MATCH_ECHO_STEP);
         Assert.assertEquals(2, filtered.size());
+
+        headCandidate = exec.getNode("7");
+        filtered = hopper.filteredNodes(Collections.singleton(headCandidate), null, MATCH_ECHO_STEP);
+        Assert.assertEquals(1, filtered.size());
 
         filtered = hopper.filteredNodes(Collections.singleton(exec.getNode("8")), null, MATCH_ECHO_STEP);
         Assert.assertEquals(1, filtered.size());
 
         filtered = hopper.filteredNodes(Collections.singleton(exec.getNode("9")), null, MATCH_ECHO_STEP);
-        Assert.assertEquals(1, filtered.size());
+        Assert.assertEquals(0, filtered.size());
     }
 
 
@@ -303,7 +344,7 @@ public class TestFlowScanner {
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(0, matches.size());
 
-        matches = scanner.filteredNodes(Collections.singleton(b.getExecution().getNode("14")), null);
+        matches = scanner.filteredNodes(Collections.singleton(b.getExecution().getNode("14")), MATCH_ECHO_STEP);
         Assert.assertEquals(2, matches.size());
     }
 
