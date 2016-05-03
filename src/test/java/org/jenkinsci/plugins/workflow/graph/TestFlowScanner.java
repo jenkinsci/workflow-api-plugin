@@ -29,6 +29,11 @@ import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.FlowNodeVisitor;
+import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.LinearScanner;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -38,7 +43,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jenkinsci.plugins.workflow.graph.FlowScanner.AbstractFlowScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.AbstractFlowScanner;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -109,9 +114,9 @@ public class TestFlowScanner {
 
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         FlowExecution exec = b.getExecution();
-        AbstractFlowScanner[] scans = {new FlowScanner.LinearScanner(),
-                new FlowScanner.DepthFirstScanner(),
-                new FlowScanner.ForkScanner()
+        AbstractFlowScanner[] scans = {new LinearScanner(),
+                new DepthFirstScanner(),
+                new ForkScanner()
         };
 
         List<FlowNode> heads = exec.getCurrentHeads();
@@ -133,7 +138,7 @@ public class TestFlowScanner {
         }
 
         // Block Hopping tests
-        FlowScanner.LinearBlockHoppingScanner scanner = new FlowScanner.LinearBlockHoppingScanner();
+        LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
         Assert.assertFalse("BlockHopping scanner jumps over the flow when started at end", scanner.setup(heads, Collections.EMPTY_SET));
         List<FlowNode> collectedNodes = scanner.filteredNodes(Collections.singleton(exec.getNode("5")), null, (Predicate)Predicates.alwaysTrue());
         Assert.assertEquals(exec.getNode("5"), collectedNodes.get(0));
@@ -234,23 +239,23 @@ public class TestFlowScanner {
         FlowExecution exec = b.getExecution();
 
         // Linear analysis
-        FlowScanner.LinearScanner linearScanner = new FlowScanner.LinearScanner();
+        LinearScanner linearScanner = new LinearScanner();
         Assert.assertEquals(3, linearScanner.filteredNodes(exec.getCurrentHeads(), null, matchEchoStep).size());
         Assert.assertEquals(3, linearScanner.filteredNodes(exec.getNode("7"), matchEchoStep).size());
 
         // Test blockhopping
-        FlowScanner.LinearBlockHoppingScanner linearBlockHoppingScanner = new FlowScanner.LinearBlockHoppingScanner();
+        LinearBlockHoppingScanner linearBlockHoppingScanner = new LinearBlockHoppingScanner();
         Assert.assertEquals(0, linearBlockHoppingScanner.filteredNodes(exec.getCurrentHeads(), null, matchEchoStep).size()); //Hopped
         Assert.assertEquals(1, linearBlockHoppingScanner.filteredNodes(exec.getNode("8"), matchEchoStep).size());
         Assert.assertEquals(3, linearBlockHoppingScanner.filteredNodes(exec.getNode("7"), matchEchoStep).size());
 
         // Prove we covered all
-        FlowScanner.DepthFirstScanner depthFirstScanner = new FlowScanner.DepthFirstScanner();
+        DepthFirstScanner depthFirstScanner = new DepthFirstScanner();
         Assert.assertEquals(3, depthFirstScanner.filteredNodes(exec.getCurrentHeads(), null, matchEchoStep).size());
         Assert.assertEquals(3, depthFirstScanner.filteredNodes(exec.getNode("7"), matchEchoStep).size());
 
         // Prove we covered all
-        FlowScanner.ForkScanner forkScanner = new FlowScanner.ForkScanner();
+        ForkScanner forkScanner = new ForkScanner();
         Assert.assertEquals(3, forkScanner.filteredNodes(exec.getCurrentHeads(), null, matchEchoStep).size());
         Assert.assertEquals(3, forkScanner.filteredNodes(exec.getNode("7"), matchEchoStep).size());
     }
@@ -280,7 +285,7 @@ public class TestFlowScanner {
         Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
         FlowExecution exec = b.getExecution();
 
-        FlowScanner.LinearBlockHoppingScanner hopper = new FlowScanner.LinearBlockHoppingScanner();
+        LinearBlockHoppingScanner hopper = new LinearBlockHoppingScanner();
         FlowNode headCandidate = exec.getNode("7");
         Assert.assertEquals(exec.getNode("4"), hopper.jumpBlockScan(headCandidate, Collections.EMPTY_SET));
         Assert.assertTrue("Setup should return true if we can iterate", hopper.setup(headCandidate, null));
@@ -339,16 +344,16 @@ public class TestFlowScanner {
         FlowExecution exec = b.getExecution();
         Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
 
-        AbstractFlowScanner scanner = new FlowScanner.LinearScanner();
+        AbstractFlowScanner scanner = new LinearScanner();
         Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertTrue(matches.size() == 3 || matches.size() == 4);  // Depending on ordering
 
-        scanner = new FlowScanner.DepthFirstScanner();
+        scanner = new DepthFirstScanner();
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(5, matches.size());
 
         // Block hopping scanner
-        scanner = new FlowScanner.LinearBlockHoppingScanner();
+        scanner = new LinearBlockHoppingScanner();
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(0, matches.size());
 
@@ -356,7 +361,7 @@ public class TestFlowScanner {
         Assert.assertEquals(2, matches.size());
 
         // We're going to test the ForkScanner in more depth since this is its natural use
-        scanner = new FlowScanner.ForkScanner();
+        scanner = new ForkScanner();
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(5, matches.size());
 
