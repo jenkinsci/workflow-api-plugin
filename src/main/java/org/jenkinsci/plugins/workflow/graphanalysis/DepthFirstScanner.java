@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.Nonnull;
@@ -72,7 +73,9 @@ public class DepthFirstScanner extends AbstractFlowScanner {
             List<FlowNode> parents = current.getParents();
             if (parents != null) {
                 for (FlowNode f : parents) {
-                    if (!blackList.contains(f) && !_visited.contains(f)) {
+                    // Only ParallelStep nodes may be visited multiple times... but we can't just filter those
+                    // because that's in workflow-cps plugin which depends on this one
+                    if (!blackList.contains(f) && !(f instanceof BlockStartNode && _visited.contains(f))) {
                         if (output == null ) {
                             output = f;
                         } else {
@@ -86,7 +89,9 @@ public class DepthFirstScanner extends AbstractFlowScanner {
         if (output == null && _queue.size() > 0) {
             output = _queue.pop();
         }
-        _visited.add(output); // No-op if null
+        if (output instanceof BlockStartNode) {  // See above, best step towards just tracking parallel starts
+            _visited.add(output);
+        }
         return output;
     }
 }
