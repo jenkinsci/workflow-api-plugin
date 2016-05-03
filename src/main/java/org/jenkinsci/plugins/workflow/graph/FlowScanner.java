@@ -611,15 +611,15 @@ public class FlowScanner {
 
         /**
          * Invoked when we start entering a parallel block (walking from head of the flow, so we see the block end first)
-         * @param endNode
-         * @param heads
+         * @param endNode Node where parents merge (final end node for the parallel block)
+         * @param parents Parent nodes that end here
          * @return FlowNode next node to visit
          */
-        protected FlowNode hitParallelEnd(BlockEndNode endNode, List<FlowNode> heads, Collection<FlowNode> blackList) {
+        protected FlowNode hitParallelEnd(BlockEndNode endNode, List<FlowNode> parents, Collection<FlowNode> blackList) {
             int branchesAdded = 0;
             BlockStartNode start = endNode.getStartNode();
             FlowNode output = null;
-            for (FlowNode f : heads) {
+            for (FlowNode f : parents) {
                 if (!blackList.contains(f)) {
                     if (branchesAdded == 0) { // We use references because it is more efficient
                         currentParallelStart = start;
@@ -639,19 +639,17 @@ public class FlowScanner {
 
         /**
          * Invoked when we complete parallel block, walking from the head (so encountered after the end)
-         * @param startNode StartNode for the block,
-         * @param parallelChild Parallel child node that is ending this
          * @return FlowNode if we're the last node
          */
-        protected FlowNode hitParallelStart(FlowNode startNode, FlowNode parallelChild) {
+        protected FlowNode hitParallelStart() {
             FlowNode output = null;
             if (forkStarts.size() > 0) { // More forks (or nested parallel forks) remain
                 FlowNode end = forkStarts.peek();
-                if (end != currentParallelStart) { // Nested parallel branches, and we finished this fork
+                // Nested parallel branches, finished nested level so we visit the head and enclosing parallel block
+                if (end != currentParallelStart) {
                     parallelDepth--;
                     output = currentParallelStart;
                 }
-                // TODO handle case where we do early exit because we encountered stop node
 
                 // If the current end == currentParallelStart then we are finishing another branch of current flow
                 currentParallelStart = end;
@@ -660,7 +658,8 @@ public class FlowScanner {
                 currentParallelStart = null;
                 parallelDepth--;
             }
-            return output;
+            // Handle cases where the BlockStartNode for the parallel block is blackListed
+            return (output != null && !_blackList.contains(output)) ? output : null;
         }
 
         @Override
@@ -676,11 +675,11 @@ public class FlowScanner {
                     FlowNode p = parents.get(0);
                     if (p == currentParallelStart) {
                         // Terminating a parallel scan
-                        FlowNode temp = hitParallelStart(currentParallelStart, p);
+                        FlowNode temp = hitParallelStart();
                         if (temp != null) { // Startnode for current parallel block now that it is done
                             return temp;
                         }
-                    } else  if (!blackList.contains(p)) {
+                    } else if (!blackList.contains(p)) {
                         return p;
                     }
                 } else if (_current instanceof BlockEndNode && parents.size() > 1) {

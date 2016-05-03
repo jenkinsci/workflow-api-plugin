@@ -41,6 +41,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -341,12 +342,19 @@ public class TestFlowScanner {
         Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertTrue(matches.size() == 3 || matches.size() == 4);  // Depending on ordering
 
-
         scanner = new FlowScanner.DepthFirstScanner();
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(5, matches.size());
 
-        // We're going to test the ForkScanner more fully
+        // Block hopping scanner
+        scanner = new FlowScanner.LinearBlockHoppingScanner();
+        matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
+        Assert.assertEquals(0, matches.size());
+
+        matches = scanner.filteredNodes(Collections.singleton(b.getExecution().getNode("14")), MATCH_ECHO_STEP);
+        Assert.assertEquals(2, matches.size());
+
+        // We're going to test the ForkScanner in more depth since this is its natural use
         scanner = new FlowScanner.ForkScanner();
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(5, matches.size());
@@ -355,12 +363,11 @@ public class TestFlowScanner {
         Assert.assertEquals(3, scanner.filteredNodes(exec.getNode("12"), MATCH_ECHO_STEP).size());
         Assert.assertEquals(2, scanner.filteredNodes(exec.getNode("9"), MATCH_ECHO_STEP).size());
 
-        scanner = new FlowScanner.LinearBlockHoppingScanner();
-        matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
-        Assert.assertEquals(0, matches.size());
-
-        matches = scanner.filteredNodes(Collections.singleton(b.getExecution().getNode("14")), MATCH_ECHO_STEP);
-        Assert.assertEquals(2, matches.size());
+        // Filtering at different points within branches
+        List<FlowNode> blackList = Arrays.asList(exec.getNode("6"), exec.getNode("7"));
+        Assert.assertEquals(4, scanner.filteredNodes(heads, blackList, MATCH_ECHO_STEP).size());
+        Assert.assertEquals(4, scanner.filteredNodes(heads, Collections.singletonList(exec.getNode("4")), MATCH_ECHO_STEP).size());
+        blackList = Arrays.asList(exec.getNode("6"), exec.getNode("10"));
+        Assert.assertEquals(3, scanner.filteredNodes(heads, blackList, MATCH_ECHO_STEP).size());
     }
-
 }
