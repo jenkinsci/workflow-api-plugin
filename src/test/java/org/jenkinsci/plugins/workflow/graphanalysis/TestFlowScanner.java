@@ -22,13 +22,14 @@
  * THE SOFTWARE.
  */
 
-package org.jenkinsci.plugins.workflow.graph;
+package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowNodeVisitor;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
