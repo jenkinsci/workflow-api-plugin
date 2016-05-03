@@ -40,7 +40,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -80,113 +79,10 @@ public class FlowScanner {
     public static final Predicate<FlowNode> MATCH_HAS_LOG = nodeHasActionPredicate(LogAction.class);
     public static final Predicate<FlowNode> MATCH_BLOCK_START = (Predicate)Predicates.instanceOf(BlockStartNode.class);
 
-    public interface FlowNodeVisitor {
-        /**
-         * Visit the flow node, and indicate if we should continue analysis
-         * @param f Node to visit
-         * @return False if node is done
-         */
-        public boolean visit(@Nonnull FlowNode f);
-    }
-
-    /** Interface to be used for scanning/analyzing FlowGraphs with support for different visit orders
-     */
-    public interface ScanAlgorithm {
-
-        /**
-         * Search for first node (walking from the heads through parents) that matches the condition
-         * @param heads Nodes to start searching from, which may be filtered against blackList
-         * @param stopNodes Search doesn't go beyond any of these nodes, null or empty will run to end of flow
-         * @param matchPredicate Matching condition for search
-         * @return First node matching condition, or null if none found
-         */
-        @CheckForNull
-        public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate);
-
-        /**
-         * Search for first node (walking from the heads through parents) that matches the condition
-         * @param heads Nodes to start searching from, which may be filtered against a blackList
-         * @param stopNodes Search doesn't go beyond any of these nodes, null or empty will run to end of flow
-         * @param matchPredicate Matching condition for search
-         * @return All nodes matching condition
-         */
-        @Nonnull
-        public Collection<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> stopNodes, @Nonnull Predicate<FlowNode> matchPredicate);
-
-        /** Used for extracting metrics from the flow graph */
-        public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor);
-    }
-
     public static Filterator<FlowNode> filterableEnclosingBlocks(FlowNode f) {
         LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
         scanner.setup(f);
         return scanner.filter(MATCH_BLOCK_START);
-    }
-
-    /** Iterator that exposes filtering */
-    public interface Filterator<T> extends Iterator<T> {
-        /** Returns a filtered view of an iterable */
-        @Nonnull
-        public Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
-    }
-
-    /** Filters an iterator against a match predicate */
-    public static class FilteratorImpl<T> implements Filterator<T> {
-        boolean hasNext = false;
-        T nextVal;
-        Iterator<T> wrapped;
-        Predicate<T> matchCondition;
-
-        public FilteratorImpl<T> filter(Predicate<T> matchCondition) {
-            return new FilteratorImpl<T>(this, matchCondition);
-        }
-
-        public FilteratorImpl(@Nonnull Iterator<T> it, @Nonnull Predicate<T> matchCondition) {
-            this.wrapped = it;
-            this.matchCondition = matchCondition;
-
-            while(it.hasNext()) {
-                T val = it.next();
-                if (matchCondition.apply(val)) {
-                    this.nextVal = val;
-                    hasNext = true;
-                    break;
-                }
-            }
-        }
-
-        @Override
-        public boolean hasNext() {
-            return hasNext;
-        }
-
-        @Override
-        public T next() {
-            T returnVal = nextVal;
-            T nextMatch = null;
-
-            boolean foundMatch = false;
-            while(wrapped.hasNext()) {
-                nextMatch = wrapped.next();
-                if (matchCondition.apply(nextMatch)) {
-                    foundMatch = true;
-                    break;
-                }
-            }
-            if (foundMatch) {
-                this.nextVal = nextMatch;
-                this.hasNext = true;
-            } else {
-                this.nextVal = null;
-                this.hasNext = false;
-            }
-            return returnVal;
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
     }
 
     /**
@@ -195,7 +91,7 @@ public class FlowScanner {
      * Scans/analysis of graphs is implemented via internal iteration to allow reusing algorithm bodies
      * However internal iteration has access to additional information
      */
-    public static abstract class AbstractFlowScanner implements ScanAlgorithm, Iterable <FlowNode>, Filterator<FlowNode> {
+    public static abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filterator<FlowNode> {
 
         // State variables, not all need be used
         protected ArrayDeque<FlowNode> _queue;
@@ -206,36 +102,17 @@ public class FlowScanner {
 
         protected Collection<FlowNode> _blackList = Collections.EMPTY_SET;
 
-        @Override
-        public boolean hasNext() {
-            return _next != null;
-        }
-
-        @Override
-        public FlowNode next() {
-            if (_next == null) {
-                throw new NoSuchElementException();
+        /** Convert stop nodes to a collection that can efficiently be checked for membership, handling null if needed */
+        @Nonnull
+        protected Collection<FlowNode> convertToFastCheckable(@CheckForNull Collection<FlowNode> nodeCollection) {
+            if (nodeCollection == null || nodeCollection.size()==0) {
+                return Collections.EMPTY_SET;
+            } else  if (nodeCollection.size() == 1) {
+                return Collections.singleton(nodeCollection.iterator().next());
+            } else if (nodeCollection instanceof Set) {
+                return nodeCollection;
             }
-
-            // For computing timings and changes, it may be helpful to keep the previous result
-            // by creating a variable _last and storing _current to it.
-
-//            System.out.println("Current iterator val: " + ((_current == null) ? "null" : _current.getId()));
-//            System.out.println("Next iterator val: " + ((_next == null) ? "null" : _next.getId()));
-            _current = _next;
-            _next = next(_blackList);
-//            System.out.println("New next val: " + ((_next == null) ? "null" : _next.getId()));
-            return _current;
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException("FlowGraphs are immutable, so FlowScanners can't remove nodes");
-        }
-
-        @Override
-        public Iterator<FlowNode> iterator() {
-            return this;
+            return nodeCollection.size() > 5 ? new HashSet<FlowNode>(nodeCollection) : nodeCollection;
         }
 
         /**
@@ -292,23 +169,63 @@ public class FlowScanner {
 
         /**
          * Actual meat of the iteration, get the next node to visit, using & updating state as needed
+         * @param current Current node to use in generating next value
          * @param blackList Nodes that are not eligible for visiting
          * @return Next node to visit, or null if we've exhausted the node list
          */
         @CheckForNull
-        protected abstract FlowNode next(@Nonnull Collection<FlowNode> blackList);
+        protected abstract FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList);
 
-        /** Convert stop nodes to a collection that can efficiently be checked for membership, handling nulls if needed */
-        @Nonnull
-        protected Collection<FlowNode> convertToFastCheckable(@CheckForNull Collection<FlowNode> nodeCollection) {
-            if (nodeCollection == null || nodeCollection.size()==0) {
-                return Collections.EMPTY_SET;
-            } else  if (nodeCollection.size() == 1) {
-                return Collections.singleton(nodeCollection.iterator().next());
-            } else if (nodeCollection instanceof Set) {
-                return nodeCollection;
+        @Override
+        public boolean hasNext() {
+            return _next != null;
+        }
+
+        @Override
+        public FlowNode next() {
+            if (_next == null) {
+                throw new NoSuchElementException();
             }
-            return nodeCollection.size() > 5 ? new HashSet<FlowNode>(nodeCollection) : nodeCollection;
+
+            // For computing timings and changes, it may be helpful to keep the previous result
+            // by creating a variable _last and storing _current to it.
+
+//            System.out.println("Current iterator val: " + ((_current == null) ? "null" : _current.getId()));
+//            System.out.println("Next iterator val: " + ((_next == null) ? "null" : _next.getId()));
+            _current = _next;
+            _next = next(_current, _blackList);
+//            System.out.println("New next val: " + ((_next == null) ? "null" : _next.getId()));
+            return _current;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("FlowGraphs are immutable, so FlowScanners can't remove nodes");
+        }
+
+        @Override
+        public Iterator<FlowNode> iterator() {
+            return this;
+        }
+
+        public Filterator<FlowNode> filter(Predicate<FlowNode> filterCondition) {
+            return new FilteratorImpl<FlowNode>(this, filterCondition);
+        }
+
+        // Basic algo impl
+        public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
+                                               @CheckForNull Collection<FlowNode> endNodes,
+                                               Predicate<FlowNode> matchCondition) {
+            if (!setup(heads, endNodes)) {
+                return null;
+            }
+
+            for (FlowNode f : this) {
+                if (matchCondition.apply(f)) {
+                    return f;
+                }
+            }
+            return null;
         }
 
         // Polymorphic methods for syntactic sugar
@@ -331,32 +248,6 @@ public class FlowScanner {
             return null;
         }
 
-        @Nonnull
-        public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
-            return this.filteredNodes(heads, null, matchPredicate);
-        }
-
-        @Nonnull
-        public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
-            return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
-        }
-
-        // Basic algo impl
-        public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
-                                               @CheckForNull Collection<FlowNode> endNodes,
-                                               Predicate<FlowNode> matchCondition) {
-            if (!setup(heads, endNodes)) {
-                return null;
-            }
-
-            for (FlowNode f : this) {
-                if (matchCondition.apply(f)) {
-                    return f;
-                }
-            }
-            return null;
-        }
-
         // Basic algo impl
         @Nonnull
         public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads,
@@ -375,9 +266,16 @@ public class FlowScanner {
             return nodes;
         }
 
-        public Filterator<FlowNode> filter(Predicate<FlowNode> filterCondition) {
-            return new FilteratorImpl<FlowNode>(this, filterCondition);
+        @Nonnull
+        public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
+            return this.filteredNodes(heads, null, matchPredicate);
         }
+
+        @Nonnull
+        public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
+            return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
+        }
+
 
         /** Used for extracting metrics from the flow graph */
         @Nonnull
@@ -425,11 +323,11 @@ public class FlowScanner {
         }
 
         @Override
-        protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
+        protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
             FlowNode output = null;
             // Walk through parents of current node
-            if (_current != null) {
-                List<FlowNode> parents = _current.getParents();
+            if (current != null) {
+                List<FlowNode> parents = current.getParents();
                 if (parents != null) {
                     for (FlowNode f : parents) {
                         if (!blackList.contains(f) && !_visited.contains(f)) {
@@ -473,11 +371,11 @@ public class FlowScanner {
         }
 
         @Override
-        protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
-            if (_current == null) {
+        protected FlowNode next(FlowNode current, @Nonnull Collection<FlowNode> blackList) {
+            if (current == null) {
                 return null;
             }
-            List<FlowNode> parents = _current.getParents();
+            List<FlowNode> parents = current.getParents();
             if (parents != null && parents.size() > 0) {
                 for (FlowNode f : parents) {
                     if (!blackList.contains(f)) {
@@ -545,11 +443,11 @@ public class FlowScanner {
         }
 
         @Override
-        protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
-            if (_current == null) {
+        protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
+            if (current == null) {
                 return null;
             }
-            List<FlowNode> parents = _current.getParents();
+            List<FlowNode> parents = current.getParents();
             if (parents != null && parents.size() > 0) {
                 for (FlowNode f : parents) {
                     if (!blackList.contains(f)) {
@@ -663,12 +561,12 @@ public class FlowScanner {
         }
 
         @Override
-        protected FlowNode next(@Nonnull Collection<FlowNode> blackList) {
+        protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
             FlowNode output = null;
 
             // First we look at the parents of the current node if present
-            if (_current != null) {
-                List<FlowNode> parents = _current.getParents();
+            if (current != null) {
+                List<FlowNode> parents = current.getParents();
                 if (parents == null || parents.size() == 0) {
                     // welp done with this node, guess we consult the queue?
                 } else if (parents.size() == 1) {
@@ -682,9 +580,9 @@ public class FlowScanner {
                     } else if (!blackList.contains(p)) {
                         return p;
                     }
-                } else if (_current instanceof BlockEndNode && parents.size() > 1) {
+                } else if (current instanceof BlockEndNode && parents.size() > 1) {
                     // We must be a BlockEndNode that begins this
-                    BlockEndNode end = ((BlockEndNode) _current);
+                    BlockEndNode end = ((BlockEndNode) current);
                     FlowNode possibleOutput = hitParallelEnd(end, parents, blackList); // What if output is block but other branches aren't?
                     if (possibleOutput != null) {
                         return possibleOutput;

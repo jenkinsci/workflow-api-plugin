@@ -38,6 +38,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jenkinsci.plugins.workflow.graph.FlowScanner.AbstractFlowScanner;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -70,7 +71,7 @@ public class TestFlowScanner {
 
     Predicate<FlowNode> MATCH_ECHO_STEP = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
 
-    static final class CollectingVisitor implements FlowScanner.FlowNodeVisitor {
+    static final class CollectingVisitor implements FlowNodeVisitor {
         ArrayList<FlowNode> visited = new ArrayList<FlowNode>();
 
         @Override
@@ -108,7 +109,7 @@ public class TestFlowScanner {
 
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         FlowExecution exec = b.getExecution();
-        FlowScanner.AbstractFlowScanner[] scans = {new FlowScanner.LinearScanner(),
+        AbstractFlowScanner[] scans = {new FlowScanner.LinearScanner(),
                 new FlowScanner.DepthFirstScanner(),
                 new FlowScanner.ForkScanner()
         };
@@ -116,7 +117,7 @@ public class TestFlowScanner {
         List<FlowNode> heads = exec.getCurrentHeads();
 
         // Iteration tests
-        for (FlowScanner.AbstractFlowScanner scan : scans) {
+        for (AbstractFlowScanner scan : scans) {
             System.out.println("Iteration test with scanner: "+scan.getClass());
             scan.setup(heads, null);
 
@@ -141,7 +142,7 @@ public class TestFlowScanner {
         Assert.assertEquals(exec.getNode("2"), collectedNodes.get(3));
 
         // Test expected scans with no stop nodes given (different ways of specifying none)
-        for (FlowScanner.ScanAlgorithm sa : scans) {
+        for (AbstractFlowScanner sa : scans) {
             System.out.println("Testing class: "+sa.getClass());
             FlowNode node = sa.findFirstMatch(heads, null, MATCH_ECHO_STEP);
             Assert.assertEquals(exec.getNode("5"), node);
@@ -160,7 +161,7 @@ public class TestFlowScanner {
         }
 
         // Test with no matches
-        for (FlowScanner.ScanAlgorithm sa : scans) {
+        for (AbstractFlowScanner sa : scans) {
             System.out.println("Testing class: "+sa.getClass());
             FlowNode node = sa.findFirstMatch(heads, null, (Predicate)Predicates.alwaysFalse());
             Assert.assertNull(node);
@@ -173,7 +174,7 @@ public class TestFlowScanner {
 
         CollectingVisitor vis = new CollectingVisitor();
         // Verify we touch head and foot nodes too
-        for (FlowScanner.ScanAlgorithm sa : scans) {
+        for (AbstractFlowScanner sa : scans) {
             System.out.println("Testing class: " + sa.getClass());
             Collection<FlowNode> nodeList = sa.filteredNodes(heads, null, (Predicate) Predicates.alwaysTrue());
             vis.reset();
@@ -185,7 +186,7 @@ public class TestFlowScanner {
         // Test with a stop node given, sometimes no matches
         Collection<FlowNode> noMatchEndNode = Collections.singleton(exec.getNode("5"));
         Collection<FlowNode> singleMatchEndNode = Collections.singleton(exec.getNode("4"));
-        for (FlowScanner.ScanAlgorithm sa : scans) {
+        for (AbstractFlowScanner sa : scans) {
             FlowNode node = sa.findFirstMatch(heads, noMatchEndNode, MATCH_ECHO_STEP);
             Assert.assertNull(node);
 
@@ -338,7 +339,7 @@ public class TestFlowScanner {
         FlowExecution exec = b.getExecution();
         Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
 
-        FlowScanner.AbstractFlowScanner scanner = new FlowScanner.LinearScanner();
+        AbstractFlowScanner scanner = new FlowScanner.LinearScanner();
         Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertTrue(matches.size() == 3 || matches.size() == 4);  // Depending on ordering
 
