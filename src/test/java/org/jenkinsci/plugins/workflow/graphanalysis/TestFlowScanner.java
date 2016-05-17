@@ -366,6 +366,12 @@ public class TestFlowScanner {
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(5, matches.size());
 
+/*        ArrayList<FlowNode> forkedHeads = new ArrayList<FlowNode>();
+        forkedHeads.add(exec.getNode("9"));
+        forkedHeads.add(exec.getNode("11"));
+        matches = scanner.filteredNodes(forkedHeads, null, MATCH_ECHO_STEP);
+        Assert.assertEquals(5, matches.size());*/
+
         // Start in one branch, test the forkscanning
         Assert.assertEquals(3, scanner.filteredNodes(exec.getNode("12"), MATCH_ECHO_STEP).size());
         Assert.assertEquals(2, scanner.filteredNodes(exec.getNode("9"), MATCH_ECHO_STEP).size());
@@ -376,5 +382,47 @@ public class TestFlowScanner {
         Assert.assertEquals(4, scanner.filteredNodes(heads, Collections.singletonList(exec.getNode("4")), MATCH_ECHO_STEP).size());
         blackList = Arrays.asList(exec.getNode("6"), exec.getNode("10"));
         Assert.assertEquals(3, scanner.filteredNodes(heads, blackList, MATCH_ECHO_STEP).size());
+    }
+
+    @Test
+    public void testNestedParallelScan() throws Exception {
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "Convoluted");
+        job.setDefinition(new CpsFlowDefinition(
+                "echo 'first'\n" +
+                "def steps = [:]\n" +
+                "steps['1'] = {\n" +
+                "    echo 'do 1 stuff'\n" +
+                "}\n" +
+                "steps['2'] = {\n" +
+                "    echo '2a'\n" +
+                "    def nested = [:]\n" +
+                "    nested['2-1'] = {\n" +
+                "        echo 'do 2-1'\n" +
+                "    } \n" +
+                "    nested['2-2'] = {\n" +
+                "        sleep 1\n" +
+                "        echo '2 section 2'\n" +
+                "    }\n" +
+                "    echo '2b'\n" +
+                "    parallel nested\n" +
+                "}\n" +
+                "parallel steps\n" +
+                "echo 'final'"
+        ));
+
+        WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        FlowExecution exec = b.getExecution();
+        Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
+
+        // Basic test of DepthFirstScanner
+        AbstractFlowScanner scanner = new DepthFirstScanner();
+        Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
+        Assert.assertEquals(7, matches.size());
+
+
+        // We're going to test the ForkScanner in more depth since this is its natural use
+        scanner = new ForkScanner();
+        matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
+        Assert.assertEquals(7, matches.size());
     }
 }

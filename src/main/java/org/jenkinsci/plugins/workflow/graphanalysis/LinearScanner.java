@@ -34,6 +34,8 @@ import java.util.List;
 /**
  * Scans through a single ancestry, does not cover parallel branches
  * Use case: we don't care about parallel branches
+ *
+ * This is the fastest way to walk a flow, because you only care about a single node
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class LinearScanner extends AbstractFlowScanner {
