@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
@@ -35,6 +36,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -112,7 +115,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
             return false;
         }
         Collection<FlowNode> fastEndNodes = convertToFastCheckable(blackList);
-        HashSet<FlowNode> filteredHeads = new HashSet<FlowNode>(heads);
+        LinkedHashSet<FlowNode> filteredHeads = new LinkedHashSet<FlowNode>(heads);
         filteredHeads.removeAll(fastEndNodes);
 
         if (filteredHeads.size() == 0) {
@@ -187,11 +190,12 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     @Override
-    public void remove() {
+    public final void remove() {
         throw new UnsupportedOperationException("FlowGraphs are immutable, so FlowScanners can't remove nodes");
     }
 
     @Override
+    @Nonnull
     public Iterator<FlowNode> iterator() {
         return this;
     }
@@ -202,6 +206,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * @return A {@link Filterator} against this FlowScanner, which can be filtered in additional ways.
      */
     @Override
+    @Nonnull
     public Filterator<FlowNode> filter(Predicate<FlowNode> filterCondition) {
         return new FilteratorImpl<FlowNode>(this, filterCondition);
     }
@@ -213,6 +218,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * @param matchCondition Predicate to match when we've successfully found a given node type
      * @return First matching node, or null if no matches found
      */
+    @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
                                            @CheckForNull Collection<FlowNode> endNodes,
                                            Predicate<FlowNode> matchCondition) {
@@ -297,7 +303,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * @param blackList Nodes we can't visit or pass beyond.
      * @param visitor Visitor that will see each FlowNode encountered.
      */
-    public void visitAll(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList, FlowNodeVisitor visitor) {
+    public void visitAll(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList, @Nonnull FlowNodeVisitor visitor) {
         if (!setup(heads, blackList)) {
             return;
         }
@@ -310,7 +316,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     /** Syntactic sugar for {@link #visitAll(Collection, FlowNodeVisitor)} where we don't blacklist any nodes */
-    public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor) {
+    public void visitAll(@CheckForNull Collection<FlowNode> heads, @Nonnull FlowNodeVisitor visitor) {
         visitAll(heads, null, visitor);
     }
 }

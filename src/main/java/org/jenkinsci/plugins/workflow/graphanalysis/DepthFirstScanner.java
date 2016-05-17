@@ -82,7 +82,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
             // because that's in workflow-cps plugin which depends on this one.
             if (!blackList.contains(f) && !(f instanceof BlockStartNode && visited.contains(f))) {
                 if (output == null ) {
-                    output = f;
+                    output = f;  // Do direct assignment rather than needless push/pop
                 } else {
                     queue.push(f);
                 }
@@ -92,7 +92,10 @@ public class DepthFirstScanner extends AbstractFlowScanner {
         if (output == null && queue.size() > 0) {
             output = queue.pop();
         }
-        if (output instanceof BlockStartNode) {  // See above, best step towards just tracking parallel starts
+
+        // Only BlockStartNodes, specifically ParallelStep can be the parent of multiple child nodes
+        // Thus they're the only nodes we need to avoid visiting multiple times by recording the visit
+        if (output instanceof BlockStartNode) {
             visited.add(output);
         }
         return output;

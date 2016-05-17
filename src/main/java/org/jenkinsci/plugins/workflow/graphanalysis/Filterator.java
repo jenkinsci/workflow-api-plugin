@@ -29,11 +29,15 @@ import com.google.common.base.Predicate;
 import javax.annotation.Nonnull;
 import java.util.Iterator;
 
-/** Iterator that allows returned objects to be filtered against a given condition
+/** Iterator that may be navigated through a filtered wrapper.
+ *
+ *  As a rule, assume that returned Filterators wrap an iterator and pass calls to it.
+ *  Thus the iterator position will change if next() is called on the filtered versions.
+ *  Note also: you may filter a filterator, if needed.
  *  @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public interface Filterator<T> extends Iterator<T> {
-    /** Returns a filtered view of the iterator */
+    /** Returns a filtered view of the iterator, which calls the iterator until matches are found */
     @Nonnull
     public Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
 }

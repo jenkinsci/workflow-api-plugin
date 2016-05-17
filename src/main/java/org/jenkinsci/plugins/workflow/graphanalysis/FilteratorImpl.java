@@ -86,6 +86,6 @@ public class FilteratorImpl<T> implements Filterator<T> {
 
     @Override
     public void remove() {
-        throw new UnsupportedOperationException();
+        wrapped.remove();
     }
 }
