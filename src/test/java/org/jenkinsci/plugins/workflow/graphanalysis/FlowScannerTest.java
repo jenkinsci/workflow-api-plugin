@@ -53,7 +53,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-public class TestFlowScanner {
+public class FlowScannerTest {
 
     @ClassRule
     public static BuildWatcher buildWatcher = new BuildWatcher();

@@ -74,20 +74,17 @@ public class DepthFirstScanner extends AbstractFlowScanner {
     @Override
     protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
         FlowNode output = null;
+
         // Walk through parents of current node
-        if (current != null) {
-            List<FlowNode> parents = current.getParents();
-            if (parents != null) {
-                for (FlowNode f : parents) {
-                    // Only ParallelStep nodes may be visited multiple times... but we can't just filter those
-                    // because that's in workflow-cps plugin which depends on this one.
-                    if (!blackList.contains(f) && !(f instanceof BlockStartNode && visited.contains(f))) {
-                        if (output == null ) {
-                            output = f;
-                        } else {
-                            queue.push(f);
-                        }
-                    }
+        List<FlowNode> parents = current.getParents();  // Can't be null
+        for (FlowNode f : parents) {
+            // Only ParallelStep nodes may be visited multiple times... but we can't just filter those
+            // because that's in workflow-cps plugin which depends on this one.
+            if (!blackList.contains(f) && !(f instanceof BlockStartNode && visited.contains(f))) {
+                if (output == null ) {
+                    output = f;
+                } else {
+                    queue.push(f);
                 }
             }
         }

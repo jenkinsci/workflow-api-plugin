@@ -33,10 +33,10 @@ import java.util.Iterator;
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class FilteratorImpl<T> implements Filterator<T> {
-    boolean hasNext = false;
-    T nextVal;
-    Iterator<T> wrapped;
-    Predicate<T> matchCondition;
+    private boolean hasNext = false;
+    private T nextVal;
+    private Iterator<T> wrapped;
+    private Predicate<T> matchCondition;
 
     public FilteratorImpl<T> filter(Predicate<T> matchCondition) {
         return new FilteratorImpl<T>(this, matchCondition);

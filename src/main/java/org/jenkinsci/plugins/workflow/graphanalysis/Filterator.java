@@ -33,7 +33,7 @@ import java.util.Iterator;
  *  @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public interface Filterator<T> extends Iterator<T> {
-    /** Returns a filtered view of an iterable */
+    /** Returns a filtered view of the iterator */
     @Nonnull
     public Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
 }

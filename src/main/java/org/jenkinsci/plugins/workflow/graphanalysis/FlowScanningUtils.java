@@ -46,16 +46,18 @@ import java.util.List;
  * Library of common functionality when analyzing/walking flow graphs
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public class FlowScanningUtils {
+public final class FlowScanningUtils {
+
+    /** Prevent instantiation */
+    private FlowScanningUtils() {}
 
     /**
      * Create a predicate that will match on all FlowNodes having a specific action present
      * @param actionClass Action class to look for
-     * @param <T> Action type
      * @return Predicate that will match when FlowNode has the action given
      */
     @Nonnull
-    public static <T extends Action>  Predicate<FlowNode> nodeHasActionPredicate(@Nonnull final Class<T> actionClass) {
+    public static  Predicate<FlowNode> nodeHasActionPredicate(@Nonnull final Class<? extends Action> actionClass) {
         return new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
