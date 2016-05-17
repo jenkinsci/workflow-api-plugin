@@ -30,7 +30,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,30 +40,54 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
- * Base class for flow scanners, which offers basic methods and stubs for algorithms
- * Scanners store state internally, and are not thread-safe but are reusable
- * Scans/analysis of graphs is implemented via internal iteration to allow reusing algorithm bodies
- * However internal iteration has access to additional information
+ * Core APIs and base logic for FlowScanners that extract information from a pipeline execution.
  *
- * Provides 4 sets of common APIs to use, in decreasing expressiveness and increasing genericness:
- *   - findFirst - find first node match a predicate
- *   - filteredNodes - return a collection of nodes filtered by a predicate, between heads(inclusive) and blackList (exclusive)
- *   - visitor - call a visitor on each node we encounter
- *   - Iterator/filterator based: FlowNode-by-FlowNode walking, after setup with head/blacklist
+ * These iterate through the directed acyclic graph (DAG) or "flow graph" of {@link FlowNode}s produced when a pipeline runs.
  *
- *  All operations can start with one or more "head" FlowNodes, and walk back from there, stopping when we hit blackList nodes
+ * This provides 6 base APIs to use, in decreasing expressiveness and increasing genericity:
+ *   - {@link #findFirstMatch(Collection, Collection, Predicate)}: find the first FlowNode matching predicate condition.
+ *   - {@link #filteredNodes(Collection, Collection, Predicate)}: return the collection of FlowNodes matching the predicate.
+ *   - {@link #visitAll(Collection, FlowNodeVisitor)}: given a {@link FlowNodeVisitor}, invoke {@link FlowNodeVisitor#visit(FlowNode)} on each node and halt when it returns false.
+ *   - Iterator: Each FlowScanner can be used as an Iterator for FlowNode-by-FlowNode walking,
+ *               after you invoke {@link #setup(Collection, Collection)} to initialize it for iteration.
+ *   - {@link Filterator}: If initialized as an Iterator, each FlowScanner can provide a filtered view from the current point in time.
+ *   - Iterable: for syntactic sugar, FlowScanners implement Iterable to allow use in for-each loops once initialized.
+ *
+ * All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #blackList} nodes (exclusive) or reach the end of the DAG.
+ * If blackList nodes are an empty collection or null, APIs will walk to the beginning of the FlowGraph.
+ * Multiple blackList nodes are helpful for putting separate bounds on walking different parallel branches.
+ *
+ * Key Points:
+ *   - There are many helper methods offering syntactic sugar for the above APIs in common use cases (simpler method signatures).
+ *   - Each implementation provides its own iteration order (described in its javadoc comments).
+ *   - Implementations may visit some or all points in the DAG, this should be called out in the class's javadoc comments
+ *   - FlowScanners are NOT thread safe, for performance reasons and because it is too hard to guarantee.
+ *   - Many fields and methods are protected: this is intentional to allow building upon the implementations for more complex analyses.
+ *   - Each FlowScanner stores state internally for several reasons:
+ *      - This state can be used to construct more advanced analyses.
+ *      - FlowScanners can be reinitialized and reused repeatedly: the overheads of creating scanners repeatedly.
+ *
+ * Suggested uses:
+ *   - Implement a {@link FlowNodeVisitor} that collects metrics from each FlowNode visited, and call visitAll to extract the data.
+ *   - Find all flownodes of a given type (ex: stages), using {@link #filteredNodes(Collection, Collection, Predicate)}
+ *   - Find the first node with an Error before a specific node
+ *   - Scan through all nodes *just* within a block
+ *      - Use the {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode} as the head
+ *      - Use the {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} as its blacklist with {@link Collections#singleton(Object)}
+ *
+ * TODO: come back and prettify this for HTML-style list formatting.
  *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filterator<FlowNode> {
 
-    protected FlowNode _current;
+    protected FlowNode current;
 
-    protected FlowNode _next;
+    protected FlowNode next;
 
-    protected Collection<FlowNode> _blackList = Collections.EMPTY_SET;
+    protected Collection<FlowNode> blackList = Collections.EMPTY_SET;
 
-    /** Convert stop nodes to a collection that can efficiently be checked for membership, handling null if needed */
+    /** Helper: convert stop nodes to a collection that can efficiently be checked for membership, handling null if needed */
     @Nonnull
     protected Collection<FlowNode> convertToFastCheckable(@CheckForNull Collection<FlowNode> nodeCollection) {
         if (nodeCollection == null || nodeCollection.size()==0) {
@@ -97,17 +120,13 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         }
 
         reset();
-        _blackList = fastEndNodes;
+        blackList = fastEndNodes;
         setHeads(filteredHeads);
         return true;
     }
 
     /**
-     * Set up for iteration/analysis on a graph of nodes, initializing the internal state
-     * @param head The head FlowNode to start walking back from
-     * @param blackList Nodes that we cannot visit or walk past (useful to limit scanning to only nodes after a specific point)
-     *                  null or empty collection means none
-     * @return True if we can have nodes to work with, otherwise false
+     *  Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to blacklist, and have just a single head
      */
     public boolean setup(@CheckForNull FlowNode head, @CheckForNull Collection<FlowNode> blackList) {
         if (head == null) {
@@ -116,6 +135,9 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return setup(Collections.singleton(head), blackList);
     }
 
+    /**
+     * Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to blacklist and have just a single head
+     */
     public boolean setup(@CheckForNull FlowNode head) {
         if (head == null) {
             return false;
@@ -123,10 +145,20 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return setup(Collections.singleton(head), Collections.EMPTY_SET);
     }
 
-    /** Public APIs need to invoke this before searches */
+    /** Reset internal state so that we can begin walking a new flow graph
+     *  Public APIs need to invoke this before searches */
     protected abstract void reset();
 
-    /** Add current head nodes to current processing set, after filtering by blackList */
+    /**
+     * Set up to begin flow scanning using the filteredHeads as starting points
+     *
+     * This method makes several assumptions:
+     *
+     *   - {@link #reset()} has already been invoked to reset state
+     *   - filteredHeads has already had any points in {@link #blackList} removed
+     *   - none of the filteredHeads are null
+     * @param filteredHeads Head nodes that have been filtered against blackList
+     */
     protected abstract void setHeads(@Nonnull Collection<FlowNode> filteredHeads);
 
     /**
@@ -140,24 +172,18 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     @Override
     public boolean hasNext() {
-        return _next != null;
+        return next != null;
     }
 
     @Override
     public FlowNode next() {
-        if (_next == null) {
+        if (next == null) {
             throw new NoSuchElementException();
         }
 
-        // For computing timings and changes, it may be helpful to keep the previous result
-        // by creating a variable _last and storing _current to it.
-
-//            System.out.println("Current iterator val: " + ((_current == null) ? "null" : _current.getId()));
-//            System.out.println("Next iterator val: " + ((_next == null) ? "null" : _next.getId()));
-        _current = _next;
-        _next = next(_current, _blackList);
-//            System.out.println("New next val: " + ((_next == null) ? "null" : _next.getId()));
-        return _current;
+        current = next;
+        next = next(current, blackList);
+        return current;
     }
 
     @Override
@@ -170,11 +196,23 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return this;
     }
 
+    /**
+     * Expose a filtered view of this FlowScanner's output.
+     * @param filterCondition Filterator only returns {@link FlowNode}s matching this predicate.
+     * @return A {@link Filterator} against this FlowScanner, which can be filtered in additional ways.
+     */
+    @Override
     public Filterator<FlowNode> filter(Predicate<FlowNode> filterCondition) {
         return new FilteratorImpl<FlowNode>(this, filterCondition);
     }
 
-    // Basic algo impl
+    /**
+     * Find the first FlowNode within the iteration order matching a given condition
+     * @param heads Head nodes to start walking from
+     * @param endNodes
+     * @param matchCondition Predicate to match when we've successfully found a given node type
+     * @return First matching node, or null if no matches found
+     */
     public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
                                            @CheckForNull Collection<FlowNode> endNodes,
                                            Predicate<FlowNode> matchCondition) {
@@ -192,16 +230,19 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     // Polymorphic methods for syntactic sugar
 
+    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is no blackList */
     @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.findFirstMatch(heads, null, matchPredicate);
     }
 
+    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is a single head and no blackList */
     @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.findFirstMatch(Collections.singleton(head), null, matchPredicate);
     }
 
+    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} using {@link FlowExecution#getCurrentHeads()}  to get heads and no blackList */
     @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
         if (exec != null && exec.getCurrentHeads() != null) {
@@ -210,12 +251,18 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return null;
     }
 
-    // Basic algo impl
+    /**
+     * Return a filtered list of {@link FlowNode}s matching a condition, in the order encountered.
+     * @param heads Nodes to start iterating backward from by visiting their parents
+     * @param blackList Nodes we may not visit or walk beyond.
+     * @param matchCondition Predicate that must be met for nodes to be included in output.
+     * @return List of flownodes matching the predicate.
+     */
     @Nonnull
     public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads,
-                                        @CheckForNull Collection<FlowNode> endNodes,
+                                        @CheckForNull Collection<FlowNode> blackList,
                                         Predicate<FlowNode> matchCondition) {
-        if (!setup(heads, endNodes)) {
+        if (!setup(heads, blackList)) {
             return Collections.EMPTY_LIST;
         }
 
@@ -228,21 +275,30 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return nodes;
     }
 
+    /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with no blackList nodes */
     @Nonnull
     public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(heads, null, matchPredicate);
     }
 
+    /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with a single head and no blackList nodes */
     @Nonnull
     public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
     }
 
 
-    /** Used for extracting metrics from the flow graph */
-    @Nonnull
-    public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor) {
-        if (!setup(heads, Collections.EMPTY_SET)) {
+    /**
+     * Given a {@link FlowNodeVisitor}, invoke {@link FlowNodeVisitor#visit(FlowNode)} on each node and halt early if it returns false.
+     *
+     * Useful if you wish to collect some information from every node in the FlowGraph.
+     * To do that, accumulate internal state in the visitor, and invoke a getter when complete.
+     * @param heads Nodes to start walking the DAG backwards from.
+     * @param blackList Nodes we can't visit or pass beyond.
+     * @param visitor Visitor that will see each FlowNode encountered.
+     */
+    public void visitAll(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList, FlowNodeVisitor visitor) {
+        if (!setup(heads, blackList)) {
             return;
         }
         for (FlowNode f : this) {
@@ -251,5 +307,10 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
                 break;
             }
         }
+    }
+
+    /** Syntactic sugar for {@link #visitAll(Collection, FlowNodeVisitor)} where we don't blacklist any nodes */
+    public void visitAll(@CheckForNull Collection<FlowNode> heads, FlowNodeVisitor visitor) {
+        visitAll(heads, null, visitor);
     }
 }

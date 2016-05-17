@@ -34,22 +34,28 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
-/** Does a simple and efficient depth-first search:
- *   - This will visit each node exactly once, and walks through the first ancestry before revisiting parallel branches
+/** Does a simple and somewhat efficient depth-first search of all FlowNodes in the DAG.
+ *
+ *  Iteration order: depth-first search, revisiting parallel branches once done.
+ *  With parallel branches, parents are visited in the order encountered.
+ *
+ * The behavior is analogous to {@link org.jenkinsci.plugins.workflow.graph.FlowGraphWalker} but faster.
  *  @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class DepthFirstScanner extends AbstractFlowScanner {
 
-    protected HashSet<FlowNode> _visited = new HashSet<FlowNode>();
+    protected ArrayDeque<FlowNode> queue;
+
+    protected HashSet<FlowNode> visited = new HashSet<FlowNode>();
 
     protected void reset() {
-        if (this._queue == null) {
-            this._queue = new ArrayDeque<FlowNode>();
+        if (this.queue == null) {
+            this.queue = new ArrayDeque<FlowNode>();
         } else {
-            this._queue.clear();
+            this.queue.clear();
         }
-        this._visited.clear();
-        this._current = null;
+        this.visited.clear();
+        this.current = null;
     }
 
     @Override
@@ -57,11 +63,11 @@ public class DepthFirstScanner extends AbstractFlowScanner {
         Iterator<FlowNode> it = heads.iterator();
         if (it.hasNext()) {
             FlowNode f = it.next();
-            _current = f;
-            _next = f;
+            current = f;
+            next = f;
         }
         while (it.hasNext()) {
-            _queue.add(it.next());
+            queue.add(it.next());
         }
     }
 
@@ -74,23 +80,23 @@ public class DepthFirstScanner extends AbstractFlowScanner {
             if (parents != null) {
                 for (FlowNode f : parents) {
                     // Only ParallelStep nodes may be visited multiple times... but we can't just filter those
-                    // because that's in workflow-cps plugin which depends on this one
-                    if (!blackList.contains(f) && !(f instanceof BlockStartNode && _visited.contains(f))) {
+                    // because that's in workflow-cps plugin which depends on this one.
+                    if (!blackList.contains(f) && !(f instanceof BlockStartNode && visited.contains(f))) {
                         if (output == null ) {
                             output = f;
                         } else {
-                            _queue.push(f);
+                            queue.push(f);
                         }
                     }
                 }
             }
         }
 
-        if (output == null && _queue.size() > 0) {
-            output = _queue.pop();
+        if (output == null && queue.size() > 0) {
+            output = queue.pop();
         }
         if (output instanceof BlockStartNode) {  // See above, best step towards just tracking parallel starts
-            _visited.add(output);
+            visited.add(output);
         }
         return output;
     }

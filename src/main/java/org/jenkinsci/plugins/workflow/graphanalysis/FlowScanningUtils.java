@@ -64,7 +64,7 @@ public class FlowScanningUtils {
         };
     }
 
-    // Default predicates
+    // Default predicates, which may be used for common conditions
     public static final Predicate<FlowNode> MATCH_HAS_LABEL = nodeHasActionPredicate(LabelAction.class);
     public static final Predicate<FlowNode> MATCH_IS_STAGE = nodeHasActionPredicate(StageAction.class);
     public static final Predicate<FlowNode> MATCH_HAS_WORKSPACE = nodeHasActionPredicate(WorkspaceAction.class);
@@ -72,7 +72,15 @@ public class FlowScanningUtils {
     public static final Predicate<FlowNode> MATCH_HAS_LOG = nodeHasActionPredicate(LogAction.class);
     public static final Predicate<FlowNode> MATCH_BLOCK_START = (Predicate)Predicates.instanceOf(BlockStartNode.class);
 
-    public static Filterator<FlowNode> filterableEnclosingBlocks(FlowNode f) {
+    /**
+     * Returns all {@link BlockStartNode}s enclosing the given FlowNode, starting from the inside out.
+     * This is useful if we want to obtain information about its scope, such as the workspace, parallel branch, or label.
+     * Warning: while this is efficient for one node, batch operations are far more efficient when handling many nodes.
+     * @param f {@link FlowNode} to start from.
+     * @return Iterator that returns all enclosing BlockStartNodes from the inside out.
+     */
+    @Nonnull
+    public static Filterator<FlowNode> filterableEnclosingBlocks(@Nonnull FlowNode f) {
         LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
         scanner.setup(f);
         return scanner.filter(MATCH_BLOCK_START);

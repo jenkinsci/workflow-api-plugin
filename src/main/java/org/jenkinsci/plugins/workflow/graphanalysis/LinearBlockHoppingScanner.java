@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
+import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
@@ -33,12 +34,21 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * LinearScanner that jumps over nested blocks
- * Use case: finding information about enclosing blocks or preceding nodes
- *   - Ex: finding out the executor workspace used to run a flownode
- * Caveats:
- *   - If you start on the last node of a completed flow, it will jump straight to start (by design)
- *   - Will only consider the first branch in a parallel case
+ * Extension of {@link LinearScanner} that skips nested blocks at the current level.
+ * ONLY use this with nodes inside the flow graph, never the last node of a completed flow (it will jump over the whole flow).
+ *
+ * This is useful where you only care about {@link FlowNode}s that precede this one or are part of an enclosing scope (within a Block).
+ *
+ * Specifically:
+ *  - Where a {@link BlockEndNode} is encountered, the scanner will jump to the {@link BlockStartNode} and go to its first parent.
+ *  - The only case where you visit branches of a parallel block is if you begin inside it.
+ *
+ * Specific use cases:
+ *   - Finding out the executor workspace used to run a FlowNode
+ *   - Finding the start of the parallel block enclosing the current node
+ *   - Locating the label applying to a given FlowNode (if any)
+ *
+ * TODO Format me into a tidy HTML list
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class LinearBlockHoppingScanner extends LinearScanner {
@@ -46,14 +56,14 @@ public class LinearBlockHoppingScanner extends LinearScanner {
     @Override
     public boolean setup(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList) {
         boolean possiblyStartable = super.setup(heads, blackList);
-        return possiblyStartable && _current != null;  // In case we start at an end block
+        return possiblyStartable && current != null;  // In case we start at an end block
     }
 
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 0) {
-            this._current = jumpBlockScan(heads.iterator().next(), _blackList);
-            this._next = this._current;
+            this.current = jumpBlockScan(heads.iterator().next(), blackList);
+            this.next = this.current;
         }
     }
 

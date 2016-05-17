@@ -32,26 +32,30 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Scans through a single ancestry, does not cover parallel branches
- * Use case: we don't care about parallel branches
+ * Scans through the flow graph in strictly linear fashion, visiting only the first branch in parallel blocks.
  *
- * This is the fastest way to walk a flow, because you only care about a single node
+ * Iteration order: depth-ONLY, meaning we walk through parents and only follow the first parent of each {@link FlowNode}
+ * This means that where are parallel branches, we will only visit a partial set of {@link FlowNode}s in the directed acyclic graph.
+ *
+ * Use case: we don't care about parallel branches or know they don't exist, we just want to walk through the top-level blocks.
+ *
+ * This is the fastest & simplest way to walk a flow, because you only care about a single node at a time.
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class LinearScanner extends AbstractFlowScanner {
 
     @Override
     protected void reset() {
-        this._current = null;
-        this._next = null;
-        this._blackList = Collections.EMPTY_SET;
+        this.current = null;
+        this.next = null;
+        this.blackList = Collections.EMPTY_SET;
     }
 
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 0) {
-            this._current = heads.iterator().next();
-            this._next = this._current;
+            this.current = heads.iterator().next();
+            this.next = this.current;
         }
     }
 

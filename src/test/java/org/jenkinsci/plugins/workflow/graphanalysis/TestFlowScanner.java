@@ -366,7 +366,7 @@ public class TestFlowScanner {
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(5, matches.size());
 
-/*        ArrayList<FlowNode> forkedHeads = new ArrayList<FlowNode>();
+        /*ArrayList<FlowNode> forkedHeads = new ArrayList<FlowNode>();
         forkedHeads.add(exec.getNode("9"));
         forkedHeads.add(exec.getNode("11"));
         matches = scanner.filteredNodes(forkedHeads, null, MATCH_ECHO_STEP);
