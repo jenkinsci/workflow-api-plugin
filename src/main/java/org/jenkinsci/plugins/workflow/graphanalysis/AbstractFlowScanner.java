@@ -46,12 +46,17 @@ import java.util.Set;
  * Scans/analysis of graphs is implemented via internal iteration to allow reusing algorithm bodies
  * However internal iteration has access to additional information
  *
+ * Provides 4 sets of common APIs to use, in decreasing expressiveness and increasing genericness:
+ *   - findFirst - find first node match a predicate
+ *   - filteredNodes - return a collection of nodes filtered by a predicate, between heads(inclusive) and blackList (exclusive)
+ *   - visitor - call a visitor on each node we encounter
+ *   - Iterator/filterator based: FlowNode-by-FlowNode walking, after setup with head/blacklist
+ *
+ *  All operations can start with one or more "head" FlowNodes, and walk back from there, stopping when we hit blackList nodes
+ *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filterator<FlowNode> {
-
-    // State variables, not all need be used
-    protected ArrayDeque<FlowNode> _queue;
 
     protected FlowNode _current;
 
