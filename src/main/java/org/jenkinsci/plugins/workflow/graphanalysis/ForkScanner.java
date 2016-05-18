@@ -316,7 +316,7 @@ public class ForkScanner extends AbstractFlowScanner {
         FlowNode output = null;
 
         if (currentParallelStart != null) {
-            if (--(currentParallelStart.remainingBranches) <= 0) {  // Strip off a completed branch
+            if ((currentParallelStart.remainingBranches--) <= 0) {  // Strip off a completed branch
                 // We finished a nested set of parallel branches, visit the head and move up a level
                 output = currentParallelStartNode;
 
@@ -328,10 +328,6 @@ public class ForkScanner extends AbstractFlowScanner {
                     currentParallelStart = null;
                     currentParallelStartNode = null;
                 }
-            } else { // We're at the top level (so far)
-                currentParallelStart = null;
-                currentParallelStartNode = null;
-                parallelBlockStartStack.pop();
             }
         } else {
             throw new IllegalStateException("Hit a BlockStartNode with multiple children, and no record of the start!");

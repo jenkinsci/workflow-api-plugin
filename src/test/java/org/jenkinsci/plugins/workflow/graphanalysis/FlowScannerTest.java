@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.sun.tools.javac.comp.Flow;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -484,11 +485,15 @@ public class FlowScannerTest {
 
         ForkScanner.ParallelBlockStart start = scanner.currentParallelStart;
         Assert.assertEquals(2, start.totalBranches);
-        Assert.assertEquals(2, start.remainingBranches);
-        Assert.assertEquals(0, start.unvisited.size());
+        Assert.assertEquals(1, start.remainingBranches);
+        Assert.assertEquals(1, start.unvisited.size());
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
 
         Assert.assertEquals(exec.getNode("9"), scanner.next());
-        
+        Assert.assertEquals(exec.getNode("8"), scanner.next());
+        Assert.assertEquals(exec.getNode("6"), scanner.next());
+        FlowNode f = scanner.next();
+        Assert.assertEquals(exec.getNode("12"), f);
+
     }
 }
