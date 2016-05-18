@@ -425,4 +425,70 @@ public class FlowScannerTest {
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(7, matches.size());
     }
+
+    /** Unit tests for the innards of the ForkScanner */
+    @Test
+    public void testForkedScanner() throws Exception {
+
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "Convoluted");
+        job.setDefinition(new CpsFlowDefinition(
+                "echo 'first'\n" +
+                        "def steps = [:]\n" +
+                        "steps['1'] = {\n" +
+                        "    echo 'do 1 stuff'\n" +
+                        "}\n" +
+                        "steps['2'] = {\n" +
+                        "    echo '2a'\n" +
+                        "    echo '2b'\n" +
+                        "}\n" +
+                        "parallel steps\n" +
+                        "echo 'final'"
+        ));
+
+        /** Flow structure (ID - type)
+         2 - FlowStartNode (BlockStartNode)
+         3 - Echostep
+         4 - ParallelStep (StepStartNode) (start branches)
+         6 - ParallelStep (StepStartNode) (start branch 1), ParallelLabelAction with branchname=1
+         7 - ParallelStep (StepStartNode) (start branch 2), ParallelLabelAction with branchname=2
+         8 - EchoStep, (branch 1) parent=6
+         9 - StepEndNode, (end branch 1) startId=6, parentId=8
+         10 - EchoStep, (branch 2) parentId=7
+         11 - EchoStep, (branch 2) parentId = 10
+         12 - StepEndNode (end branch 2)  startId=7  parentId=11,
+         13 - StepEndNode (close branches), parentIds = 9,12, startId=4
+         14 - EchoStep
+         15 - FlowEndNode (BlockEndNode)
+         */
+
+        WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        FlowExecution exec = b.getExecution();
+        Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
+
+        // Initial case
+        ForkScanner scanner = new ForkScanner();
+        scanner.setup(heads, null);
+        Assert.assertNull(scanner.currentParallelStart);
+        Assert.assertNull(scanner.currentParallelStartNode);
+        Assert.assertNotNull(scanner.parallelBlockStartStack);
+        Assert.assertEquals(0, scanner.parallelBlockStartStack.size());
+        Assert.assertTrue(scanner.isWalkingFromFinish());
+
+        // Fork case
+        scanner.setup(exec.getNode("13"));
+        Assert.assertFalse(scanner.isWalkingFromFinish());
+        Assert.assertEquals("13", scanner.next().getId());
+        Assert.assertNotNull(scanner.parallelBlockStartStack);
+        Assert.assertEquals(0, scanner.parallelBlockStartStack.size());
+        Assert.assertEquals(exec.getNode("4"), scanner.currentParallelStartNode);
+
+        ForkScanner.ParallelBlockStart start = scanner.currentParallelStart;
+        Assert.assertEquals(2, start.totalBranches);
+        Assert.assertEquals(2, start.remainingBranches);
+        Assert.assertEquals(0, start.unvisited.size());
+        Assert.assertEquals(exec.getNode("4"), start.forkStart);
+
+        Assert.assertEquals(exec.getNode("9"), scanner.next());
+        
+    }
 }
