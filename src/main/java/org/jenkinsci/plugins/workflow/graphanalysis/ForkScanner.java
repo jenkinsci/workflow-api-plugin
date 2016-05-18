@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
+import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
@@ -38,7 +39,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -60,29 +60,41 @@ import java.util.Set;
  */
 public class ForkScanner extends AbstractFlowScanner {
 
-    /** These are the BlockStartNodes that begin parallel blocks
-     *  There will be one entry for every executing parallel branch in current flow
-     */
-    ArrayDeque<FlowNode> forkStarts = new ArrayDeque<FlowNode>();
+    // Last element in stack is end of myCurrent parallel start, first is myCurrent start
+    ArrayDeque<ParallelBlockStart> parallelBlockStartStack = new ArrayDeque<ParallelBlockStart>();
 
-    /** FlowNode that will terminate the current parallel block */
-    FlowNode currentParallelStart = null;
+    /** FlowNode that will terminate the myCurrent parallel block */
+    FlowNode currentParallelStartNode = null;
 
-    /** How deep are we in parallel branches, if 0 we are linear */
-    protected int parallelDepth = 0;
+    ParallelBlockStart currentParallelStart = null;
+
+    private boolean walkingFromFinish = false;
 
     @Override
     protected void reset() {
-        if (_queue == null) {
-            _queue = new ArrayDeque<FlowNode>();
-        } else {
-            _queue.clear();
-        }
-        forkStarts.clear();
-        parallelDepth =0;
+        parallelBlockStartStack.clear();
         currentParallelStart = null;
-        _current = null;
-        _next = null;
+        currentParallelStartNode = null;
+        myCurrent = null;
+        myNext = null;
+    }
+
+    /** If true, we are walking from the flow end node and have a complete view of the flow */
+    public boolean isWalkingFromFinish() {
+        return walkingFromFinish;
+    }
+
+    /** Tracks state for parallel blocks */
+    protected static class ParallelBlockStart {
+        protected BlockStartNode forkStart; // This is the node with child branches
+        protected int remainingBranches;
+        protected int totalBranches;
+        protected ArrayDeque<FlowNode> unvisited;  // Remaining branches of this that we have have not visited yet
+
+        protected ParallelBlockStart(BlockStartNode forkStart, int branchCount) {
+            this.forkStart = forkStart;
+            this.remainingBranches = branchCount;
+        }
     }
 
     protected static abstract class FlowPiece {
@@ -94,10 +106,6 @@ public class ForkScanner extends AbstractFlowScanner {
         // Bounds for a block
         String startId;
         String endId;
-    }
-
-    protected static class AtomicStep extends FlowPiece {
-
     }
 
     protected static class FlowSegment extends FlowPiece {
@@ -190,12 +198,6 @@ public class ForkScanner extends AbstractFlowScanner {
         }
     }
 
-    /** Endpoint for a fork */
-    protected static class ForkHead {
-        protected FlowNode head;
-        protected int branchCount = 0;
-    }
-
     /** Accumulate all the branch references here, recursively */
     private void addForkRefs(List<ForkRef> refs, Fork myFork, int currentDepth) {
         List<FlowPiece> pieces = myFork.following;
@@ -220,6 +222,8 @@ public class ForkScanner extends AbstractFlowScanner {
      * @param heads
      */
      void leastCommonAncestor(@Nonnull Set<FlowNode> heads) {
+         // FIX ME: nest in the parallel blockstart nodes, as we see further back ones, add them on hte opposite side of pushing
+
         HashMap<FlowNode, FlowPiece> branches = new HashMap<FlowNode, FlowPiece>();
         ArrayList<Filterator<FlowNode>> iterators = new ArrayList<Filterator<FlowNode>>();
         ArrayList<FlowSegment> liveHeads = new ArrayList<FlowSegment>();
@@ -281,6 +285,8 @@ public class ForkScanner extends AbstractFlowScanner {
         Collections.sort(refs);
         // Now we add start points
 
+         // TODO : don't use sorted ForkRef, just applying the ParallelBlockStarts as we go, pushing in the tree levels
+
 
         // FIRST: we visit all nodes on the same level, with the same parent
         // Add refs to an
@@ -294,15 +300,13 @@ public class ForkScanner extends AbstractFlowScanner {
         if (heads.size() > 1) {
             //throw new IllegalArgumentException("ForkedFlowScanner can't handle multiple head nodes yet");
             leastCommonAncestor(new HashSet<FlowNode>(heads));
+            walkingFromFinish = false;
+        } else {
+            FlowNode f = heads.iterator().next();
+            walkingFromFinish = f instanceof FlowEndNode;
+            myCurrent = f;
+            myNext = f;
         }
-        _current = null;
-        _queue.addAll(heads);
-        _current = _queue.poll();
-        _next = _current;
-    }
-
-    public int getParallelDepth() {
-        return parallelDepth;
     }
 
     /**
@@ -310,35 +314,38 @@ public class ForkScanner extends AbstractFlowScanner {
      * @return
      */
     @CheckForNull
-    public FlowNode getCurrentParallelStart() {
-        return currentParallelStart;
+    public FlowNode getCurrentParallelStartNode() {
+        return currentParallelStartNode;
     }
 
     /**
      * Invoked when we start entering a parallel block (walking from head of the flow, so we see the block end first)
      * @param endNode Node where parents merge (final end node for the parallel block)
      * @param parents Parent nodes that end here
-     * @return FlowNode next node to visit
+     * @return FlowNode myNext node to visit
      */
     protected FlowNode hitParallelEnd(BlockEndNode endNode, List<FlowNode> parents, Collection<FlowNode> blackList) {
-        int branchesAdded = 0;
         BlockStartNode start = endNode.getStartNode();
-        FlowNode output = null;
+
+        ArrayDeque<FlowNode> branches = new ArrayDeque<FlowNode>();
         for (FlowNode f : parents) {
             if (!blackList.contains(f)) {
-                // If this is the first fork, we'll walk up it, and then queue up the others
-                if (branchesAdded == 0) {
-                    currentParallelStart = start;
-                    output = f;
-                } else {
-                    _queue.push(f);
-                    forkStarts.push(start);
-                }
-                branchesAdded++;
+                branches.add(f);
             }
         }
-        if (branchesAdded > 0) {
-            parallelDepth++;
+
+        FlowNode output = null;
+        if (branches.size() > 0) { // Push another branch start
+            ParallelBlockStart parallelBlockStart = new ParallelBlockStart(start, branches.size());
+            output = branches.pop();
+            parallelBlockStart.remainingBranches--;
+            parallelBlockStart.unvisited = branches;
+
+            if (currentParallelStart != null) {
+                parallelBlockStartStack.push(currentParallelStart);
+            }
+            currentParallelStart = parallelBlockStart;
+            currentParallelStartNode = start;
         }
         return output;
     }
@@ -349,23 +356,32 @@ public class ForkScanner extends AbstractFlowScanner {
      */
     protected FlowNode hitParallelStart() {
         FlowNode output = null;
-        if (forkStarts.size() > 0) { // More forks (or nested parallel forks) remain
-            FlowNode end = forkStarts.peek();
-            // Nested parallel branches, finished nested level so we visit the head and enclosing parallel block
-            if (end != currentParallelStart) {
-                parallelDepth--;
-                output = currentParallelStart;
-            }
 
-            // If the current end == currentParallelStart then we are finishing another branch of current flow
-            currentParallelStart = end;
-        } else {  // We're now at the top level of the flow, having finished our last (nested) parallel fork
-            output = currentParallelStart;
-            currentParallelStart = null;
-            parallelDepth--;
+        if (currentParallelStart != null) {
+            if (currentParallelStart.remainingBranches-- <= 1) {  // Strip off a completed branch
+                // We finished a nested set of parallel branches, visit the head and move up a level
+                output = currentParallelStartNode;
+
+                if (parallelBlockStartStack.size() > 0) {
+                    // Finished a nested parallel block, move up a level
+                    currentParallelStart = parallelBlockStartStack.pop();
+                    currentParallelStartNode = currentParallelStart.forkStart;
+                } else { // At the top level, not inside any parallel block
+                    currentParallelStart = null;
+                    currentParallelStartNode = null;
+                }
+            }
+            else { // We're at the top
+                currentParallelStart = null;
+                currentParallelStartNode = null;
+                parallelBlockStartStack.pop();
+            }
+        } else {
+            throw new IllegalStateException("Hit a BlockStartNode with multiple children, and no record of the start!");
         }
+
         // Handle cases where the BlockStartNode for the parallel block is blackListed
-        return (output != null && !_blackList.contains(output)) ? output : null;
+        return (output != null && !myBlackList.contains(output)) ? output : null;
     }
 
     @Override
@@ -379,7 +395,7 @@ public class ForkScanner extends AbstractFlowScanner {
                 // welp done with this node, guess we consult the queue?
             } else if (parents.size() == 1) {
                 FlowNode p = parents.get(0);
-                if (p == currentParallelStart) {
+                if (p == currentParallelStartNode) {
                     // Terminating a parallel scan
                     FlowNode temp = hitParallelStart();
                     if (temp != null) { // Startnode for current parallel block now that it is done
@@ -396,12 +412,11 @@ public class ForkScanner extends AbstractFlowScanner {
                     return possibleOutput;
                 }
             } else {
-                throw new IllegalStateException("Found a FlowNode with multiple parents that isn't the end of a block! "+_current.toString());
+                throw new IllegalStateException("Found a FlowNode with multiple parents that isn't the end of a block! "+ this.myCurrent.toString());
             }
         }
-        if (_queue.size() > 0) {
-            output = _queue.pop();
-            currentParallelStart = forkStarts.pop();
+        if (currentParallelStart != null && currentParallelStart.unvisited.size() > 0) {
+            output = currentParallelStart.unvisited.pop();
         }
 
         return output;

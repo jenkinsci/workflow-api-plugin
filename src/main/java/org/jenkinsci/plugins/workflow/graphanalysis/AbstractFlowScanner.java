@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
@@ -37,7 +36,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -84,11 +82,11 @@ import java.util.Set;
  */
 public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filterator<FlowNode> {
 
-    protected FlowNode current;
+    protected FlowNode myCurrent;
 
-    protected FlowNode next;
+    protected FlowNode myNext;
 
-    protected Collection<FlowNode> blackList = Collections.EMPTY_SET;
+    protected Collection<FlowNode> myBlackList = Collections.EMPTY_SET;
 
     /** Helper: convert stop nodes to a collection that can efficiently be checked for membership, handling null if needed */
     @Nonnull
@@ -158,7 +156,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * This method makes several assumptions:
      *
      *   - {@link #reset()} has already been invoked to reset state
-     *   - filteredHeads has already had any points in {@link #blackList} removed
+     *   - filteredHeads has already had any points in {@link #myBlackList} removed
      *   - none of the filteredHeads are null
      * @param filteredHeads Head nodes that have been filtered against blackList
      */
@@ -175,18 +173,18 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     @Override
     public boolean hasNext() {
-        return next != null;
+        return myNext != null;
     }
 
     @Override
     public FlowNode next() {
-        if (next == null) {
+        if (myNext == null) {
             throw new NoSuchElementException();
         }
 
-        current = next;
-        next = next(current, blackList);
-        return current;
+        myCurrent = myNext;
+        myNext = next(myCurrent, myBlackList);
+        return myCurrent;
     }
 
     @Override

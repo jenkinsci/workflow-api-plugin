@@ -34,7 +34,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Extension of {@link LinearScanner} that skips nested blocks at the current level.
+ * Extension of {@link LinearScanner} that skips nested blocks at the myCurrent level.
  * ONLY use this with nodes inside the flow graph, never the last node of a completed flow (it will jump over the whole flow).
  *
  * This is useful where you only care about {@link FlowNode}s that precede this one or are part of an enclosing scope (within a Block).
@@ -56,14 +56,14 @@ public class LinearBlockHoppingScanner extends LinearScanner {
     @Override
     public boolean setup(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList) {
         boolean possiblyStartable = super.setup(heads, blackList);
-        return possiblyStartable && current != null;  // In case we start at an end block
+        return possiblyStartable && myCurrent != null;  // In case we start at an end block
     }
 
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 0) {
-            this.current = jumpBlockScan(heads.iterator().next(), blackList);
-            this.next = this.current;
+            this.myCurrent = jumpBlockScan(heads.iterator().next(), myBlackList);
+            this.myNext = this.myCurrent;
         }
     }
 

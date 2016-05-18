@@ -55,7 +55,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
             this.queue.clear();
         }
         this.visited.clear();
-        this.current = null;
+        this.myCurrent = null;
     }
 
     @Override
@@ -63,8 +63,8 @@ public class DepthFirstScanner extends AbstractFlowScanner {
         Iterator<FlowNode> it = heads.iterator();
         if (it.hasNext()) {
             FlowNode f = it.next();
-            current = f;
-            next = f;
+            myCurrent = f;
+            myNext = f;
         }
         while (it.hasNext()) {
             queue.add(it.next());

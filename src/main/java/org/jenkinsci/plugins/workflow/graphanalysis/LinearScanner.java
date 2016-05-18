@@ -46,16 +46,16 @@ public class LinearScanner extends AbstractFlowScanner {
 
     @Override
     protected void reset() {
-        this.current = null;
-        this.next = null;
-        this.blackList = Collections.EMPTY_SET;
+        this.myCurrent = null;
+        this.myNext = null;
+        this.myBlackList = Collections.EMPTY_SET;
     }
 
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 0) {
-            this.current = heads.iterator().next();
-            this.next = this.current;
+            this.myCurrent = heads.iterator().next();
+            this.myNext = this.myCurrent;
         }
     }
 
