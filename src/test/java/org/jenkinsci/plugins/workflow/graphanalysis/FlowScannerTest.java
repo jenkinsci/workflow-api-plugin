@@ -26,16 +26,10 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.sun.tools.javac.comp.Flow;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.FlowNodeVisitor;
-import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.LinearScanner;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -45,7 +39,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jenkinsci.plugins.workflow.graphanalysis.AbstractFlowScanner;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;

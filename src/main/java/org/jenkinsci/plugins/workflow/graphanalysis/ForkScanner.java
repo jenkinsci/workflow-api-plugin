@@ -101,19 +101,11 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     protected interface FlowPiece {
-        /*long startTime;
-        long endTime;
-        long pauseDuration;
-        String statusCode;
-
-        // Bounds for a block
-        String startId;
-        String endId;*/
+        // Marker interface for now
     }
 
     protected static class FlowSegment implements FlowPiece {
         ArrayList<FlowNode> visited = new ArrayList<FlowNode>();
-        FlowPiece before;
         FlowPiece after;
 
         /**
@@ -135,11 +127,9 @@ public class ForkScanner extends AbstractFlowScanner {
             Fork newFork = new Fork(forkPoint);
             FlowSegment newSegment = new FlowSegment();
             newSegment.after = this.after;
-            newSegment.before = newFork;
             if (visited.size() > index+1) {
                 newSegment.visited.addAll(index+1, visited);
             }
-            newFork.before = this;
             newFork.following.add(forkBranch);
             newFork.following.add(newSegment);
             this.after = newFork;
@@ -159,7 +149,6 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     protected static class Fork extends ParallelBlockStart implements FlowPiece {
-        FlowPiece before;
         List<FlowPiece> following = new ArrayList<FlowPiece>();
 
         public Fork(BlockStartNode forkNode) {

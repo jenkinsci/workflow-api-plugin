@@ -121,7 +121,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         }
 
         reset();
-        blackList = fastEndNodes;
+        myBlackList = fastEndNodes;
         setHeads(filteredHeads);
         return true;
     }
