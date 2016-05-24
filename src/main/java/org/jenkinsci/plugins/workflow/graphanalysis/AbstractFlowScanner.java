@@ -103,6 +103,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     /**
      * Set up for iteration/analysis on a graph of nodes, initializing the internal state
+     * Includes null-checking on arguments to allow directly calling with unchecked inputs (simplifies use).
      * @param heads The head nodes we start walking from (the most recently executed nodes,
      *              i.e. FlowExecution.getCurrentHeads()
      * @param blackList Nodes that we cannot visit or walk past (useful to limit scanning to only nodes after a specific point)
@@ -124,6 +125,16 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         myBlackList = fastEndNodes;
         setHeads(filteredHeads);
         return true;
+    }
+
+    /**
+     * Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to blacklist
+     */
+    public boolean setup(@CheckForNull Collection<FlowNode> heads) {
+        if (heads == null) {
+            return false;
+        }
+        return setup(heads, Collections.EMPTY_SET);
     }
 
     /**
@@ -205,12 +216,13 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      */
     @Override
     @Nonnull
-    public Filterator<FlowNode> filter(Predicate<FlowNode> filterCondition) {
+    public Filterator<FlowNode> filter(@Nonnull Predicate<FlowNode> filterCondition) {
         return new FilteratorImpl<FlowNode>(this, filterCondition);
     }
 
     /**
      * Find the first FlowNode within the iteration order matching a given condition
+     * Includes null-checking on arguments to allow directly calling with unchecked inputs (simplifies use).
      * @param heads Head nodes to start walking from
      * @param endNodes
      * @param matchCondition Predicate to match when we've successfully found a given node type
@@ -257,7 +269,8 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     /**
      * Return a filtered list of {@link FlowNode}s matching a condition, in the order encountered.
-     * @param heads Nodes to start iterating backward from by visiting their parents
+     * Includes null-checking on arguments to allow directly calling with unchecked inputs (simplifies use).
+     * @param heads Nodes to start iterating backward from by visiting their parents.
      * @param blackList Nodes we may not visit or walk beyond.
      * @param matchCondition Predicate that must be met for nodes to be included in output.
      * @return List of flownodes matching the predicate.
@@ -291,9 +304,9 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
     }
 
-
     /**
      * Given a {@link FlowNodeVisitor}, invoke {@link FlowNodeVisitor#visit(FlowNode)} on each node and halt early if it returns false.
+     * Includes null-checking on all but the visitor, to allow directly calling with unchecked inputs (simplifies use).
      *
      * Useful if you wish to collect some information from every node in the FlowGraph.
      * To do that, accumulate internal state in the visitor, and invoke a getter when complete.
