@@ -341,7 +341,7 @@ public class FlowScannerTest {
 
         AbstractFlowScanner scanner = new LinearScanner();
         Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
-        Assert.assertTrue(matches.size() == 3 || matches.size() == 4);  // Depending on ordering
+        Assert.assertEquals(3, matches.size());
 
         scanner = new DepthFirstScanner();
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
