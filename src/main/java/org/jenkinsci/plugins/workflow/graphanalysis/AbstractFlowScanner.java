@@ -89,7 +89,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     protected Collection<FlowNode> myBlackList = Collections.EMPTY_SET;
 
     /** When checking for blacklist membership, we convert to a hashset when checking more than this many elements */
-    protected final int MAX_LIST_CHECK_SIZE = 5;
+    protected static final int MAX_LIST_CHECK_SIZE = 5;
 
     /** Helper: convert stop nodes to a collection that can efficiently be checked for membership, handling null if needed */
     @Nonnull

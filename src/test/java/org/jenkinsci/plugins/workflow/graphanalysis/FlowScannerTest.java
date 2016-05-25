@@ -27,12 +27,10 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -40,7 +38,6 @@ import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import javax.annotation.Nonnull;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,8 +47,14 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.TreeSet;
 
+// Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
+import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
+
+/**
+ * Tests for all the core parts of graph analysis except the ForkScanner, internals which is complex enough to merit its own tests
+ * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ */
 public class FlowScannerTest {
 
     @ClassRule
@@ -59,64 +62,11 @@ public class FlowScannerTest {
 
     @Rule public JenkinsRule r = new JenkinsRule();
 
-    public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {
-        Predicate<FlowNode> outputPredicate = new Predicate<FlowNode>() {
-            @Override
-            public boolean apply(FlowNode input) {
-                if (input instanceof StepAtomNode) {
-                    StepAtomNode san = (StepAtomNode)input;
-                    StepDescriptor sd = san.getDescriptor();
-                    return sd != null && descriptorId.equals(sd.getId());
-                }
-                return false;
-            }
-        };
-        return outputPredicate;
-    }
-
-    Predicate<FlowNode> MATCH_ECHO_STEP = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
-
-    static final class CollectingVisitor implements FlowNodeVisitor {
-        ArrayList<FlowNode> visited = new ArrayList<FlowNode>();
-
-        @Override
-        public boolean visit(@Nonnull FlowNode f) {
-            visited.add(f);
-            return true;
-        }
-
-        public void reset() {
-            this.visited.clear();
-        }
-
-        public ArrayList<FlowNode> getVisited() {
-            return visited;
-        }
-    };
-
-    /** Assert node ordering using their ids */
-    public void assertNodeOrder(String description, Iterable<FlowNode> nodes, String... nodeIds) {
-        ArrayList<String> realIds = new ArrayList<String>();
-        for (FlowNode f: nodes) {
-            Assert.assertNotNull(f);
-            realIds.add(f.getId());
-        }
-        Assert.assertArrayEquals(description, nodeIds, realIds.toArray());
-    }
-
-    /** Assert node ordering using iotas for their ids */
-    public void assertNodeOrder(String description, Iterable<FlowNode> nodes, int... nodeIds) {
-        String[] nodeIdStrings = new String[nodeIds.length];
-        for (int i=0; i<nodeIdStrings.length; i++) {
-            nodeIdStrings[i] = Integer.toString(nodeIds[i]);
-        }
-        assertNodeOrder(description, nodes, nodeIdStrings);
-    }
 
     /** Tests the core logic separately from each implementation's scanner */
     @Test
     public void testAbstractScanner() throws Exception {
-        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "Convoluted");
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "SimpleLinear");
         job.setDefinition(new CpsFlowDefinition(
                 "sleep 2 \n" +
                         "echo 'donothing'\n" +
@@ -225,7 +175,7 @@ public class FlowScannerTest {
 
 
         // Visitor pattern tests
-        CollectingVisitor visitor = new CollectingVisitor();
+        FlowTestUtils.CollectingVisitor visitor = new FlowTestUtils.CollectingVisitor();
         linear.visitAll(Collections.EMPTY_SET, null);
         Assert.assertEquals(0, visitor.getVisited().size());
 
@@ -323,7 +273,7 @@ public class FlowScannerTest {
          */
 
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-        Predicate<FlowNode> matchEchoStep = predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
+        Predicate<FlowNode> matchEchoStep = FlowTestUtils.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
         FlowExecution exec = b.getExecution();
         Collection<FlowNode> heads = exec.getCurrentHeads();
 
@@ -413,16 +363,23 @@ public class FlowScannerTest {
         scanner = new ForkScanner();
         scanner.setup(heads);
         assertNodeOrder("ForkedScanner", scanner, 15, 14, 13, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
+        scanner.setup(heads, Collections.singleton(exec.getNode("9")));
+        assertNodeOrder("ForkedScanner", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
 
-        /*ArrayList<FlowNode> forkedHeads = new ArrayList<FlowNode>();
-        forkedHeads.add(exec.getNode("9"));
-        forkedHeads.add(exec.getNode("11"));
-        matches = scanner.filteredNodes(forkedHeads, null, MATCH_ECHO_STEP);
-        Assert.assertEquals(5, matches.size());*/
+        // Test forkscanner midflow
+        scanner.setup(exec.getNode("14"));
+        assertNodeOrder("ForkedScanner", scanner, 14, 13, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
 
-        // Start in one branch, test the forkscanning
-        Assert.assertEquals(3, scanner.filteredNodes(exec.getNode("12"), MATCH_ECHO_STEP).size());
-        Assert.assertEquals(2, scanner.filteredNodes(exec.getNode("9"), MATCH_ECHO_STEP).size());
+        // Test forkscanner inside a parallel
+        /*
+        List<FlowNode> startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("12"));
+        scanner.setup(startingPoints);
+        assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
+
+        startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("11"));
+        scanner.setup(startingPoints);
+        assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 11, 10, 7, 4, 3, 2);
+        */
 
         // Filtering at different points within branches
         List<FlowNode> blackList = Arrays.asList(exec.getNode("6"), exec.getNode("7"));
@@ -472,74 +429,5 @@ public class FlowScannerTest {
         scanner = new ForkScanner();
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(7, matches.size());
-    }
-
-    /** Unit tests for the innards of the ForkScanner */
-    @Test
-    public void testForkedScanner() throws Exception {
-
-        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "Convoluted");
-        job.setDefinition(new CpsFlowDefinition(
-                "echo 'first'\n" +
-                        "def steps = [:]\n" +
-                        "steps['1'] = {\n" +
-                        "    echo 'do 1 stuff'\n" +
-                        "}\n" +
-                        "steps['2'] = {\n" +
-                        "    echo '2a'\n" +
-                        "    echo '2b'\n" +
-                        "}\n" +
-                        "parallel steps\n" +
-                        "echo 'final'"
-        ));
-
-        /** Flow structure (ID - type)
-         2 - FlowStartNode (BlockStartNode)
-         3 - Echostep
-         4 - ParallelStep (StepStartNode) (start branches)
-         6 - ParallelStep (StepStartNode) (start branch 1), ParallelLabelAction with branchname=1
-         7 - ParallelStep (StepStartNode) (start branch 2), ParallelLabelAction with branchname=2
-         8 - EchoStep, (branch 1) parent=6
-         9 - StepEndNode, (end branch 1) startId=6, parentId=8
-         10 - EchoStep, (branch 2) parentId=7
-         11 - EchoStep, (branch 2) parentId = 10
-         12 - StepEndNode (end branch 2)  startId=7  parentId=11,
-         13 - StepEndNode (close branches), parentIds = 9,12, startId=4
-         14 - EchoStep
-         15 - FlowEndNode (BlockEndNode)
-         */
-
-        WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-        FlowExecution exec = b.getExecution();
-        Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
-
-        // Initial case
-        ForkScanner scanner = new ForkScanner();
-        scanner.setup(heads, null);
-        Assert.assertNull(scanner.currentParallelStart);
-        Assert.assertNull(scanner.currentParallelStartNode);
-        Assert.assertNotNull(scanner.parallelBlockStartStack);
-        Assert.assertEquals(0, scanner.parallelBlockStartStack.size());
-        Assert.assertTrue(scanner.isWalkingFromFinish());
-
-        // Fork case
-        scanner.setup(exec.getNode("13"));
-        Assert.assertFalse(scanner.isWalkingFromFinish());
-        Assert.assertEquals("13", scanner.next().getId());
-        Assert.assertNotNull(scanner.parallelBlockStartStack);
-        Assert.assertEquals(0, scanner.parallelBlockStartStack.size());
-        Assert.assertEquals(exec.getNode("4"), scanner.currentParallelStartNode);
-
-        ForkScanner.ParallelBlockStart start = scanner.currentParallelStart;
-        Assert.assertEquals(2, start.totalBranches);
-        Assert.assertEquals(1, start.remainingBranches);
-        Assert.assertEquals(1, start.unvisited.size());
-        Assert.assertEquals(exec.getNode("4"), start.forkStart);
-
-        Assert.assertEquals(exec.getNode("9"), scanner.next());
-        Assert.assertEquals(exec.getNode("8"), scanner.next());
-        Assert.assertEquals(exec.getNode("6"), scanner.next());
-        FlowNode f = scanner.next();
-        Assert.assertEquals(exec.getNode("12"), f);
     }
 }
