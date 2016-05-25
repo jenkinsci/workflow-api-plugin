@@ -34,9 +34,8 @@ import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
@@ -109,10 +108,10 @@ public class ForkScanner extends AbstractFlowScanner {
         FlowPiece after;
 
         /**
-         * We have discovered a forking node intersecting our FlowSegment in the middle
-         * Now we need to split the flow
+         * We have discovered a forking node intersecting our FlowSegment in the middle or meeting at the end
+         * Now we need to split the flow, or pull out the fork point and make both branches follow it
          * @param nodeMapping Mapping of BlockStartNodes to flowpieces (forks or segments)
-         * @param forkPoint Node where the flows intersec
+         * @param forkPoint Node where the branches intersect/meet
          * @param forkBranch Flow piece that is joining this
          * @return Fork where split occurred
          */
@@ -130,10 +129,7 @@ public class ForkScanner extends AbstractFlowScanner {
                 //   to a new segment and add that to the fork
                 FlowSegment newSegment = new FlowSegment();
                 newSegment.after = this.after;
-
-                if (index < visited.size()) {
-                    newSegment.visited.addAll(this.visited.subList(0, index));
-                }
+                newSegment.visited.addAll(this.visited.subList(0, index));
                 newFork.following.add(newSegment);
                 newFork.following.add(forkBranch);
                 this.after = newFork;
@@ -160,12 +156,6 @@ public class ForkScanner extends AbstractFlowScanner {
 
         public Fork(BlockStartNode forkNode) {
             this.forkStart = forkNode;
-        }
-
-        public ParallelBlockStart toSimple() {
-            ParallelBlockStart st = new ParallelBlockStart();
-
-            return st;
         }
     }
 
@@ -205,6 +195,7 @@ public class ForkScanner extends AbstractFlowScanner {
             start.totalBranches = f.following.size();
             start.forkStart = f.forkStart;
             start.remainingBranches = start.totalBranches;
+            start.unvisited = new ArrayDeque<FlowNode>();
 
             // Add the nodes to the parallel starts here
             for (FlowPiece fp : f.following) {
@@ -212,7 +203,6 @@ public class ForkScanner extends AbstractFlowScanner {
                 if (fp instanceof FlowSegment) {
                     FlowSegment fs = (FlowSegment)fp;
                     if (fs.after == null) { // Ends in a head, not a fork
-                        start.unvisited = new ArrayDeque<FlowNode>();
                         start.unvisited.add(fs.visited.get(0));
                     }
                 }
@@ -273,7 +263,7 @@ public class ForkScanner extends AbstractFlowScanner {
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 1) {
             //throw new IllegalArgumentException("ForkedFlowScanner can't handle multiple head nodes yet");
-            leastCommonAncestor(new HashSet<FlowNode>(heads));
+            leastCommonAncestor(new LinkedHashSet<FlowNode>(heads));
             walkingFromFinish = false;
         } else {
             FlowNode f = heads.iterator().next();

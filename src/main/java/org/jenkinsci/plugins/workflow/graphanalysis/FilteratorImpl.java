@@ -32,7 +32,7 @@ import java.util.Iterator;
 /** Filters an iterator against a match predicate by wrapping an iterator
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public class FilteratorImpl<T> implements Filterator<T> {
+class FilteratorImpl<T> implements Filterator<T> {
     private boolean hasNext = false;
     private T nextVal;
     private Iterator<T> wrapped;

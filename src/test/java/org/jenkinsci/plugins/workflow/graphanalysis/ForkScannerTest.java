@@ -38,8 +38,15 @@ import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.junit.Assert;
 
+import java.lang.reflect.Array;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
 import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
@@ -70,6 +77,31 @@ public class ForkScannerTest {
      15 - FlowEndNode (BlockEndNode)
      */
     WorkflowRun SIMPLE_PARALLEL_RUN;
+
+    /** Parallel nested in parallel (ID-type)
+     * 2 - FlowStartNode (BlockStartNode)
+     * 3 - Echostep
+     * 4 - ParallelStep (stepstartnode)
+     * 6 - ParallelStep (StepStartNode) (start branch 1), ParallelLabelAction with branchname=1
+     * 7 - ParallelStep (StepStartNode) (start branch 2), ParallelLabelAction with branchname=2
+     * 8 - EchoStep (branch #1) - parentId=6
+     * 9 - StepEndNode (end branch #1) - startId=6
+     * 10 - EchoStep - parentId=7
+     * 11 - EchoStep
+     * 12 - ParallelStep (StepStartNode) - start inner parallel
+     * 14 - ParallelStep (StepStartNode) (start branch 2-1), parentId=12, ParallelLabellAction with branchName=2-1
+     * 15 - ParallelStep (StepStartNode) (start branch 2-2), parentId=12, ParallelLabelAction with branchName=2-2
+     * 16 - Echo (Branch2-1), parentId=14
+     * 17 - StepEndNode (end branch 2-1), parentId=16, startId=14
+     * 18 - SleepStep (branch 2-2) parentId=15
+     * 19 - EchoStep (branch 2-2)
+     * 20 - StepEndNode (end branch 2-2), startId=15
+     * 21 - StepEndNode (end inner parallel ), parentIds=17,20, startId=12
+     * 22 - StepEndNode (end parallel #2), parent=21, startId=7
+     * 23 - StepEndNode (end outer parallel), parentIds=9,22, startId=4
+     * 24 - Echo
+     * 25 - FlowEndNode
+     */
     WorkflowRun NESTED_PARALLEL_RUN;
 
     @Before
@@ -251,13 +283,39 @@ public class ForkScannerTest {
     }
 
     @Test
-    public void testBranchMerge() throws Exception {
+    public void testLeastCommonAncestor() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
 
-    }
+        ForkScanner scan = new ForkScanner();
+        // Starts at the ends of the parallel branches
+        Set<FlowNode> heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("12"), exec.getNode("9")));
+        ArrayDeque<ForkScanner.ParallelBlockStart> starts = scan.leastCommonAncestor(heads);
+        Assert.assertEquals(1, starts.size());
 
-    @Test
-    public void testParallelBranchCreation() throws Exception {
+        ForkScanner.ParallelBlockStart start = starts.peek();
+        Assert.assertEquals(2, start.totalBranches);
+        Assert.assertEquals(2, start.unvisited.size());
+        Assert.assertEquals(2, start.remainingBranches);
+        Assert.assertEquals(exec.getNode("4"), start.forkStart);
+        Assert.assertArrayEquals(heads.toArray(), start.unvisited.toArray());
 
+        /** Now we do the same with nested run */
+        exec = NESTED_PARALLEL_RUN.getExecution();
+        heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
+        starts = scan.leastCommonAncestor(heads);
+        Assert.assertEquals(2, starts.size());
+        ForkScanner.ParallelBlockStart inner = starts.getFirst();
+        ForkScanner.ParallelBlockStart outer = starts.getLast();
+
+        Assert.assertEquals(2, inner.remainingBranches);
+        Assert.assertEquals(2, inner.totalBranches);
+        Assert.assertEquals(2, inner.unvisited.size());
+        Assert.assertEquals(exec.getNode("12"), inner.forkStart);
+
+        Assert.assertEquals(2, outer.remainingBranches);
+        Assert.assertEquals(2, outer.totalBranches);
+        Assert.assertEquals(1, outer.unvisited.size());
+        Assert.assertEquals(exec.getNode("9"), outer.unvisited.peek());
+        Assert.assertEquals(exec.getNode("4"), outer.forkStart);
     }
 }

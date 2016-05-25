@@ -359,6 +359,9 @@ public class FlowScannerTest {
         scanner.setup(heads, Collections.singleton(exec.getNode("9")));
         assertNodeOrder("Linear", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
 
+        scanner.setup(Arrays.asList(exec.getNode("9"), exec.getNode("12")));
+        assertNodeOrder("Depth-first scanner from inside parallels", scanner, 9, 8, 6, 4, 3, 2, 12, 11, 10, 7);
+
         // We're going to test the ForkScanner in more depth since this is its natural use
         scanner = new ForkScanner();
         scanner.setup(heads);
@@ -415,12 +418,43 @@ public class FlowScannerTest {
                 "echo 'final'"
         ));
 
+        /** Parallel nested in parallel (ID-type)
+         * 2 - FlowStartNode (BlockStartNode)
+         * 3 - Echostep
+         * 4 - ParallelStep (stepstartnode)
+         * 6 - ParallelStep (StepStartNode) (start branch 1), ParallelLabelAction with branchname=1
+         * 7 - ParallelStep (StepStartNode) (start branch 2), ParallelLabelAction with branchname=2
+         * 8 - EchoStep (branch #1) - parentId=6
+         * 9 - StepEndNode (end branch #1) - startId=6
+         * 10 - EchoStep - parentId=7
+         * 11 - EchoStep
+         * 12 - ParallelStep (StepStartNode) - start inner parallel
+         * 14 - ParallelStep (StepStartNode) (start branch 2-1), parentId=12, ParallelLabellAction with branchName=2-1
+         * 15 - ParallelStep (StepStartNode) (start branch 2-2), parentId=12, ParallelLabelAction with branchName=2-2
+         * 16 - Echo (Branch2-1), parentId=14
+         * 17 - StepEndNode (end branch 2-1), parentId=16, startId=14
+         * 18 - SleepStep (branch 2-2) parentId=15
+         * 19 - EchoStep (branch 2-2)
+         * 20 - StepEndNode (end branch 2-2), startId=15
+         * 21 - StepEndNode (end inner parallel), parentIds=17,20, startId=12
+         * 22 - StepEndNode (end parallel #2), parent=21, startId=7
+         * 23 - StepEndNode (end outer parallel), parentIds=9,22, startId=4
+         * 24 - Echo
+         * 25 - FlowEndNode
+         */
+
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         FlowExecution exec = b.getExecution();
         Collection<FlowNode> heads = b.getExecution().getCurrentHeads();
 
         // Basic test of DepthFirstScanner
         AbstractFlowScanner scanner = new DepthFirstScanner();
+        scanner.setup(heads);
+        /*assertNodeOrder("Depth first with recursion", scanner, 25, 24, 23,
+                9, 8, 6, 4, 3, 2, //Branch 1
+                22,17,16,14, //Branch 2-1
+
+        );*/
         Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(7, matches.size());
 
