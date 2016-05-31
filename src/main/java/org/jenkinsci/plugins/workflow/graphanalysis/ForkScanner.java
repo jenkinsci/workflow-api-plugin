@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.sun.tools.javac.comp.Flow;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
