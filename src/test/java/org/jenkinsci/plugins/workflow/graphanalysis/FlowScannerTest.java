@@ -374,7 +374,7 @@ public class FlowScannerTest {
         assertNodeOrder("ForkedScanner", scanner, 14, 13, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
 
         // Test forkscanner inside a parallel
-        /*
+
         List<FlowNode> startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("12"));
         scanner.setup(startingPoints);
         assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
@@ -382,7 +382,7 @@ public class FlowScannerTest {
         startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("11"));
         scanner.setup(startingPoints);
         assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 11, 10, 7, 4, 3, 2);
-        */
+
 
         // Filtering at different points within branches
         List<FlowNode> blackList = Arrays.asList(exec.getNode("6"), exec.getNode("7"));
@@ -457,5 +457,9 @@ public class FlowScannerTest {
         scanner = new ForkScanner();
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(7, matches.size());
+
+        heads = Arrays.asList(exec.getNode("20"), exec.getNode("17"), exec.getNode("9"));
+        matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
+        Assert.assertEquals(6, matches.size()); // Commented out since temporarily failing
     }
 }
