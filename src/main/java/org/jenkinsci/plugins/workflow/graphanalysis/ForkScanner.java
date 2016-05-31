@@ -42,18 +42,22 @@ import java.util.Set;
 
 /**
  * Scanner that will scan down all forks when we hit parallel blocks before continuing, but generally runs in linear order
- * Think of it as the opposite of {@link DepthFirstScanner}.
+ * <p/>Think of it as the opposite of {@link DepthFirstScanner}.
  *
- * This is a fairly efficient way to visit all FlowNodes, and provides three useful guarantees:
- *   - Every FlowNode is visited, and visited EXACTLY ONCE (not true for LinearScanner)
- *   - All parallel branches are visited before we move past the parallel block (not true for DepthFirstScanner)
- *   - For EVERY block, the BlockEndNode is visited before the BlockStartNode (not true for DepthFirstScanner, with parallels)
+ * <p/>This is a fairly efficient way to visit all FlowNodes, and provides three useful guarantees:
+ * <ul>
+ *   <li>Every FlowNode is visited, and visited EXACTLY ONCE (not true for LinearScanner)</li>
+ *   <li>All parallel branches are visited before we move past the parallel block (not true for DepthFirstScanner)</li>
+ *   <li>For EVERY block, the BlockEndNode is visited before the BlockStartNode (not true for DepthFirstScanner, with parallels)</li>
+ * </ul>
  *
- * The big advantages of this approach:
- *   - Blocks are visited in the order they end (no backtracking) - helps with working a block at a time
- *   - Points are visited in linear order within a block (easy to use for analysis)
- *   - Minimal state information needed
- *   - Branch information is available for use here
+ * <p/>The big advantages of this approach:
+ * <ul>
+ *     <li>Blocks are visited in the order they end (no backtracking) - helps with working a block at a time</li>
+ *     <li>Points are visited in linear order within a block (easy to use for analysis)</li>
+ *     <li>Minimal state information needed</li>
+ *     <li>Branch information is available for use here</li>
+ * </ul>
  *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
@@ -83,7 +87,7 @@ public class ForkScanner extends AbstractFlowScanner {
         return walkingFromFinish;
     }
 
-    /** Tracks state for parallel blocks, so we can ensure all are visited and know the heads */
+    /** Tracks state for parallel blocks, so we can ensure all are visited and know the branch starting point */
     protected static class ParallelBlockStart {
         protected BlockStartNode forkStart; // This is the node with child branches
         protected int remainingBranches;

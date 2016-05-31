@@ -34,21 +34,24 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Extension of {@link LinearScanner} that skips nested blocks at the myCurrent level.
- * ONLY use this with nodes inside the flow graph, never the last node of a completed flow (it will jump over the whole flow).
+ * Extension of {@link LinearScanner} that skips nested blocks at the current level, useful for finding enclosing blocks.
+ *  <strong>ONLY use this with nodes inside the flow graph</strong>, never the last node of a completed flow (it will jump over the whole flow).
  *
- * This is useful where you only care about {@link FlowNode}s that precede this one or are part of an enclosing scope (within a Block).
+ * <p/>This is useful where you only care about {@link FlowNode}s that precede this one or are part of an enclosing scope (within a Block).
  *
- * Specifically:
- *  - Where a {@link BlockEndNode} is encountered, the scanner will jump to the {@link BlockStartNode} and go to its first parent.
- *  - The only case where you visit branches of a parallel block is if you begin inside it.
+ * <p></p>Specifically:
+ *  <ul>
+ *    <li>Where a {@link BlockEndNode} is encountered, the scanner will jump to the {@link BlockStartNode} and go to its first parent.</li>
+ *    <li>The only case where you visit branches of a parallel block is if you begin inside it.</li>
+ *  </ul>
  *
- * Specific use cases:
- *   - Finding out the executor workspace used to run a FlowNode
- *   - Finding the start of the parallel block enclosing the current node
- *   - Locating the label applying to a given FlowNode (if any)
+ * <p/>Specific use cases:
+ * <ul>
+ *   <li>Finding out the executor workspace used to run a FlowNode</li>
+ *   <li>Finding the start of the parallel block enclosing the current node</li>
+ *   <li>Locating the label applying to a given FlowNode (if any)</li>
+ * </ul>
  *
- * TODO Format me into a tidy HTML list
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class LinearBlockHoppingScanner extends LinearScanner {

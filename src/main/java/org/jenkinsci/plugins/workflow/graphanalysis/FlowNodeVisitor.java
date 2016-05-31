@@ -31,7 +31,8 @@ import java.util.Collection;
 
 /**
  * Interface used when examining a pipeline FlowNode graph node by node, and terminating when a condition is met
- * This is intended to couple with {@link AbstractFlowScanner#visitAll(Collection, FlowNodeVisitor)}
+ *
+ * <p/>This is intended to couple with {@link AbstractFlowScanner#visitAll(Collection, FlowNodeVisitor)}
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public interface FlowNodeVisitor {
