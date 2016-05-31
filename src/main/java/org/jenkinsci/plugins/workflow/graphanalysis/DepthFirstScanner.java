@@ -37,7 +37,7 @@ import java.util.List;
 /** Does a simple and somewhat efficient depth-first search of all FlowNodes in the DAG.
  *
  *  Iteration order: depth-first search, revisiting parallel branches once done.
- *  With parallel branches, parents are visited in the order encountered.
+ *  With parallel branches, the first branch is explored, then remaining branches are explored in reverse order.
  *
  * The behavior is analogous to {@link org.jenkinsci.plugins.workflow.graph.FlowGraphWalker} but faster.
  *  @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>

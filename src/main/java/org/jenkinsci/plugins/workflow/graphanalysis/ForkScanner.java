@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.sun.tools.javac.comp.Flow;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
@@ -83,12 +84,12 @@ public class ForkScanner extends AbstractFlowScanner {
         return walkingFromFinish;
     }
 
-    /** Tracks state for parallel blocks */
+    /** Tracks state for parallel blocks, so we can ensure all are visited and know the heads */
     protected static class ParallelBlockStart {
         protected BlockStartNode forkStart; // This is the node with child branches
         protected int remainingBranches;
         protected int totalBranches;
-        protected ArrayDeque<FlowNode> unvisited;  // Remaining branches of this that we have have not visited yet
+        protected ArrayDeque<FlowNode> unvisited = new ArrayDeque<FlowNode>();  // Remaining branches of this that we have have not visited yet
 
         protected ParallelBlockStart(BlockStartNode forkStart, int branchCount) {
             this.forkStart = forkStart;
@@ -99,49 +100,62 @@ public class ForkScanner extends AbstractFlowScanner {
         ParallelBlockStart() {}
     }
 
-    interface FlowPiece {
-        // Marker interface for now, so we don't just inherit from object
+    interface FlowPiece {  // Mostly a marker
+        /** If true we are a leaf, I.E. no forks follow this */
+        boolean isLeaf();
     }
 
+    /** Linear (no parallels) run of FLowNodes */
     static class FlowSegment implements FlowPiece {
         ArrayList<FlowNode> visited = new ArrayList<FlowNode>();
         FlowPiece after;
+        boolean isLeaf = true;
+
+        @Override
+        public boolean isLeaf() {
+            return isLeaf;
+        }
 
         /**
          * We have discovered a forking node intersecting our FlowSegment in the middle or meeting at the end
          * Now we need to split the flow, or pull out the fork point and make both branches follow it
          * @param nodeMapping Mapping of BlockStartNodes to flowpieces (forks or segments)
-         * @param forkPoint Node where the branches intersect/meet
-         * @param forkBranch Flow piece that is joining this
-         * @return Fork where split occurred
+         * @param joinPoint Node where the branches intersect/meet (fork point)
+         * @param joiningBranch Flow piece that is joining this
+         * @return Recreated fork
          */
-        public Fork split(@Nonnull HashMap<FlowNode, FlowPiece> nodeMapping, @Nonnull BlockStartNode forkPoint, @Nonnull FlowPiece forkBranch) {
-            int index = visited.lastIndexOf(forkPoint);  // Fork will be closer to end, so this is better than indexOf
-            Fork newFork = new Fork(forkPoint);
+        Fork split(@Nonnull HashMap<FlowNode, FlowPiece> nodeMapping, @Nonnull BlockStartNode joinPoint, @Nonnull FlowPiece joiningBranch) {
+            int index = visited.lastIndexOf(joinPoint);  // Fork will be closer to end, so this is better than indexOf
+            Fork newFork = new Fork(joinPoint);
+
+            // FIXME fork following fork with no segment! --- 30 May fixed, I think?
             if (index < 0) {
                 throw new IllegalStateException("Tried to split a segment where the node doesn't exist in this segment");
-            } else if (index == this.visited.size()-1) { // We forked just off the end
+            } else if (index == this.visited.size()-1) { // We forked just off the most recent node
                 newFork.following.add(this);
-                newFork.following.add(forkBranch);
+                newFork.following.add(joiningBranch);
                 this.visited.remove(index);
+            } else if (index == 0) {
+                throw new IllegalStateException("We have a cyclic graph somehow!?");
             } else { // Splitting at some midpoint within the segment, everything before becomes part of the following
                 // Execute the split: create a new fork at the fork point, and shuffle the part of the flow after it
-                //   to a new segment and add that to the fork
+                //   to a new segment and add that to the fork.
+
                 FlowSegment newSegment = new FlowSegment();
                 newSegment.after = this.after;
                 newSegment.visited.addAll(this.visited.subList(0, index));
                 newFork.following.add(newSegment);
-                newFork.following.add(forkBranch);
+                newFork.following.add(joiningBranch);
                 this.after = newFork;
+                this.isLeaf = false;
 
                 // Remove the part before the fork point
-
                 this.visited.subList(0, index+1).clear();
                 for (FlowNode n : newSegment.visited) {
                     nodeMapping.put(n, newSegment);
                 }
             }
-            nodeMapping.put(forkPoint, newFork);
+            nodeMapping.put(joinPoint, newFork);
             return newFork;
         }
 
@@ -154,34 +168,13 @@ public class ForkScanner extends AbstractFlowScanner {
     static class Fork extends ParallelBlockStart implements FlowPiece {
         List<FlowPiece> following = new ArrayList<FlowPiece>();
 
+        @Override
+        public boolean isLeaf() {
+            return false;
+        }
+
         public Fork(BlockStartNode forkNode) {
             this.forkStart = forkNode;
-        }
-    }
-
-    /** Subcomponent of least-common-ancestor: check for merge of branches
-     *  Pulled out to allow for unit testing, and to simplify logic.
-     *
-     *  Basically this looks to see if a branch intersects an existing one (where a node points to an existing FlowPiece)
-     *  If they intersect, the branch is merged onto the existing one, splitting it and creating a fork if needed.
-     *  Otherwise, it gets a new FlowNode added in
-     *  @return true if the next node from myPiece merged with an existing branch, false if we just added another head
-     */
-    boolean checkForMerge(final HashMap<FlowNode, FlowPiece> branches, FlowSegment myPiece, FlowNode nextHead, ArrayDeque<Fork> parallelForks) {
-        FlowPiece existingBranch = branches.get(nextHead);
-        if (existingBranch != null) { // Joining into an existing branch
-            // Found a case where they converge, replace with a convergent branch
-            if (existingBranch instanceof Fork) {  // Joining an existing fork with other branches
-                Fork f = (Fork) existingBranch;
-                f.following.add(myPiece);
-            } else {  // We've hit a new fork, split the segment and add it to top the parallels (it's higher than previous ones)
-                parallelForks.add((((FlowSegment) existingBranch).split(branches, (BlockStartNode) nextHead, myPiece)));
-            }
-            return true;
-        } else {
-            myPiece.add(nextHead);
-            branches.put(nextHead, myPiece);
-            return false;
         }
     }
 
@@ -200,11 +193,8 @@ public class ForkScanner extends AbstractFlowScanner {
             // Add the nodes to the parallel starts here
             for (FlowPiece fp : f.following) {
                 // FIXME do something with the remainingCounts to ensure we don't hit issues with primitive branches
-                if (fp instanceof FlowSegment) {
-                    FlowSegment fs = (FlowSegment)fp;
-                    if (fs.after == null) { // Ends in a head, not a fork
-                        start.unvisited.add(fs.visited.get(0));
-                    }
+                if (fp.isLeaf()) { // Forks are never leaves
+                    start.unvisited.add(((FlowSegment)fp).visited.get(0));
                 }
             }
             output.add(start);
@@ -214,13 +204,14 @@ public class ForkScanner extends AbstractFlowScanner {
 
     /**
      * Given a set of nodes, walks back (jumping blocks) and constructing the hierarchy of branches
+     * Back to the least common ancestor (where parallel branches diverge)
      * This allows us to use ForkScanner when starting with heads that are parallel branches
      * @param heads
      */
     ArrayDeque<ParallelBlockStart> leastCommonAncestor(@Nonnull Set<FlowNode> heads) {
         HashMap<FlowNode, FlowPiece> branches = new HashMap<FlowNode, FlowPiece>();
         ArrayList<Filterator<FlowNode>> iterators = new ArrayList<Filterator<FlowNode>>();
-        ArrayList<FlowSegment> liveHeads = new ArrayList<FlowSegment>();
+        ArrayList<FlowPiece> liveHeads = new ArrayList<FlowPiece>();
 
         ArrayDeque<Fork> parallelForks = new ArrayDeque<Fork>();  // Tracks the discovered forks in order of encounter
 
@@ -235,21 +226,48 @@ public class ForkScanner extends AbstractFlowScanner {
         // Walk through, merging flownodes one-by-one until everything has merged to one ancestor
         while (iterators.size() > 1) {
             ListIterator<Filterator<FlowNode>> itIterator = iterators.listIterator();
-            ListIterator<FlowSegment> pieceIterator = liveHeads.listIterator();
+            ListIterator<FlowPiece> pieceIterator = liveHeads.listIterator();
 
             while (itIterator.hasNext()) {
-                Filterator<FlowNode> blockStarts = itIterator.next();
-                FlowSegment myPiece = pieceIterator.next();
+                Filterator<FlowNode> blockStartIterator = itIterator.next();
+                FlowPiece myPiece = pieceIterator.next();
 
                 // Welp we hit the end of a branch
-                if (!blockStarts.hasNext()) {
+                if (!blockStartIterator.hasNext()) {
                     pieceIterator.remove();
                     itIterator.remove();
                     continue;
                 }
 
-                boolean didMerge = checkForMerge(branches, myPiece, blockStarts.next(), parallelForks);
-                if (didMerge) {
+                FlowNode nextBlockStart = blockStartIterator.next();
+
+                // THIS WAS ALL IN THE CHECKFORMERGE function call
+                FlowPiece existingPiece = branches.get(nextBlockStart);
+                if (existingPiece == null && myPiece instanceof Fork) {  // Start a segment preceding the fork
+                    FlowSegment newSegment = new FlowSegment();
+                    newSegment.isLeaf = false;
+                    newSegment.add(nextBlockStart);
+                    newSegment.after = myPiece;
+                    pieceIterator.remove();
+                    pieceIterator.add(newSegment);
+                    branches.put(nextBlockStart, newSegment);
+                } else if (existingPiece == null && myPiece instanceof FlowSegment) { // Add to segment
+                    ((FlowSegment) myPiece).add(nextBlockStart);
+                    branches.put(nextBlockStart, myPiece);
+                } else {  // We're merging into another thing, remove this entry, we're done. DONE!
+                    if (existingPiece instanceof Fork) {
+                        ((Fork) existingPiece).following.add(myPiece);
+                    } else { // Split a flow segment so it forks against this one
+                        Fork f = ((FlowSegment) existingPiece).split(branches, (BlockStartNode)nextBlockStart, myPiece);
+                        // If we split the existing segment at its end, we created a fork replacing its latest node
+                        // Thus we must replace the piece with the fork ahead of it
+                        if (f.following.contains(existingPiece) ) {
+                            int headIndex = liveHeads.indexOf(existingPiece);
+                            liveHeads.set(headIndex, f);
+                        }
+                        parallelForks.add(f);
+                    }
+
                     itIterator.remove();
                     pieceIterator.remove();
                 }
@@ -264,7 +282,7 @@ public class ForkScanner extends AbstractFlowScanner {
         if (heads.size() > 1) {
             //throw new IllegalArgumentException("ForkedFlowScanner can't handle multiple head nodes yet");
             leastCommonAncestor(new LinkedHashSet<FlowNode>(heads));
-            walkingFromFinish = false;
+            walkingFromFinish = false;// FIXME do something with the remainingCounts to ensure we don't hit issues with primitive branches
         } else {
             FlowNode f = heads.iterator().next();
             walkingFromFinish = f instanceof FlowEndNode;

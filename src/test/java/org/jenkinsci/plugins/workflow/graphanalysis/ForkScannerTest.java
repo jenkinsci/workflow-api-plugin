@@ -189,6 +189,7 @@ public class ForkScannerTest {
         // Now we test the least common ancestor bits
     }
 
+    /** Reference the flow graphs in {@link #SIMPLE_PARALLEL_RUN} and {@link #NESTED_PARALLEL_RUN} */
     @Test
     public void testFlowSegmentSplit() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
@@ -282,9 +283,11 @@ public class ForkScannerTest {
         Assert.assertEquals(sideBranch, nodeMap.get(exec.getNode("7")));
     }
 
+    /** Reference the flow graphs in {@link #SIMPLE_PARALLEL_RUN} and {@link #NESTED_PARALLEL_RUN} */
     @Test
     public void testLeastCommonAncestor() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
+
 
         ForkScanner scan = new ForkScanner();
         // Starts at the ends of the parallel branches
@@ -302,6 +305,8 @@ public class ForkScannerTest {
         /** Now we do the same with nested run */
         exec = NESTED_PARALLEL_RUN.getExecution();
         heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
+
+        // Problem: we get a parallel start with the same flowsegment in the following for more than one parallel start
         starts = scan.leastCommonAncestor(heads);
         Assert.assertEquals(2, starts.size());
         ForkScanner.ParallelBlockStart inner = starts.getFirst();

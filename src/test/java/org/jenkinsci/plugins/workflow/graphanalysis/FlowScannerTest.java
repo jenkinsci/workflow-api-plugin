@@ -449,12 +449,6 @@ public class FlowScannerTest {
 
         // Basic test of DepthFirstScanner
         AbstractFlowScanner scanner = new DepthFirstScanner();
-        scanner.setup(heads);
-        /*assertNodeOrder("Depth first with recursion", scanner, 25, 24, 23,
-                9, 8, 6, 4, 3, 2, //Branch 1
-                22,17,16,14, //Branch 2-1
-
-        );*/
         Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(7, matches.size());
 

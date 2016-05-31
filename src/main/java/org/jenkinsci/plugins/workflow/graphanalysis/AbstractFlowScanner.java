@@ -54,13 +54,14 @@ import java.util.Set;
  *   - {@link Filterator}: If initialized as an Iterator, each FlowScanner can provide a filtered view from the current point in time.
  *   - Iterable: for syntactic sugar, FlowScanners implement Iterable to allow use in for-each loops once initialized.
  *
- * All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #blackList} nodes (exclusive) or reach the end of the DAG.
+ * All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #myBlackList} nodes (exclusive) or reach the end of the DAG.
  * If blackList nodes are an empty collection or null, APIs will walk to the beginning of the FlowGraph.
  * Multiple blackList nodes are helpful for putting separate bounds on walking different parallel branches.
  *
  * Key Points:
  *   - There are many helper methods offering syntactic sugar for the above APIs in common use cases (simpler method signatures).
- *   - Each implementation provides its own iteration order (described in its javadoc comments).
+ *   - Each implementation provides its own iteration order (described in its javadoc comments),
+ *     but it is generally unsafe to rely on parallel branches being visited in a specific order.
  *   - Implementations may visit some or all points in the DAG, this should be called out in the class's javadoc comments
  *   - FlowScanners are NOT thread safe, for performance reasons and because it is too hard to guarantee.
  *   - Many fields and methods are protected: this is intentional to allow building upon the implementations for more complex analyses.
