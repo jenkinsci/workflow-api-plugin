@@ -330,7 +330,7 @@ public class ForkScanner extends AbstractFlowScanner {
 
     /**
      * Return the node that begins the current parallel head
-     * @return
+     * @return The FlowNode that marks current parallel start
      */
     @CheckForNull
     public FlowNode getCurrentParallelStartNode() {
