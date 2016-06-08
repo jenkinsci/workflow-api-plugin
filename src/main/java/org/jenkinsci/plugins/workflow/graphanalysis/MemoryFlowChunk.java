@@ -82,6 +82,10 @@ public class MemoryFlowChunk implements FlowChunk, Timeable {
         return chunkType;
     }
 
+    public void setChunkType(ChunkType type) {
+        this.chunkType = type;
+    }
+
     public FlowNode getFirstNode() {
         return firstNode;
     }
