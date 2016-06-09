@@ -26,8 +26,10 @@ package org.jenkinsci.plugins.workflow.pickles;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import hudson.FilePath;
+import hudson.Util;
 
 import java.io.Serializable;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 
 /**
  * Handle value objects to replace another stateful objects that cannot be serialized on its own,
@@ -36,12 +38,27 @@ import java.io.Serializable;
  * @author Kohsuke Kawaguchi
  */
 public abstract class Pickle implements Serializable {
+
+    @Deprecated
+    public ListenableFuture<?> rehydrate() {
+        return rehydrate(FlowExecutionOwner.dummyOwner());
+    }
+
     /**
      * Start preparing rehydration of this value, and when it's ready or fail, report that to the
      * given call.
      * An implementation should return quickly and avoid acquiring locks in this method itself (as opposed to the future).
+     * {@link ListenableFuture#cancel} should be implemented if possible.
+     * @param owner an owner handle on which you may, for example, call {@link FlowExecutionOwner#getListener}
      */
-    public abstract ListenableFuture<?> rehydrate();
+    public ListenableFuture<?> rehydrate(FlowExecutionOwner owner) {
+        if (Util.isOverridden(Pickle.class, getClass(), "rehydrate")) {
+            return rehydrate();
+        } else {
+            throw new AbstractMethodError(getClass().getName() + " must implement rehydrate");
+        }
+    }
 
     private static final long serialVersionUID = 1L;
+
 }
