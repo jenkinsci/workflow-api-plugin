@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
@@ -440,5 +441,48 @@ public class ForkScanner extends AbstractFlowScanner {
             currentParallelStart.remainingBranches--;
         }
         return output;
+    }
+
+    public void visitBlocks(@CheckForNull List<FlowNode> heads, @Nonnull SimpleBlockVisitor visitor) {
+        if (!setup(heads)) {
+            return;
+        }
+
+        FlowNode previous = null;
+        FlowNode current = null;
+        FlowNode next = this.next();
+
+        if (hasNext()) {
+            current = next;
+            next = this.next();
+        } else {
+            return; // No block here
+        }
+
+        while (this.hasNext()) {
+            if (current instanceof BlockEndNode) {
+                visitor.blockEnd(current, next, this);
+            } else if (current instanceof BlockStartNode) {
+                visitor.blockStart(current, previous, this);
+            } else {
+                visitor.atomNode(current, this);
+            }
+
+            previous = current;
+            current = next;
+            next = next();
+        }
+
+        previous = current;
+        current = next;
+        next = null;
+
+        if (current instanceof BlockEndNode) {
+            visitor.blockEnd(current, next, this);
+        } else if (current instanceof BlockStartNode) {
+            visitor.blockStart(current, previous, this);
+        } else {
+            visitor.atomNode(current, this);
+        }
     }
 }

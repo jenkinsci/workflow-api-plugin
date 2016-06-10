@@ -28,6 +28,7 @@ public interface FlowChunkStorage <CHUNKBASETYPE extends FlowChunk> {
     @Nonnull
     public CHUNKBASETYPE configureChunk(@Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode);
 
+    // TODO add API for parallel
 
     /** Returns the container */
     @Nonnull
