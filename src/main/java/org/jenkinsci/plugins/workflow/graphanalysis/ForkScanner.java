@@ -443,6 +443,18 @@ public class ForkScanner extends AbstractFlowScanner {
         return output;
     }
 
+    public void visitAdvanced(@CheckForNull List<FlowNode> heads, @Nonnull AdvancedVisitor visitor) {
+        if (!setup(heads)) {
+            return;
+        }
+        for (FlowNode f : this) {
+            boolean canContinue = visitor.visitSpecial(f, this);
+            if (!canContinue) {
+                break;
+            }
+        }
+    }
+
     public void visitBlocks(@CheckForNull List<FlowNode> heads, @Nonnull SimpleBlockVisitor visitor) {
         if (!setup(heads)) {
             return;
