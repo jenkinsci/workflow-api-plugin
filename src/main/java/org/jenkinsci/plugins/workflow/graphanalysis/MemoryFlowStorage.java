@@ -36,6 +36,22 @@ public class MemoryFlowStorage implements FlowChunkStorage<MemoryFlowChunk> {
 
     @Nonnull
     @Override
+    public MemoryFlowChunk createParallelChunk() {
+        return new ParallelMemoryFlowChunk();
+    }
+
+    @Nonnull
+    @Override
+    public MemoryFlowChunk addBranchToParallel(@Nonnull MemoryFlowChunk parallelContainer, String branchName, MemoryFlowChunk branch) {
+        if (! (parallelContainer instanceof ParallelMemoryFlowChunk)) {
+            throw new IllegalArgumentException("Can't add a parallel branch to a container that is not a ParallelMemoryFlowStorage");
+        }
+        ((ParallelMemoryFlowChunk)parallelContainer).setBranch(branchName, branch);
+        return parallelContainer;
+    }
+
+    @Nonnull
+    @Override
     public MemoryFlowChunk finalizeChunk(@Nonnull MemoryFlowChunk chunk) {
         return chunk;
     }

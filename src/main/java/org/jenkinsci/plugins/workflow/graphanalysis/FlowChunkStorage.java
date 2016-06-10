@@ -22,7 +22,11 @@ public interface FlowChunkStorage <CHUNKBASETYPE extends FlowChunk> {
     @Nonnull
     public CHUNKBASETYPE setStatus(@Nonnull CHUNKBASETYPE chunk, boolean isExecuted, boolean isErrored, boolean isComplete);
 
-    // TODO parallel and arbitrary run blocks
+    @Nonnull
+    public CHUNKBASETYPE createParallelChunk();  // Return type must implement ParallelFlowChunk
+
+    @Nonnull
+    public CHUNKBASETYPE addBranchToParallel(@Nonnull CHUNKBASETYPE parallelContainer, String branchName, CHUNKBASETYPE branch);
 
     /** Complete analysis of chunk and return it (chunk may be contained in other things but never modified further) */
     @Nonnull
@@ -38,6 +42,8 @@ public interface FlowChunkStorage <CHUNKBASETYPE extends FlowChunk> {
     /** Returns the container */
     @Nonnull
     public CHUNKBASETYPE addBlockInside(@Nonnull CHUNKBASETYPE container, @Nonnull CHUNKBASETYPE content);
+
+    // TODO adder API for chunks
 
     /** Returns the container */
     @Nonnull
