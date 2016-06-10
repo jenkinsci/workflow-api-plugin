@@ -61,6 +61,7 @@ public class MemoryFlowChunk implements FlowChunk, Timeable {
         return lastNode;
     }
 
+
     @Nonnull
     @Override
     public String getFirstNodeId() {
@@ -74,7 +75,7 @@ public class MemoryFlowChunk implements FlowChunk, Timeable {
 
     @Override
     public boolean isComplete() {
-        return false;
+        return isComplete;
     }
 
     @Override

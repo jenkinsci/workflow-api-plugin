@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import javax.annotation.Nonnull;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +33,7 @@ import java.util.Map;
  * Corresponds to a parallel block, does some customization to compute the timing with parallel branches
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public class ParallelMemoryFlowChunk extends MemoryFlowChunk {
+public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements ParallelFlowChunk {
     private HashMap<String, MemoryFlowChunk> branches = new HashMap<String, MemoryFlowChunk>();
 
     @Override
@@ -58,6 +57,8 @@ public class ParallelMemoryFlowChunk extends MemoryFlowChunk {
         branches.put(branchName, branchBlock);
     }
 
+    @Override
+    @Nonnull
     public Map<String,MemoryFlowChunk> getBranches() {
         return Collections.unmodifiableMap(branches);
     }

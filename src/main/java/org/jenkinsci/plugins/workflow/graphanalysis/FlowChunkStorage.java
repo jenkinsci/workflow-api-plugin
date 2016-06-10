@@ -19,6 +19,9 @@ public interface FlowChunkStorage <CHUNKBASETYPE extends FlowChunk> {
     @Nonnull
     public CHUNKBASETYPE createBlockChunk(@Nonnull FlowNode blockStart, @CheckForNull FlowNode blockEnd);
 
+    @Nonnull
+    public CHUNKBASETYPE setStatus(@Nonnull CHUNKBASETYPE chunk, boolean isExecuted, boolean isErrored, boolean isComplete);
+
     // TODO parallel and arbitrary run blocks
 
     /** Complete analysis of chunk and return it (chunk may be contained in other things but never modified further) */
@@ -26,9 +29,7 @@ public interface FlowChunkStorage <CHUNKBASETYPE extends FlowChunk> {
     public CHUNKBASETYPE finalizeChunk(@Nonnull CHUNKBASETYPE chunk);
 
     @Nonnull
-    public CHUNKBASETYPE configureChunk(@Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode);
-
-    // TODO add API for parallel
+    public CHUNKBASETYPE configureChunk(@Nonnull CHUNKBASETYPE chunk, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode);
 
     /** Returns the container */
     @Nonnull
