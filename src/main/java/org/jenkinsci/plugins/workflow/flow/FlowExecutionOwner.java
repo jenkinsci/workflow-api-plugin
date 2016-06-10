@@ -35,6 +35,7 @@ import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.TransientActionFactory;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 /**
  * We need something that's serializable in small moniker that helps us find THE instance
@@ -109,6 +110,10 @@ public abstract class FlowExecutionOwner implements Serializable {
     @Override
     public abstract int hashCode();
 
+    /**
+     * Gets a listener to which we may print general messages.
+     * Normally {@link StepContext#get} should be used, but in some cases there is no associated step.
+     */
     public @Nonnull TaskListener getListener() throws IOException {
         return TaskListener.NULL;
     }
