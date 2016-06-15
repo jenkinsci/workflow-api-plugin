@@ -183,9 +183,9 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     @Override
                     public void onFailure(Throwable t) {
                         if (t instanceof CancellationException) {
-                            LOGGER.log(Level.FINE, "cancelled load of " + e, t);
+                            LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
                         } else {
-                            LOGGER.log(WARNING, "failed to load " + e, t);
+                            LOGGER.log(WARNING, "Failed to load " + e, t);
                         }
                     }
                 });
