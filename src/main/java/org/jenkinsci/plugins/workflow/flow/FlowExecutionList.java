@@ -19,9 +19,11 @@ import org.jenkinsci.plugins.workflow.steps.StepExecutionIterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.CancelledKeyException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -167,7 +169,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
         @Override
         public void onLoaded() {
-            for (FlowExecution e : list) {
+            for (final FlowExecution e : list) {
                 LOGGER.log(FINE, "Eager loading {0}", e);
                 Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                     @Override
@@ -180,7 +182,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
                     @Override
                     public void onFailure(Throwable t) {
-                        LOGGER.log(WARNING, null, t);
+                        if (t instanceof CancellationException) {
+                            LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
+                        } else {
+                            LOGGER.log(WARNING, "Failed to load " + e, t);
+                        }
                     }
                 });
             }
