@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.XmlFile;
 import hudson.init.Terminator;
 import hudson.model.listeners.ItemListener;
@@ -19,7 +20,6 @@ import org.jenkinsci.plugins.workflow.steps.StepExecutionIterator;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.channels.CancelledKeyException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -151,11 +151,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     private static final Logger LOGGER = Logger.getLogger(FlowExecutionList.class.getName());
 
     public static FlowExecutionList get() {
-        Jenkins j = Jenkins.getInstance();
-        if (j == null) { // might be called during shutdown
-            return new FlowExecutionList();
+        FlowExecutionList l = ExtensionList.lookup(FlowExecutionList.class).get(FlowExecutionList.class);
+        if (l == null) { // might be called during shutdown
+            l = new FlowExecutionList();
         }
-        return j.getInjector().getInstance(FlowExecutionList.class);
+        return l;
     }
 
     /**
