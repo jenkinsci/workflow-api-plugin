@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.flow;
 
 import hudson.model.Queue;
 import hudson.model.Run;
+import hudson.model.TaskListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -34,6 +35,7 @@ import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.TransientActionFactory;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 /**
  * We need something that's serializable in small moniker that helps us find THE instance
@@ -100,13 +102,21 @@ public abstract class FlowExecutionOwner implements Serializable {
      * {@link FlowExecutionOwner}s are equal to one another if and only if
      * they point to the same {@link FlowExecution} object.
      */
-    public abstract boolean equals(Object o);
+    @Override public abstract boolean equals(Object o);
 
     /**
      * Needs to be overridden as the {@link #equals(Object)} method is overridden.
      */
     @Override
     public abstract int hashCode();
+
+    /**
+     * Gets a listener to which we may print general messages.
+     * Normally {@link StepContext#get} should be used, but in some cases there is no associated step.
+     */
+    public @Nonnull TaskListener getListener() throws IOException {
+        return TaskListener.NULL;
+    }
 
     /**
      * Marker interface for queue executables from {@link #getExecutable}.
@@ -120,6 +130,35 @@ public abstract class FlowExecutionOwner implements Serializable {
          */
         @CheckForNull FlowExecutionOwner asFlowExecutionOwner();
 
+    }
+
+    /**
+     * A placeholder implementation for use in compatibility stubs.
+     */
+    public static FlowExecutionOwner dummyOwner() {
+        return new DummyOwner();
+    }
+
+    private static class DummyOwner extends FlowExecutionOwner {
+        DummyOwner() {}
+        @Override public FlowExecution get() throws IOException {
+            throw new IOException("not implemented");
+        }
+        @Override public File getRootDir() throws IOException {
+            throw new IOException("not implemented");
+        }
+        @Override public Queue.Executable getExecutable() throws IOException {
+            throw new IOException("not implemented");
+        }
+        @Override public String getUrl() throws IOException {
+            throw new IOException("not implemented");
+        }
+        @Override public boolean equals(Object o) {
+            return o instanceof DummyOwner;
+        }
+        @Override public int hashCode() {
+            return 0;
+        }
     }
 
 }
