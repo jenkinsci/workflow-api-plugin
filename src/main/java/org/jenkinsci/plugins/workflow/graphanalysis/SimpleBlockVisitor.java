@@ -33,7 +33,12 @@ import javax.annotation.Nonnull;
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public interface SimpleBlockVisitor {
+    /** Called when hitting the start of a block */
     public void blockStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
+
+    /** Called when hitting the end of a block */
     public void blockEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterBlock, @Nonnull ForkScanner scanner);
+
+    /** Called when encountering a node inside a block (may be the implicit outer block though) */
     public void atomNode(@Nonnull FlowNode node, @Nonnull ForkScanner scan);
 }

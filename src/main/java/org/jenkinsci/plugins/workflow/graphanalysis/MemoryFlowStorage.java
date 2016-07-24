@@ -36,7 +36,7 @@ public class MemoryFlowStorage implements FlowChunkStorage<MemoryFlowChunk> {
 
     @Nonnull
     @Override
-    public MemoryFlowChunk createParallelChunk() {
+    public ParallelMemoryFlowChunk createParallelChunk() {
         return new ParallelMemoryFlowChunk();
     }
 

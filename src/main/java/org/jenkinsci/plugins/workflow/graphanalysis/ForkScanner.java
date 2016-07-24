@@ -443,6 +443,24 @@ public class ForkScanner extends AbstractFlowScanner {
         return output;
     }
 
+    /**
+     * Sample call:
+     *   <code>
+     *       ForkScanner scan = new ForkScanner();
+     *       ApiResponseObject output = new ApiResponseObject(); // Implements FlowChunkStorage and builds up a DAG response
+     *       AdvancedVisitor visit = new AdvancedVisitor(output);
+     *       scan.visitAdvanced(flowExecution.getCurrentHeads(), visit);
+     *       return output; // Configured response object
+     *       //OR
+     *       return output.getGraphObject();
+     *
+     *       Alternately:
+     *       return visit.getMarkedChunks(); // List of \<FlowChunk\> that might be stages if you like
+     *
+     *   </code>
+     * @param heads
+     * @param visitor
+     */
     public void visitAdvanced(@CheckForNull List<FlowNode> heads, @Nonnull AdvancedVisitor visitor) {
         if (!setup(heads)) {
             return;

@@ -74,7 +74,7 @@ public class MemoryFlowChunk implements FlowChunk, Timeable {
     }
 
     @Override
-    public boolean isComplete() {
+    public boolean isBalancedBlock() {
         return isComplete;
     }
 

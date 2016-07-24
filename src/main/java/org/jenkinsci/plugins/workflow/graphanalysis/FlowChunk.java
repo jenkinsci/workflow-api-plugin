@@ -31,22 +31,33 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * Represents one or more FlowNodes in a linear sequence
+ * Common container interface for a series of {@link FlowNode}s with a logical start and end.
+ * <p/><p/> We use this because every plugin has a different way of storing info about the nodes.
  *
  * <p/> Common uses:
  * <ul>
- *     <li>A single FlowNode</li>
+ *     <li>A single FlowNode (when coupling with timing/status APIs)</li>
  *     <li>A block (with a {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} and {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode})</li>
- *     <li>A Stage or other arbitrary run of nodes with a beginning and end, determined by a marker </li>
+ *     <li>A linear run of marked nodes (such as a legacy stage)</li>
+ *     <li>A parallel block (special case of block)</li>
+ *     <li>A parallel branch within a parallel block</li>
+ *     <li>A mix of types in sequence, such as nested structures</li>
  * </ul>
+ *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public interface FlowChunk {
 
+    /** Since libraries have radically different internal storage, we need a way to distinguish what type a chunk is
+     *  We might replace this with marker interfaces or boolean flags about types.
+     */
     public enum ChunkType {
         NODE, // single node
         BLOCK, // block with a BlockStartNode and BlockEndNode
-        ARBITRARY // Random chunk of data
+        LINEAR, // stage is this, or something else with a marker
+        PARALLEL_BRANCH,
+        PARALLEL_BLOCK,
+        MIXED // Random chunk of data
     }
 
     /**
@@ -61,6 +72,7 @@ public interface FlowChunk {
     /**
      * Retrieve the end node for the block
      * @param execution
+     * @throws IllegalArgumentException If the start node is not part of the execution given
      * @return Null if still in progress
      */
     @Nonnull
@@ -73,7 +85,7 @@ public interface FlowChunk {
     public String getLastNodeId();
 
     /** True if block is finished */
-    public boolean isComplete();
+    public boolean isBalancedBlock();
 
     @Nonnull
     public ChunkType getChunkType();
