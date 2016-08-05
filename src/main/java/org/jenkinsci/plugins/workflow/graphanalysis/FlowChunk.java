@@ -47,46 +47,9 @@ import javax.annotation.Nonnull;
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public interface FlowChunk {
-
-    /** Since libraries have radically different internal storage, we need a way to distinguish what type a chunk is
-     *  We might replace this with marker interfaces or boolean flags about types.
-     */
-    public enum ChunkType {
-        NODE, // single node
-        BLOCK, // block with a BlockStartNode and BlockEndNode
-        LINEAR, // stage is this, or something else with a marker
-        PARALLEL_BRANCH,
-        PARALLEL_BLOCK,
-        MIXED // Random chunk of data
-    }
-
-    /**
-     * Retrieve the starting node
-     * @param execution Execution for the start and end nodes
-     * @throws IllegalArgumentException If the start node is not part of the execution given
-     * @return
-     */
     @Nonnull
-    public FlowNode getFirstNode(FlowExecution execution);
-
-    /**
-     * Retrieve the end node for the block
-     * @param execution
-     * @throws IllegalArgumentException If the start node is not part of the execution given
-     * @return Null if still in progress
-     */
-    @Nonnull
-    public FlowNode getLastNode(FlowExecution execution);
+    public FlowNode getFirstNode();
 
     @Nonnull
-    public String getFirstNodeId();
-
-    @Nonnull
-    public String getLastNodeId();
-
-    /** True if block is finished */
-    public boolean isBalancedBlock();
-
-    @Nonnull
-    public ChunkType getChunkType();
+    public FlowNode getLastNode();
 }

@@ -23,6 +23,7 @@
  */
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
@@ -33,12 +34,27 @@ import javax.annotation.Nonnull;
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public interface SimpleBlockVisitor {
+
+
+    @Nonnull
+    public Predicate<FlowNode> getChunkStartPredicate();
+
+    @Nonnull
+    public Predicate<FlowNode> getChunkEndPredicate();
+
     /** Called when hitting the start of a block */
-    public void blockStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
+    public void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
 
     /** Called when hitting the end of a block */
-    public void blockEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterBlock, @Nonnull ForkScanner scanner);
+    public void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterBlock, @Nonnull ForkScanner scanner);
 
-    /** Called when encountering a node inside a block (may be the implicit outer block though) */
-    public void atomNode(@Nonnull FlowNode node, @Nonnull ForkScanner scan);
+    /**
+     * Called for a flownode within the chunk that is neither start nor end.
+     * Ways you may want to use this: accumulate pause time, collect errors, etc.
+     * @param before Node before the current
+     * @param atomNode The node itself
+     * @param after Node after the current
+     * @param scan Reference to our forkscanner, if we want to poke at the state within
+     */
+    public void atomNode(@CheckForNull FlowNode before, @Nonnull FlowNode atomNode, @CheckForNull FlowNode after, @Nonnull ForkScanner scan);
 }

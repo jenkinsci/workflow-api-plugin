@@ -4,14 +4,14 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * Flowchunk that has parallel branches
+ * FlowChunk that has parallel branches
  */
-public interface ParallelFlowChunk extends FlowChunk {
+public interface ParallelFlowChunk <ChunkType extends FlowChunk> extends FlowChunk  {
 
     /** Returns the branches of a parallel flow chunk, mapped by branch name and parallel branch block */
     @Nonnull
-    public Map<String, ? extends FlowChunk> getBranches();
+    public Map<String, ChunkType> getBranches();
 
     @Nonnull
-    public void setBranch(@Nonnull String branchName, @Nonnull MemoryFlowChunk branchBlock);
+    public void setBranch(@Nonnull String branchName, @Nonnull ChunkType branchBlock);
 }

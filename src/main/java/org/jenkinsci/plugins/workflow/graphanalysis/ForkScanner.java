@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import org.jenkinsci.plugins.workflow.actions.NotExecutedNodeAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
@@ -443,36 +442,6 @@ public class ForkScanner extends AbstractFlowScanner {
         return output;
     }
 
-    /**
-     * Sample call:
-     *   <code>
-     *       ForkScanner scan = new ForkScanner();
-     *       ApiResponseObject output = new ApiResponseObject(); // Implements FlowChunkStorage and builds up a DAG response
-     *       AdvancedVisitor visit = new AdvancedVisitor(output);
-     *       scan.visitAdvanced(flowExecution.getCurrentHeads(), visit);
-     *       return output; // Configured response object
-     *       //OR
-     *       return output.getGraphObject();
-     *
-     *       Alternately:
-     *       return visit.getMarkedChunks(); // List of \<FlowChunk\> that might be stages if you like
-     *
-     *   </code>
-     * @param heads
-     * @param visitor
-     */
-    public void visitAdvanced(@CheckForNull List<FlowNode> heads, @Nonnull AdvancedVisitor visitor) {
-        if (!setup(heads)) {
-            return;
-        }
-        for (FlowNode f : this) {
-            boolean canContinue = visitor.visitSpecial(f, this);
-            if (!canContinue) {
-                break;
-            }
-        }
-    }
-
     public void visitBlocks(@CheckForNull List<FlowNode> heads, @Nonnull SimpleBlockVisitor visitor) {
         if (!setup(heads)) {
             return;
@@ -491,11 +460,11 @@ public class ForkScanner extends AbstractFlowScanner {
 
         while (this.hasNext()) {
             if (current instanceof BlockEndNode) {
-                visitor.blockEnd(current, next, this);
+                visitor.chunkEnd(current, next, this);
             } else if (current instanceof BlockStartNode) {
-                visitor.blockStart(current, previous, this);
+                visitor.chunkStart(current, previous, this);
             } else {
-                visitor.atomNode(current, this);
+                visitor.atomNode(next, current, previous, this);
             }
 
             previous = current;
@@ -508,11 +477,11 @@ public class ForkScanner extends AbstractFlowScanner {
         next = null;
 
         if (current instanceof BlockEndNode) {
-            visitor.blockEnd(current, next, this);
+            visitor.chunkEnd(current, next, this);
         } else if (current instanceof BlockStartNode) {
-            visitor.blockStart(current, previous, this);
+            visitor.chunkStart(current, previous, this);
         } else {
-            visitor.atomNode(current, this);
+            visitor.atomNode(next, current, previous, this);
         }
     }
 }

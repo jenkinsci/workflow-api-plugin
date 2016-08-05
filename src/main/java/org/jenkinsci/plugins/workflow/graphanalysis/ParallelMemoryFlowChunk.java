@@ -24,6 +24,9 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
+
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,27 +36,14 @@ import java.util.Map;
  * Corresponds to a parallel block, does some customization to compute the timing with parallel branches
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements ParallelFlowChunk {
+public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements ParallelFlowChunk<MemoryFlowChunk> {
     private HashMap<String, MemoryFlowChunk> branches = new HashMap<String, MemoryFlowChunk>();
 
-    @Override
-    public void setPauseDurationMillis(long pauseDurationMillis) {
-        throw new UnsupportedOperationException("Can't set pause duration for a parallel block, since it is determined by branches");
-    }
-
-    @Override
-    public void setChunkType(ChunkType type) {
-        throw new UnsupportedOperationException("Parallel chunk types are always block types, cannot override");
-    }
-
-    public ChunkType getChunkType() {
-        return ChunkType.BLOCK;
+    public ParallelMemoryFlowChunk(@CheckForNull FlowNode nodeBefore, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
+        super (nodeBefore,firstNode, lastNode, nodeAfter);
     }
 
     public void setBranch(@Nonnull String branchName, @Nonnull MemoryFlowChunk branchBlock) {
-        if (branchBlock.getChunkType() != ChunkType.BLOCK) {
-            throw new IllegalArgumentException("All parallel branches must be blocks");
-        }
         branches.put(branchName, branchBlock);
     }
 
@@ -63,15 +53,4 @@ public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements Parallel
         return Collections.unmodifiableMap(branches);
     }
 
-    @Override
-    public long getPauseDurationMillis() {
-        if (branches.size() == 0) {
-            return 0;
-        }
-        long longestPause = 0;
-        for (Map.Entry<String, MemoryFlowChunk> branch : branches.entrySet()) {
-            longestPause = Math.max(longestPause, branch.getValue().getPauseDurationMillis());
-        }
-        return longestPause;
-    }
 }

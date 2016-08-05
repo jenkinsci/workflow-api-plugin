@@ -24,69 +24,31 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * FlowChunk that holds direct references to the {@link FlowNode} instances
+ * FlowChunk that holds direct references to the {@link FlowNode} instances and context info
  * This makes it easy to use in analysis and visualizations, but inappropriate to retain in caches, etc
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public class MemoryFlowChunk implements FlowChunk, Timeable {
-
+public class MemoryFlowChunk implements FlowChunkWithContext {
     private FlowNode firstNode;
     private FlowNode lastNode;
-    private ChunkType chunkType;
-    private boolean isComplete = false;
+    private FlowNode nodeBefore;
+    private FlowNode nodeAfter;
 
-    private long startTimeMillis;
-    private long endTimeMillis;
-    private long durationMillis;
-    private long pauseDurationMillis;
-
-    public MemoryFlowChunk() {
-
+    public MemoryFlowChunk(@CheckForNull FlowNode before, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
+        this.setNodeBefore(before);
+        this.setFirstNode(firstNode);
+        this.setLastNode(lastNode);
+        this.setNodeAfter(lastNode);
     }
 
     @Nonnull
     @Override
-    public FlowNode getFirstNode(FlowExecution execution) {
-        return firstNode;
-    }
-
-    @Override
-    public FlowNode getLastNode(FlowExecution execution) {
-        return lastNode;
-    }
-
-
-    @Nonnull
-    @Override
-    public String getFirstNodeId() {
-        return firstNode.getId();
-    }
-
-    @Override
-    public String getLastNodeId() {
-        return lastNode.getId();
-    }
-
-    @Override
-    public boolean isBalancedBlock() {
-        return isComplete;
-    }
-
-    @Override
-    public ChunkType getChunkType() {
-        return chunkType;
-    }
-
-    public void setChunkType(ChunkType type) {
-        this.chunkType = type;
-    }
-
     public FlowNode getFirstNode() {
         return firstNode;
     }
@@ -95,6 +57,8 @@ public class MemoryFlowChunk implements FlowChunk, Timeable {
         this.firstNode = firstNode;
     }
 
+    @Nonnull
+    @Override
     public FlowNode getLastNode() {
         return lastNode;
     }
@@ -103,43 +67,21 @@ public class MemoryFlowChunk implements FlowChunk, Timeable {
         this.lastNode = lastNode;
     }
 
-    public void setIsComplete(boolean isComplete) {
-        this.isComplete = isComplete;
+    @Override
+    public FlowNode getNodeBefore() {
+        return nodeBefore;
+    }
+
+    public void setNodeBefore(FlowNode nodeBefore) {
+        this.nodeBefore = nodeBefore;
     }
 
     @Override
-    public long getStartTimeMillis() {
-        return startTimeMillis;
+    public FlowNode getNodeAfter() {
+        return nodeAfter;
     }
 
-    public void setStartTimeMillis(long startTimeMillis) {
-        this.startTimeMillis = startTimeMillis;
-    }
-
-    @Override
-    public long getEndTimeMillis() {
-        return endTimeMillis;
-    }
-
-    public void setEndTimeMillis(long endTimeMillis) {
-        this.endTimeMillis = endTimeMillis;
-    }
-
-    @Override
-    public long getDurationMillis() {
-        return durationMillis;
-    }
-
-    public void setDurationMillis(long durationMillis) {
-        this.durationMillis = durationMillis;
-    }
-
-    @Override
-    public long getPauseDurationMillis() {
-        return pauseDurationMillis;
-    }
-
-    public void setPauseDurationMillis(long pauseDurationMillis) {
-        this.pauseDurationMillis = pauseDurationMillis;
+    public void setNodeAfter(FlowNode nodeAfter) {
+        this.nodeAfter = nodeAfter;
     }
 }
