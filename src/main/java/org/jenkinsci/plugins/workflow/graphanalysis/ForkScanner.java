@@ -441,47 +441,4 @@ public class ForkScanner extends AbstractFlowScanner {
         }
         return output;
     }
-
-    public void visitBlocks(@CheckForNull List<FlowNode> heads, @Nonnull SimpleBlockVisitor visitor) {
-        if (!setup(heads)) {
-            return;
-        }
-
-        FlowNode previous = null;
-        FlowNode current = null;
-        FlowNode next = this.next();
-
-        if (hasNext()) {
-            current = next;
-            next = this.next();
-        } else {
-            return; // No block here
-        }
-
-        while (this.hasNext()) {
-            if (current instanceof BlockEndNode) {
-                visitor.chunkEnd(current, next, this);
-            } else if (current instanceof BlockStartNode) {
-                visitor.chunkStart(current, previous, this);
-            } else {
-                visitor.atomNode(next, current, previous, this);
-            }
-
-            previous = current;
-            current = next;
-            next = next();
-        }
-
-        previous = current;
-        current = next;
-        next = null;
-
-        if (current instanceof BlockEndNode) {
-            visitor.chunkEnd(current, next, this);
-        } else if (current instanceof BlockStartNode) {
-            visitor.chunkStart(current, previous, this);
-        } else {
-            visitor.atomNode(next, current, previous, this);
-        }
-    }
 }

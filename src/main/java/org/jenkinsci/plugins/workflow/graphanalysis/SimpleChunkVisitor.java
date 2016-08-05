@@ -30,16 +30,40 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * Splits a flow into chunks. What is done with these chunks is 100% up to the consumer.
+ * This visitor's callbacks are invoked as we walk through a pipeline flow graph, and it splits it into chunks.
+ * The {@link FlowChunker} uses the split methods & holds state needed convert the {@link ForkScanner}'s API to invoke these right.
+ *
+ * <p/><h3>Determining how we split into chunk.</h3>
+ * <ul>
+ *     <li>{@link #getChunkStartPredicate()} Provides the condition marking the beginning of a chunk we care about</li>
+ *     <li>{@link #getChunkEndPredicate()} Provides the condition to mark a node as ending a chunk we care about</li>
+ * </ul>
+ *
+ * Think of it as a finite state machine: we're either in a chunk or not.
+ *
+ * <p/><h3>Callbacks Reporting on chunk/parallel information:</h3>
+ * <ul>
+ *     <li>{@link #chunkStart(FlowNode, FlowNode, ForkScanner)} is called when we hit start of a boundary</li>
+ *     <li>{@link #chunkEnd(FlowNode, FlowNode, ForkScanner)} is called when we hit end of a boundary</li>
+ *     <li>{@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} is called, used to gather information within a chunk</li>
+ *     <li>All the parallel methods are used to report on parallel status - helpful when we need to deal with parallels internal to chunks.</li>
+ * </ul>
+ *
+ * <p/> Start/Stop predicates may both trigger on the same node (in which case end is invoked first).
+ * For example with marker nodes like the legacy stage.
+ *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public interface SimpleBlockVisitor {
+public interface SimpleChunkVisitor {
 
     @Nonnull
     public Predicate<FlowNode> getChunkStartPredicate();
 
     @Nonnull
     public Predicate<FlowNode> getChunkEndPredicate();
+
+    /** If true, we create an implicit chunk when starting out and don't wait for end condition */
+    public boolean startInsideChunk();
 
     /** Called when hitting the start of a block */
     public void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
@@ -53,9 +77,9 @@ public interface SimpleBlockVisitor {
     /** Notifies that we've seen the end of a parallel block*/
     public void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
 
-    public void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
+    public void parallelBranchStart(@Nonnull String branchName, @Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
 
-    public void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
+    public void parallelBranchEnd(@Nonnull String branchName, @Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
 
     /**
      * Called for a flownode within the chunk that is neither start nor end.
