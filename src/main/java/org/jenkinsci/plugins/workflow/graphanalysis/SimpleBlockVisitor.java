@@ -30,11 +30,10 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * Block handling mechanism
+ * Splits a flow into chunks. What is done with these chunks is 100% up to the consumer.
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public interface SimpleBlockVisitor {
-
 
     @Nonnull
     public Predicate<FlowNode> getChunkStartPredicate();
@@ -47,6 +46,16 @@ public interface SimpleBlockVisitor {
 
     /** Called when hitting the end of a block */
     public void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterBlock, @Nonnull ForkScanner scanner);
+
+    /** Notifies that we've seen a new parallel block */
+    public void parallelStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchNode, @Nonnull ForkScanner scanner);
+
+    /** Notifies that we've seen the end of a parallel block*/
+    public void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
+
+    public void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
+
+    public void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
 
     /**
      * Called for a flownode within the chunk that is neither start nor end.
