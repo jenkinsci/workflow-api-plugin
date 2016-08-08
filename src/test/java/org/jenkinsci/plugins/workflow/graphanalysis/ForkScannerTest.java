@@ -24,7 +24,10 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
+import org.jenkinsci.plugins.workflow.cps.steps.ParallelStep;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -149,6 +152,13 @@ public class ForkScannerTest {
         this.NESTED_PARALLEL_RUN = b;
     }
 
+    public static Predicate<FlowNode> PARALLEL_START_PREDICATE = new Predicate<FlowNode>() {
+        @Override
+        public boolean apply(FlowNode input) {
+            return input != null && input instanceof StepStartNode && (((StepStartNode) input).getDescriptor().getClass() == ParallelStep.DescriptorImpl.class);
+        }
+    };
+
     @Test
     public void testForkedScanner() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
@@ -157,6 +167,7 @@ public class ForkScannerTest {
         // Initial case
         ForkScanner scanner = new ForkScanner();
         scanner.setup(heads, null);
+        ForkScanner.setParallelStartPredicate(PARALLEL_START_PREDICATE);
         Assert.assertNull(scanner.currentParallelStart);
         Assert.assertNull(scanner.currentParallelStartNode);
         Assert.assertNotNull(scanner.parallelBlockStartStack);
@@ -166,6 +177,8 @@ public class ForkScannerTest {
         // Fork case
         scanner.setup(exec.getNode("13"));
         Assert.assertFalse(scanner.isWalkingFromFinish());
+        Assert.assertEquals(null, scanner.currentType);
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.nextType);
         Assert.assertEquals("13", scanner.next().getId());
         Assert.assertNotNull(scanner.parallelBlockStartStack);
         Assert.assertEquals(0, scanner.parallelBlockStartStack.size());
@@ -178,9 +191,17 @@ public class ForkScannerTest {
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
 
         Assert.assertEquals(exec.getNode("9"), scanner.next());
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.getCurrentType());
+        Assert.assertEquals(ForkScanner.NodeType.NORMAL, scanner.getNextType());
         Assert.assertEquals(exec.getNode("8"), scanner.next());
+        Assert.assertEquals(ForkScanner.NodeType.NORMAL, scanner.getCurrentType());
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_START, scanner.getNextType());
         Assert.assertEquals(exec.getNode("6"), scanner.next());
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_START, scanner.getCurrentType());
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.getNextType());
         FlowNode f = scanner.next();
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.getCurrentType());
+        Assert.assertEquals(ForkScanner.NodeType.NORMAL, scanner.getNextType());
         Assert.assertEquals(exec.getNode("12"), f);
 
         // Now we test the least common ancestor bits

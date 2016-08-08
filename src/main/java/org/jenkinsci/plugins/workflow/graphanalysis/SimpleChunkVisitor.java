@@ -54,32 +54,32 @@ import javax.annotation.Nonnull;
  *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public interface SimpleChunkVisitor {
+interface SimpleChunkVisitor {
 
     @Nonnull
-    public Predicate<FlowNode> getChunkStartPredicate();
+    Predicate<FlowNode> getChunkStartPredicate();
 
     @Nonnull
-    public Predicate<FlowNode> getChunkEndPredicate();
+    Predicate<FlowNode> getChunkEndPredicate();
 
     /** If true, we create an implicit chunk when starting out and don't wait for end condition */
-    public boolean startInsideChunk();
+    boolean startInsideChunk();
 
     /** Called when hitting the start of a block */
-    public void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
+    void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
 
     /** Called when hitting the end of a block */
-    public void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterBlock, @Nonnull ForkScanner scanner);
+    void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterBlock, @Nonnull ForkScanner scanner);
 
     /** Notifies that we've seen a new parallel block */
-    public void parallelStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchNode, @Nonnull ForkScanner scanner);
+    void parallelStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchNode, @Nonnull ForkScanner scanner);
 
     /** Notifies that we've seen the end of a parallel block*/
-    public void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
+    void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
 
-    public void parallelBranchStart(@Nonnull String branchName, @Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
+    void parallelBranchStart(@Nonnull String branchName, @Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
 
-    public void parallelBranchEnd(@Nonnull String branchName, @Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
+    void parallelBranchEnd(@Nonnull String branchName, @Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
 
     /**
      * Called for a flownode within the chunk that is neither start nor end.
@@ -89,5 +89,5 @@ public interface SimpleChunkVisitor {
      * @param after Node after the current
      * @param scan Reference to our forkscanner, if we want to poke at the state within
      */
-    public void atomNode(@CheckForNull FlowNode before, @Nonnull FlowNode atomNode, @CheckForNull FlowNode after, @Nonnull ForkScanner scan);
+    void atomNode(@CheckForNull FlowNode before, @Nonnull FlowNode atomNode, @CheckForNull FlowNode after, @Nonnull ForkScanner scan);
 }

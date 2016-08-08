@@ -30,6 +30,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -37,7 +38,9 @@ import java.util.Map;
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements ParallelFlowChunk<MemoryFlowChunk> {
-    private HashMap<String, MemoryFlowChunk> branches = new HashMap<String, MemoryFlowChunk>();
+
+    // LinkedHashMap to preserve insert order
+    private LinkedHashMap<String, MemoryFlowChunk> branches = new LinkedHashMap<String, MemoryFlowChunk>();
 
     public ParallelMemoryFlowChunk(@CheckForNull FlowNode nodeBefore, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
         super (nodeBefore,firstNode, lastNode, nodeAfter);

@@ -24,6 +24,9 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
@@ -63,6 +66,23 @@ import java.util.Set;
  */
 public class ForkScanner extends AbstractFlowScanner {
 
+    public NodeType getCurrentType() {
+        return currentType;
+    }
+
+    public NodeType getNextType() {
+        return nextType;
+    }
+
+    /** Used to recognize special nodes */
+    public enum NodeType {
+        NORMAL,
+        PARALLEL_START,
+        PARALLEL_END,
+        PARALLEL_BRANCH_START,
+        PARALLEL_BRANCH_END,
+    }
+
     // Last element in stack is end of myCurrent parallel start, first is myCurrent start
     ArrayDeque<ParallelBlockStart> parallelBlockStartStack = new ArrayDeque<ParallelBlockStart>();
 
@@ -73,6 +93,9 @@ public class ForkScanner extends AbstractFlowScanner {
 
     private boolean walkingFromFinish = false;
 
+    protected NodeType currentType;
+    protected NodeType nextType;
+
     @Override
     protected void reset() {
         parallelBlockStartStack.clear();
@@ -80,6 +103,26 @@ public class ForkScanner extends AbstractFlowScanner {
         currentParallelStartNode = null;
         myCurrent = null;
         myNext = null;
+    }
+
+    // A bit of a dirty hack, but it works around the fact that we need trivial access to classes from workflow-cps
+    // For this and only this test. So, we load them from a context that is aware of them.
+    // Ex: workflow-cps can automatically set this correctly. Not perfectly graceful but it works.
+    private static Predicate<FlowNode> parallelStartPredicate = Predicates.alwaysFalse();
+
+    // Invoke this passing a test against the ParallelStep conditions
+    public static void setParallelStartPredicate(@Nonnull Predicate<FlowNode> pred) {
+        parallelStartPredicate = pred;
+    }
+
+    // Needed because the *next* node might be a parallel start if we start in middle and we don't know it
+    public static boolean isParallelStart(@CheckForNull FlowNode f) {
+        return parallelStartPredicate.apply(f);
+    }
+
+    // Needed because the *next* node might be a parallel end and we don't know it from a normal one
+    public static boolean isParallelEnd(@CheckForNull FlowNode f) {
+        return f != null && f instanceof BlockEndNode && isParallelStart(((BlockEndNode) f).getStartNode());
     }
 
     /** If true, we are walking from the flow end node and have a complete view of the flow */
@@ -318,6 +361,7 @@ public class ForkScanner extends AbstractFlowScanner {
             currentParallelStartNode = currentParallelStart.forkStart;
             myCurrent = currentParallelStart.unvisited.pop();
             myNext = myCurrent;
+            nextType = NodeType.PARALLEL_BRANCH_END;
             currentParallelStart.remainingBranches--;
             walkingFromFinish = false;
         } else {
@@ -325,7 +369,15 @@ public class ForkScanner extends AbstractFlowScanner {
             walkingFromFinish = f instanceof FlowEndNode;
             myCurrent = f;
             myNext = f;
+            if (isParallelEnd(f)) {
+                nextType = NodeType.PARALLEL_BRANCH_END;
+            } else if (isParallelStart(f)) {
+                nextType = NodeType.PARALLEL_START;
+            } else {
+                nextType = NodeType.NORMAL;
+            }
         }
+        currentType = null;
     }
 
     /**
@@ -406,6 +458,13 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     @Override
+    public FlowNode next() {
+        currentType = nextType;
+        FlowNode output = super.next();
+        return output;
+    }
+
+    @Override
     protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
         FlowNode output = null;
 
@@ -419,9 +478,15 @@ public class ForkScanner extends AbstractFlowScanner {
                 // Terminating a parallel scan
                 FlowNode temp = hitParallelStart();
                 if (temp != null) { // Start node for current parallel block now that it is done
+                    nextType = NodeType.PARALLEL_START;
                     return temp;
                 }
             } else if (!blackList.contains(p)) {
+                if (p instanceof BlockStartNode && p.getAction(ThreadNameAction.class) != null) {
+                    nextType = NodeType.PARALLEL_BRANCH_START;
+                } else {
+                    nextType = NodeType.NORMAL;
+                }
                 return p;
             }
         } else if (current instanceof BlockEndNode && parents.size() > 1) {
@@ -429,6 +494,7 @@ public class ForkScanner extends AbstractFlowScanner {
             BlockEndNode end = ((BlockEndNode) current);
             FlowNode possibleOutput = hitParallelEnd(end, parents, blackList); // What if output is block but other branches aren't?
             if (possibleOutput != null) {
+                nextType = NodeType.PARALLEL_BRANCH_END;
                 return possibleOutput;
             }
         } else {
@@ -437,7 +503,11 @@ public class ForkScanner extends AbstractFlowScanner {
 
         if (currentParallelStart != null && currentParallelStart.unvisited.size() > 0) {
             output = currentParallelStart.unvisited.pop();
+            nextType = NodeType.PARALLEL_BRANCH_END;
             currentParallelStart.remainingBranches--;
+        }
+        if (output == null) {
+            nextType = null;
         }
         return output;
     }
