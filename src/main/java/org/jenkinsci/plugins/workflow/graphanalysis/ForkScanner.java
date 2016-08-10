@@ -517,6 +517,9 @@ public class ForkScanner extends AbstractFlowScanner {
     /** Walk through flows  */
     public void visitSimpleChunks(SimpleChunkVisitor visitor, ChunkFinder finder) {
         FlowNode prev = null;
+        if (finder.isStartInsideChunk() && hasNext()) {
+            visitor.chunkEnd(this.myNext, null, this);
+        }
         while(hasNext()) {
             prev = myCurrent;
             FlowNode f = next();

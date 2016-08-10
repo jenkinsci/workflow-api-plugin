@@ -54,7 +54,7 @@ import javax.annotation.Nonnull;
  *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-interface SimpleChunkVisitor {
+public interface SimpleChunkVisitor {
 
     /**
      * Called when hitting the start of a chunk
