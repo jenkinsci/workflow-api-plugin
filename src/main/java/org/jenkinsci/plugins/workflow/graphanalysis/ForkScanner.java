@@ -457,6 +457,18 @@ public class ForkScanner extends AbstractFlowScanner {
         return (output != null && !myBlackList.contains(output)) ? output : null;
     }
 
+    /** Return the current node without iterating */
+    @CheckForNull
+    public FlowNode peekCurrent() {
+        return this.myCurrent;
+    }
+
+    /** Return the next node without iterating */
+    @CheckForNull
+    public FlowNode peekNext() {
+        return this.myNext;
+    }
+
     @Override
     public FlowNode next() {
         currentType = nextType;

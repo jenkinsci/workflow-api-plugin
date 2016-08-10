@@ -35,10 +35,10 @@ import javax.annotation.Nonnull;
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class MemoryFlowChunk implements FlowChunkWithContext {
-    private FlowNode firstNode;
-    private FlowNode lastNode;
-    private FlowNode nodeBefore;
-    private FlowNode nodeAfter;
+    protected FlowNode firstNode;
+    protected FlowNode lastNode;
+    protected FlowNode nodeBefore;
+    protected FlowNode nodeAfter;
 
     public MemoryFlowChunk(@CheckForNull FlowNode before, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
         this.setNodeBefore(before);

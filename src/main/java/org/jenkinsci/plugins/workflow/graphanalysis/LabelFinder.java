@@ -37,6 +37,6 @@ public class LabelFinder implements ChunkFinder {
                 return true;
             }
         }
-        return previous != null && isChunkStart(previous, null);
+        return isChunkStart(previous, null);
     }
 }
