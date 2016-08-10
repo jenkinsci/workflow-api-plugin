@@ -525,4 +525,45 @@ public class ForkScanner extends AbstractFlowScanner {
         }
         return output;
     }
+
+    /** Walk through flows  */
+    public void visitSimpleChunks(SimpleChunkVisitor visitor, ChunkFinder finder) {
+        FlowNode prev = null;
+        while(hasNext()) {
+            prev = myCurrent;
+            FlowNode f = next();
+
+            boolean boundary = false;
+            if (finder.isChunkStart(myCurrent, prev)) {
+                visitor.chunkStart(myCurrent, myNext, this);
+                boundary = true;
+            }
+            if (finder.isChunkEnd(myCurrent, prev)) {
+                visitor.chunkEnd(myCurrent, prev, this);
+                boundary = true;
+            }
+            if (!boundary) {
+                visitor.atomNode(prev, f, myNext, this);
+            }
+
+            // Trigger on parallels
+            switch (currentType) {
+                case PARALLEL_END:
+                    visitor.parallelEnd(this.currentParallelStartNode, prev, this);
+                    break;
+                case PARALLEL_START:
+                    visitor.parallelStart(myCurrent, prev, this);
+                    break;
+                case PARALLEL_BRANCH_END:
+                    visitor.parallelBranchEnd(myCurrent, this.currentParallelStartNode, this);
+                    break;
+                case PARALLEL_BRANCH_START:
+                    visitor.parallelBranchStart(myCurrent, this.currentParallelStartNode, this);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
 }

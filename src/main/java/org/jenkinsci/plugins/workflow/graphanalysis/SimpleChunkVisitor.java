@@ -30,7 +30,7 @@ import javax.annotation.Nonnull;
 
 /**
  * This visitor's callbacks are invoked as we walk through a pipeline flow graph, and it splits it into chunks.
- * <p/> A {@link FlowChunker} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
+ * <p/> A {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
  *
  * <p/> Implementations get to decide how to use & handle chunks.
  * <p/> <h3>At a minimum they should handle:</h3>
@@ -73,9 +73,9 @@ interface SimpleChunkVisitor {
     /** Notifies that we've seen the end of a parallel block*/
     void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
 
-    void parallelBranchStart(@Nonnull String branchName, @Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
+    void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
 
-    void parallelBranchEnd(@Nonnull String branchName, @Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
+    void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
 
     /**
      * Called for a flownode within the chunk that is neither start nor end.

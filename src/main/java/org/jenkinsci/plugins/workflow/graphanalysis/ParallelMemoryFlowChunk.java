@@ -42,6 +42,10 @@ public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements Parallel
     // LinkedHashMap to preserve insert order
     private LinkedHashMap<String, MemoryFlowChunk> branches = new LinkedHashMap<String, MemoryFlowChunk>();
 
+    public ParallelMemoryFlowChunk(@Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode) {
+        super (null,firstNode, lastNode, null);
+    }
+
     public ParallelMemoryFlowChunk(@CheckForNull FlowNode nodeBefore, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
         super (nodeBefore,firstNode, lastNode, nodeAfter);
     }
