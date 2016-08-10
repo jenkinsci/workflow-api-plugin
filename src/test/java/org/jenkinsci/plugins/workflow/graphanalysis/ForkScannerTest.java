@@ -178,7 +178,7 @@ public class ForkScannerTest {
         scanner.setup(exec.getNode("13"));
         Assert.assertFalse(scanner.isWalkingFromFinish());
         Assert.assertEquals(null, scanner.currentType);
-        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.nextType);
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_END, scanner.nextType);
         Assert.assertEquals("13", scanner.next().getId());
         Assert.assertNotNull(scanner.parallelBlockStartStack);
         Assert.assertEquals(0, scanner.parallelBlockStartStack.size());

@@ -122,7 +122,7 @@ public class ForkScanner extends AbstractFlowScanner {
 
     // Needed because the *next* node might be a parallel end and we don't know it from a normal one
     public static boolean isParallelEnd(@CheckForNull FlowNode f) {
-        return f != null && f instanceof BlockEndNode && isParallelStart(((BlockEndNode) f).getStartNode());
+        return f != null && f instanceof BlockEndNode && (f.getParents().size()>1 || isParallelStart(((BlockEndNode) f).getStartNode()));
     }
 
     /** If true, we are walking from the flow end node and have a complete view of the flow */
