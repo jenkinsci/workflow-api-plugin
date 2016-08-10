@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * FlowChunk that has parallel branches
+ * FlowChunk mapping to the block from a Parallel step (with parallel branches inside)
  */
 public interface ParallelFlowChunk <ChunkType extends FlowChunk> extends FlowChunk  {
 

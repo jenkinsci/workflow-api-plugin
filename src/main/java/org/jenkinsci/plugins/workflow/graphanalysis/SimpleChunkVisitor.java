@@ -23,7 +23,6 @@
  */
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
@@ -31,44 +30,41 @@ import javax.annotation.Nonnull;
 
 /**
  * This visitor's callbacks are invoked as we walk through a pipeline flow graph, and it splits it into chunks.
- * The {@link FlowChunker} uses the split methods & holds state needed convert the {@link ForkScanner}'s API to invoke these right.
+ * <p/> A {@link FlowChunker} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
  *
- * <p/><h3>Determining how we split into chunk.</h3>
+ * <p/> Implementations get to decide how to use & handle chunks.
+ * <p/> <h3>At a minimum they should handle:</h3>
  * <ul>
- *     <li>{@link #getChunkStartPredicate()} Provides the condition marking the beginning of a chunk we care about</li>
- *     <li>{@link #getChunkEndPredicate()} Provides the condition to mark a node as ending a chunk we care about</li>
+ *     <li>Unbalanced numbers of chunk start/end calls</li>
+ *     <li>A chunk end with no beginning (runs to start of flow, or never began)</li>
+ *     <li>A chunk start with no end (ex: a block that hasn't completed running)</li>
+ *     <li>Other starts/ends before we hit the closing one</li>
  * </ul>
  *
- * Think of it as a finite state machine: we're either in a chunk or not.
+ * <em>Important implementation note: multiple callbacks can be invoked for a single node depending on its type.</em
+ * <p/>For example, we may capture parallels as chunks.
  *
  * <p/><h3>Callbacks Reporting on chunk/parallel information:</h3>
  * <ul>
- *     <li>{@link #chunkStart(FlowNode, FlowNode, ForkScanner)} is called when we hit start of a boundary</li>
- *     <li>{@link #chunkEnd(FlowNode, FlowNode, ForkScanner)} is called when we hit end of a boundary</li>
- *     <li>{@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} is called, used to gather information within a chunk</li>
+ *     <li>{@link #chunkStart(FlowNode, FlowNode, ForkScanner)} is called on the current node when we hit start of a boundary (inclusive) </li>
+ *     <li>{@link #chunkEnd(FlowNode, FlowNode, ForkScanner)} is called when we hit end of a boundary (inclusive)</li>
+ *     <li>{@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} called when a node is neither start nor end.</li>
  *     <li>All the parallel methods are used to report on parallel status - helpful when we need to deal with parallels internal to chunks.</li>
  * </ul>
- *
- * <p/> Start/Stop predicates may both trigger on the same node (in which case end is invoked first).
- * For example with marker nodes like the legacy stage.
  *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 interface SimpleChunkVisitor {
 
-    @Nonnull
-    Predicate<FlowNode> getChunkStartPredicate();
-
-    @Nonnull
-    Predicate<FlowNode> getChunkEndPredicate();
-
-    /** If true, we create an implicit chunk when starting out and don't wait for end condition */
-    boolean startInsideChunk();
-
-    /** Called when hitting the start of a block */
+    /**
+     * Called when hitting the start of a chunk
+     * @param startNode First node in chunk (marker), included in node
+     * @param beforeBlock First node before chunk
+     * @param scanner Forkscanner used (for state tracking)
+     */
     void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
 
-    /** Called when hitting the end of a block */
+    /** Called when hitting the end of a block (determined by the chunkEndPredicate) */
     void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterBlock, @Nonnull ForkScanner scanner);
 
     /** Notifies that we've seen a new parallel block */

@@ -370,7 +370,7 @@ public class ForkScanner extends AbstractFlowScanner {
             myCurrent = f;
             myNext = f;
             if (isParallelEnd(f)) {
-                nextType = NodeType.PARALLEL_BRANCH_END;
+                nextType = NodeType.PARALLEL_END;
             } else if (isParallelStart(f)) {
                 nextType = NodeType.PARALLEL_START;
             } else {
@@ -484,6 +484,8 @@ public class ForkScanner extends AbstractFlowScanner {
             } else if (!blackList.contains(p)) {
                 if (p instanceof BlockStartNode && p.getAction(ThreadNameAction.class) != null) {
                     nextType = NodeType.PARALLEL_BRANCH_START;
+                } else if (ForkScanner.isParallelEnd(p)) {
+                    nextType = NodeType.PARALLEL_END;
                 } else {
                     nextType = NodeType.NORMAL;
                 }
