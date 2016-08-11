@@ -521,7 +521,7 @@ public class ForkScanner extends AbstractFlowScanner {
             visitor.chunkEnd(this.myNext, null, this);
         }
         while(hasNext()) {
-            prev = myCurrent;
+            prev = (myCurrent != myNext) ? myCurrent : null;
             FlowNode f = next();
 
             boolean boundary = false;
@@ -546,10 +546,10 @@ public class ForkScanner extends AbstractFlowScanner {
                     visitor.parallelStart(myCurrent, prev, this);
                     break;
                 case PARALLEL_BRANCH_END:
-                    visitor.parallelBranchEnd(myCurrent, this.currentParallelStartNode, this);
+                    visitor.parallelBranchEnd(this.currentParallelStartNode, myCurrent, this);
                     break;
                 case PARALLEL_BRANCH_START:
-                    visitor.parallelBranchStart(myCurrent, this.currentParallelStartNode, this);
+                    visitor.parallelBranchStart(this.currentParallelStartNode, myCurrent, this);
                     break;
                 default:
                     break;

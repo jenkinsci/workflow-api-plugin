@@ -64,15 +64,31 @@ public interface SimpleChunkVisitor {
      */
     void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
 
-    /** Called when hitting the end of a block (determined by the chunkEndPredicate) */
-    void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterBlock, @Nonnull ForkScanner scanner);
+    /** Called when hitting the end of a block */
+    void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterChunk, @Nonnull ForkScanner scanner);
 
-    /** Notifies that we've seen a new parallel block */
+    /**
+     * Notifies that we've hit the start of a parallel block (the point where it branches out)
+     * @param parallelStartNode The {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} beginning it, next will be branches
+     * @param branchNode {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} for one of the branches (it will be labelled)
+     * @param scanner ForkScanner used
+     */
     void parallelStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchNode, @Nonnull ForkScanner scanner);
 
-    /** Notifies that we've seen the end of a parallel block*/
+    /**
+     * Notifies that we've seen the end of a parallel block
+     * @param parallelStartNode First node of parallel
+     * @param parallelEndNode Last node of parallel
+     * @param scanner
+     */
     void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
 
+    /**
+     *
+     * @param parallelStartNode
+     * @param branchStartNode
+     * @param scanner
+     */
     void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
 
     void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);

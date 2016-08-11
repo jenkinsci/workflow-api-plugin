@@ -25,6 +25,9 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.cps.steps.ParallelStep;
@@ -42,10 +45,12 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.junit.Assert;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
@@ -306,7 +311,6 @@ public class ForkScannerTest {
     public void testLeastCommonAncestor() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
 
-
         ForkScanner scan = new ForkScanner();
         // Starts at the ends of the parallel branches
         Set<FlowNode> heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("12"), exec.getNode("9")));
@@ -340,5 +344,48 @@ public class ForkScannerTest {
         Assert.assertEquals(1, outer.unvisited.size());
         Assert.assertEquals(exec.getNode("9"), outer.unvisited.peek());
         Assert.assertEquals(exec.getNode("4"), outer.forkStart);
+    }
+
+    /** For nodes, see {@link #SIMPLE_PARALLEL_RUN} */
+    @Test
+    public void testSimpleVisitor() throws Exception {
+        ForkScanner.setParallelStartPredicate(PARALLEL_START_PREDICATE);
+        FlowExecution exec = this.SIMPLE_PARALLEL_RUN.getExecution();
+        ForkScanner f = new ForkScanner();
+        f.setup(exec.getCurrentHeads());
+        TestVisitor visitor = new TestVisitor();
+
+        f.visitSimpleChunks(visitor, new BlockChunkFinder());
+
+        // 13 calls for chunk/atoms, 6 for parallels
+        Assert.assertEquals(19, visitor.calls.size());
+
+        // End has nothing after it, just last node (15)
+        TestVisitor.CallEntry last = new TestVisitor.CallEntry(TestVisitor.CallType.CHUNK_END, 15, -1, -1, -1);
+        last.assertEquals(visitor.calls.get(0));
+
+        // Start has nothing before it, just the first node (2)
+        TestVisitor.CallEntry first = new TestVisitor.CallEntry(TestVisitor.CallType.CHUNK_START, 2, -1, -1, -1);
+        first.assertEquals(visitor.calls.get(18));
+
+        List<TestVisitor.CallEntry> parallelCalls = Lists.newArrayList(Iterables.filter(visitor.calls, new Predicate<TestVisitor.CallEntry>() {
+            @Override
+            public boolean apply(TestVisitor.CallEntry input) {
+                return input.type != null
+                        && input.type != TestVisitor.CallType.ATOM_NODE
+                        && input.type != TestVisitor.CallType.CHUNK_START
+                        && input.type != TestVisitor.CallType.CHUNK_END;
+            }
+        }));
+        Assert.assertEquals(6, parallelCalls.size());
+        // Start to end
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_END, 4, 13).assertEquals(visitor.calls.get(0));
+
+        // Start to end, in reverse order
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 12).assertEquals(visitor.calls.get(1));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 7).assertEquals(visitor.calls.get(2));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 9).assertEquals(visitor.calls.get(3));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 6).assertEquals(visitor.calls.get(4));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_START, 4, 6).assertEquals(visitor.calls.get(5));
     }
 }
