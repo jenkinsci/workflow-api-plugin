@@ -34,7 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Corresponds to a parallel block, does some customization to compute the timing with parallel branches
+ * Corresponds to a parallel block, acts as an in-memory container that can plug into status/timing APIs
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
 public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements ParallelFlowChunk<MemoryFlowChunk> {
