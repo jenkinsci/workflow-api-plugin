@@ -47,7 +47,10 @@ public class MemoryFlowChunk implements FlowChunkWithContext {
         this.setNodeAfter(lastNode);
     }
 
-    @Nonnull
+    public MemoryFlowChunk() {
+
+    }
+
     @Override
     public FlowNode getFirstNode() {
         return firstNode;
@@ -57,7 +60,7 @@ public class MemoryFlowChunk implements FlowChunkWithContext {
         this.firstNode = firstNode;
     }
 
-    @Nonnull
+
     @Override
     public FlowNode getLastNode() {
         return lastNode;

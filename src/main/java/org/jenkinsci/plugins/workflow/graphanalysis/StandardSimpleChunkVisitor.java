@@ -6,8 +6,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
-import java.util.Iterator;
-import java.util.ListIterator;
 
 /**
  * Fairly straightforward implementation that will cover many cases.
