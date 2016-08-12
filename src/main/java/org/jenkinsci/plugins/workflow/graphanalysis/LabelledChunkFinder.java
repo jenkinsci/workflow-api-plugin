@@ -32,7 +32,7 @@ public class LabelledChunkFinder implements ChunkFinder {
             return false;
         }
         if (current instanceof BlockEndNode) {
-            BlockStartNode bsn = ((BlockEndNode) previous).getStartNode();
+            BlockStartNode bsn = ((BlockEndNode) current).getStartNode();
             if (isChunkStart(bsn, null)) {
                 return true;
             }
