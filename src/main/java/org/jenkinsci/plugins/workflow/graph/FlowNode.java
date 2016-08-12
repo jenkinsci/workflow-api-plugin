@@ -114,6 +114,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     /**
      * Returns a read-only view of parents.
      */
+    @Nonnull
     public List<FlowNode> getParents() {
         if (parents == null) {
             parents = loadParents(parentIds);
@@ -121,6 +122,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return parents;
     }
 
+    @Nonnull
     private List<FlowNode> loadParents(List<String> parentIds) {
         List<FlowNode> _parents = new ArrayList<FlowNode>(parentIds.size());
         for (String parentId : parentIds) {
@@ -135,6 +137,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Restricted(DoNotUse.class)
     @Exported(name="parents")
+    @Nonnull
     public List<String> getParentIds() {
         List<String> ids = new ArrayList<String>(2);
         for (FlowNode parent : getParents()) {
