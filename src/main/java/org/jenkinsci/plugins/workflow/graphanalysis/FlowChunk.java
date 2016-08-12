@@ -24,10 +24,8 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
@@ -48,8 +46,8 @@ import javax.annotation.Nonnull;
  */
 public interface FlowChunk {
     @Nonnull
-    public FlowNode getFirstNode();
+    FlowNode getFirstNode();
 
     @Nonnull
-    public FlowNode getLastNode();
+    FlowNode getLastNode();
 }

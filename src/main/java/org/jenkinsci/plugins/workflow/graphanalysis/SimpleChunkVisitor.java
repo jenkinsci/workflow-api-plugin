@@ -35,10 +35,11 @@ import javax.annotation.Nonnull;
  * <p/> Implementations get to decide how to use & handle chunks.
  * <p/> <h3>At a minimum they should handle:</h3>
  * <ul>
- *     <li>Unbalanced numbers of chunk start/end calls</li>
+ *     <li>Unbalanced numbers of chunk start/end calls (for incomplete flows)</li>
  *     <li>A chunk end with no beginning (runs to start of flow, or never began)</li>
  *     <li>A chunk start with no end (ex: a block that hasn't completed running)</li>
- *     <li>Other starts/ends before we hit the closing one</li>
+ *     <li>Other starts/ends before we hit the closing one (nesting)</li>
+ *     <li>Atom nodes not within the current Chunk (visitor is responsible for handling state)</li>
  * </ul>
  *
  * <em>Important implementation note: multiple callbacks can be invoked for a single node depending on its type.</em
@@ -77,25 +78,33 @@ public interface SimpleChunkVisitor {
 
     /**
      * Notifies that we've seen the end of a parallel block
-     * @param parallelStartNode First node of parallel
-     * @param parallelEndNode Last node of parallel
+     * @param parallelStartNode First node of parallel (BlockStartNode before the branches)
+     * @param parallelEndNode Last node of parallel (BlockEndNode)
      * @param scanner
      */
     void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
 
     /**
-     *
-     * @param parallelStartNode
-     * @param branchStartNode
+     * Hit the start of a parallel branch
+     * @param parallelStartNode First node of parallel (BlockStartNode before the branches)
+     * @param branchStartNode BlockStartNode beginning the branch (this will have the ThreadNameAction giving its name)
      * @param scanner
      */
     void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
 
+    /**
+     * Hit the end start of a parallel branch
+     * <p/> May not be invoked if we're inside an in-progress parallel
+     * @param parallelStartNode First node of parallel (BlockStartNode before the branches)
+     * @param branchEndNode Final node of the branch (may be BlockEndNode if done, otherwise just the last one executed)
+     * @param scanner
+     */
     void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
 
     /**
-     * Called for a flownode within the chunk that is neither start nor end.
+     * Called for a flownode neither start nor end.
      * Ways you may want to use this: accumulate pause time, collect errors, etc.
+     * Note: invocations don't guarantee whether or not you're within a marked chunk.
      * @param before Node before the current
      * @param atomNode The node itself
      * @param after Node after the current

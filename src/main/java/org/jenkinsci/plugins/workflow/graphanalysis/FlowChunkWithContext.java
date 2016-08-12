@@ -9,9 +9,9 @@ public interface FlowChunkWithContext extends FlowChunk {
 
     /** Return the node before this chunk, or null if it is the end */
     @CheckForNull
-    public FlowNode getNodeBefore();
+    FlowNode getNodeBefore();
 
     /** Return the node after this chunk, or null if it is the end */
     @CheckForNull
-    public FlowNode getNodeAfter();
+    FlowNode getNodeAfter();
 }

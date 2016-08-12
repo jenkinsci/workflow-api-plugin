@@ -42,5 +42,5 @@ public interface FlowNodeVisitor {
      * @param f Node to visit
      * @return False if we should stop visiting nodes
      */
-    public boolean visit(@Nonnull FlowNode f);
+    boolean visit(@Nonnull FlowNode f);
 }
