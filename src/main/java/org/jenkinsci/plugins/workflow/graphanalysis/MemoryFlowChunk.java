@@ -39,6 +39,7 @@ public class MemoryFlowChunk implements FlowChunkWithContext {
     protected FlowNode lastNode;
     protected FlowNode nodeBefore;
     protected FlowNode nodeAfter;
+    private long pauseTimeMillis = -1;
 
     public MemoryFlowChunk(@CheckForNull FlowNode before, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
         this.setNodeBefore(before);
@@ -86,5 +87,13 @@ public class MemoryFlowChunk implements FlowChunkWithContext {
 
     public void setNodeAfter(FlowNode nodeAfter) {
         this.nodeAfter = nodeAfter;
+    }
+
+    public long getPauseTimeMillis() {
+        return pauseTimeMillis;
+    }
+
+    public void setPauseTimeMillis(long pauseTimeMillis) {
+        this.pauseTimeMillis = pauseTimeMillis;
     }
 }
