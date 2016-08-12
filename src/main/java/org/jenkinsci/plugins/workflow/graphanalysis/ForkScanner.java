@@ -96,6 +96,18 @@ public class ForkScanner extends AbstractFlowScanner {
     protected NodeType currentType;
     protected NodeType nextType;
 
+    public ForkScanner() {
+
+    }
+
+    public ForkScanner(@Nonnull Collection<FlowNode> heads) {
+        this.setup(heads);
+    }
+
+    public ForkScanner(@Nonnull Collection<FlowNode> heads, @Nonnull Collection<FlowNode> blackList) {
+        this.setup(heads, blackList);
+    }
+
     @Override
     protected void reset() {
         parallelBlockStartStack.clear();
@@ -514,8 +526,20 @@ public class ForkScanner extends AbstractFlowScanner {
         return output;
     }
 
+    public static void visitSimpleChunks(@Nonnull Collection<FlowNode> heads, @Nonnull Collection<FlowNode> blacklist, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
+        ForkScanner scanner = new ForkScanner();
+        scanner.setup(heads, blacklist);
+        scanner.visitSimpleChunks(visitor, finder);
+    }
+
+    public static void visitSimpleChunks(@Nonnull Collection<FlowNode> heads, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
+        ForkScanner scanner = new ForkScanner();
+        scanner.setup(heads);
+        scanner.visitSimpleChunks(visitor, finder);
+    }
+
     /** Walk through flows  */
-    public void visitSimpleChunks(SimpleChunkVisitor visitor, ChunkFinder finder) {
+    public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         FlowNode prev = null;
         if (finder.isStartInsideChunk() && hasNext()) {
             visitor.chunkEnd(this.myNext, null, this);
