@@ -13,7 +13,7 @@ import javax.annotation.Nonnull;
  * Creates chunks whenever you have a labelled linear block (not a parallel branch).
  * Created by @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
-public class LabelFinder implements ChunkFinder {
+public class LabelledChunkFinder implements ChunkFinder {
 
     public boolean isStartInsideChunk() {
         return true;
