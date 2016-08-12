@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.XmlFile;
 import hudson.init.Terminator;
 import hudson.model.listeners.ItemListener;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -149,11 +151,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     private static final Logger LOGGER = Logger.getLogger(FlowExecutionList.class.getName());
 
     public static FlowExecutionList get() {
-        Jenkins j = Jenkins.getInstance();
-        if (j == null) { // might be called during shutdown
-            return new FlowExecutionList();
+        FlowExecutionList l = ExtensionList.lookup(FlowExecutionList.class).get(FlowExecutionList.class);
+        if (l == null) { // might be called during shutdown
+            l = new FlowExecutionList();
         }
-        return j.getInjector().getInstance(FlowExecutionList.class);
+        return l;
     }
 
     /**
@@ -167,11 +169,12 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
         @Override
         public void onLoaded() {
-            for (FlowExecution e : list) {
+            for (final FlowExecution e : list) {
                 LOGGER.log(FINE, "Eager loading {0}", e);
                 Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                     @Override
                     public void onSuccess(List<StepExecution> result) {
+                        LOGGER.log(FINE, "Will resume {0}", result);
                         for (StepExecution se : result) {
                             se.onResume();
                         }
@@ -179,7 +182,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
                     @Override
                     public void onFailure(Throwable t) {
-
+                        if (t instanceof CancellationException) {
+                            LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
+                        } else {
+                            LOGGER.log(WARNING, "Failed to load " + e, t);
+                        }
                     }
                 });
             }
