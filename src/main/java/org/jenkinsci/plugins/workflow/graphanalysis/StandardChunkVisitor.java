@@ -29,6 +29,7 @@ public class StandardChunkVisitor implements SimpleChunkVisitor {
         chunk.setLastNode(null);
         chunk.setNodeBefore(null);
         chunk.setNodeAfter(null);
+        chunk.setPauseTimeMillis(0);
     }
 
     @Override
