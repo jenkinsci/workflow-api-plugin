@@ -379,15 +379,17 @@ public class ForkScannerTest {
         }));
         Assert.assertEquals(6, parallelCalls.size());
         // Start to end
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_END, 4, 13).assertEquals(visitor.calls.get(0));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_END, 4, 13).assertEquals(parallelCalls.get(0));
 
-        /* Tests for parallel handling
+        //Tests for parallel handling
         // Start to end, in reverse order
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 12).assertEquals(visitor.calls.get(1));
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 7).assertEquals(visitor.calls.get(2));
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 9).assertEquals(visitor.calls.get(3));
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 6).assertEquals(visitor.calls.get(4));
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_START, 4, 6).assertEquals(visitor.calls.get(5));
-        */
+
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 9).assertEquals(parallelCalls.get(1));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 6).assertEquals(parallelCalls.get(2));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 12).assertEquals(parallelCalls.get(3));
+
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 7).assertEquals(parallelCalls.get(4));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_START, 4, 7).assertEquals(parallelCalls.get(5));
+
     }
 }

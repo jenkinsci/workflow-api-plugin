@@ -539,8 +539,10 @@ public class ForkScanner extends AbstractFlowScanner {
 
             // Trigger on parallels
             switch (currentType) {
+                case NORMAL:
+                    break;
                 case PARALLEL_END:
-                    visitor.parallelEnd(this.currentParallelStartNode, prev, this);
+                    visitor.parallelEnd(this.currentParallelStartNode, myCurrent, this);
                     break;
                 case PARALLEL_START:
                     visitor.parallelStart(myCurrent, prev, this);
@@ -549,7 +551,9 @@ public class ForkScanner extends AbstractFlowScanner {
                     visitor.parallelBranchEnd(this.currentParallelStartNode, myCurrent, this);
                     break;
                 case PARALLEL_BRANCH_START:
-                    visitor.parallelBranchStart(this.currentParallelStartNode, myCurrent, this);
+                    // Needed because once we hit the start of the last branch, the next node is our currentParallelStart
+                    FlowNode parallelStart = (nextType == NodeType.PARALLEL_START) ? myNext : this.currentParallelStartNode;
+                    visitor.parallelBranchStart(parallelStart, myCurrent, this);
                     break;
                 default:
                     break;
