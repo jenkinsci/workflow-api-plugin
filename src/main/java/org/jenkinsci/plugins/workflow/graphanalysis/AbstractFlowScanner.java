@@ -185,7 +185,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     protected abstract void setHeads(@Nonnull Collection<FlowNode> filteredHeads);
 
     /**
-     * Actual meat of the iteration, get the next node to visit, using & updating state as needed
+     * Actual meat of the iteration, get the next node to visit, using and updating state as needed
      * @param current Current node to use in generating next value
      * @param blackList Nodes that are not eligible for visiting
      * @return Next node to visit, or null if we've exhausted the node list
