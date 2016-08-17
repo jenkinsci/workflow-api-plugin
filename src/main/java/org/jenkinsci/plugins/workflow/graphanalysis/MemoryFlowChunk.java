@@ -32,7 +32,7 @@ import javax.annotation.Nonnull;
 /**
  * FlowChunk that holds direct references to the {@link FlowNode} instances and context info
  * This makes it easy to use in analysis and visualizations, but inappropriate to retain in caches, etc
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class MemoryFlowChunk implements FlowChunkWithContext {
     protected FlowNode firstNode;

@@ -36,7 +36,7 @@ import java.util.Collection;
 
 /**
  * Utilities for testing flow scanning
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class FlowTestUtils {
     public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {

@@ -10,7 +10,7 @@ import javax.annotation.Nonnull;
  * Note: does not handle parallels or nesting
  * Extend {@link #handleChunkDone(MemoryFlowChunk)}  to gather up final chunks
  * Extend {@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} to gather data about nodes in a chunk
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class StandardChunkVisitor implements SimpleChunkVisitor {
 

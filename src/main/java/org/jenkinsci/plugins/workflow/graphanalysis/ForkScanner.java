@@ -62,7 +62,7 @@ import java.util.Set;
  *     <li>Branch information is available for use here</li>
  * </ul>
  *
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class ForkScanner extends AbstractFlowScanner {
 

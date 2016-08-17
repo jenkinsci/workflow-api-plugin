@@ -52,7 +52,7 @@ import java.util.List;
  *   <li>Locating the label applying to a given FlowNode (if any)</li>
  * </ul>
  *
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class LinearBlockHoppingScanner extends LinearScanner {
 

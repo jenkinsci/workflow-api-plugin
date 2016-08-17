@@ -9,7 +9,7 @@ import javax.annotation.Nonnull;
 
 /**
  * Matches start and end of a block.  Any block
- * Created by @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class BlockChunkFinder implements ChunkFinder {
 

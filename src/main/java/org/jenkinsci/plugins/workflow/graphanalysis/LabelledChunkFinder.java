@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
 /**
  * Basically finds stages. *Technically* it's any block of nodes.
  * Creates chunks whenever you have a labelled linear block (not a parallel branch).
- * Created by @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class LabelledChunkFinder implements ChunkFinder {
 

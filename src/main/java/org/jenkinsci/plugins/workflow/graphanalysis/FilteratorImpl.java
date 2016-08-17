@@ -30,7 +30,7 @@ import javax.annotation.Nonnull;
 import java.util.Iterator;
 
 /** Filters an iterator against a match predicate by wrapping an iterator
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 class FilteratorImpl<T> implements Filterator<T> {
     private boolean hasNext = false;

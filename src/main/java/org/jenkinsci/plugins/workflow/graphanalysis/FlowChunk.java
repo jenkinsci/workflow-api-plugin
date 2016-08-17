@@ -42,7 +42,7 @@ import javax.annotation.Nonnull;
  *     <li>A mix of types in sequence, such as nested structures</li>
  * </ul>
  *
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public interface FlowChunk {
     @Nonnull

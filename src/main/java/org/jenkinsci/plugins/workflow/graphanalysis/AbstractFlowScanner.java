@@ -86,7 +86,7 @@ import java.util.Set;
  *     </ul></li>
  *   </ul>
  *
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filterator<FlowNode> {
 

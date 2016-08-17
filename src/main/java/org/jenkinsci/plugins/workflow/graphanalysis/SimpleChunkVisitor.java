@@ -53,7 +53,7 @@ import javax.annotation.Nonnull;
  *     <li>All the parallel methods are used to report on parallel status - helpful when we need to deal with parallels internal to chunks.</li>
  * </ul>
  *
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public interface SimpleChunkVisitor {
 

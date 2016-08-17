@@ -35,7 +35,7 @@ import java.util.Map;
 
 /**
  * Corresponds to a parallel block, acts as an in-memory container that can plug into status/timing APIs
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements ParallelFlowChunk<MemoryFlowChunk> {
 

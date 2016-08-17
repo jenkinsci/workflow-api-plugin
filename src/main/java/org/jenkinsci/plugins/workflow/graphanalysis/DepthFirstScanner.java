@@ -40,7 +40,7 @@ import java.util.List;
  *  With parallel branches, the first branch is explored, then remaining branches are explored in reverse order.
  *
  * <p/> The behavior is analogous to {@link org.jenkinsci.plugins.workflow.graph.FlowGraphWalker} but faster.
- *  @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ *  @author Sam Van Oort
  */
 public class DepthFirstScanner extends AbstractFlowScanner {
 

@@ -34,7 +34,7 @@ import java.util.Iterator;
  *  <p/>As a rule, assume that returned Filterators wrap an iterator and pass calls to it.
  *  Thus the iterator position will change if next() is called on the filtered versions.
  *  Note also: you may filter a filterator, if needed.
- *  @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ *  @author Sam Van Oort
  */
 public interface Filterator<T> extends Iterator<T> {
     /** Returns a filtered view of the iterator, which calls the iterator until matches are found */

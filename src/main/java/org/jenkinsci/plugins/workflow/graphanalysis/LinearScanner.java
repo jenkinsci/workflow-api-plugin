@@ -40,7 +40,7 @@ import java.util.List;
  * <p/>Use case: we don't care about parallel branches or know they don't exist, we just want to walk through the top-level blocks.
  *
  * <p/>This is the fastest & simplest way to walk a flow, because you only care about a single node at a time.
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class LinearScanner extends AbstractFlowScanner {
 

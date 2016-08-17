@@ -7,7 +7,7 @@ import javax.annotation.Nonnull;
 
 /**
  * Matches the start and end of a chunk
- * Created by @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public interface ChunkFinder {
 

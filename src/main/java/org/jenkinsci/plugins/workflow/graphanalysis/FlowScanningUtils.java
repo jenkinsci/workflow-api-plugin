@@ -45,7 +45,7 @@ import java.util.List;
 
 /**
  * Library of common functionality when analyzing/walking flow graphs
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public final class FlowScanningUtils {
 
