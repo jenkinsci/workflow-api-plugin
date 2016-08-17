@@ -37,7 +37,7 @@ import java.util.List;
  * Extension of {@link LinearScanner} that skips nested blocks at the current level, useful for finding enclosing blocks.
  *  <strong>ONLY use this with nodes inside the flow graph</strong>, never the last node of a completed flow (it will jump over the whole flow).
  *
- * <p/>This is useful where you only care about {@link FlowNode}s that precede this one or are part of an enclosing scope (within a Block).
+ * <p></p>This is useful where you only care about {@link FlowNode}s that precede this one or are part of an enclosing scope (within a Block).
  *
  * <p></p>Specifically:
  *  <ul>
@@ -45,7 +45,7 @@ import java.util.List;
  *    <li>The only case where you visit branches of a parallel block is if you begin inside it.</li>
  *  </ul>
  *
- * <p/>Specific use cases:
+ * <p></p>Specific use cases:
  * <ul>
  *   <li>Finding out the executor workspace used to run a FlowNode</li>
  *   <li>Finding the start of the parallel block enclosing the current node</li>

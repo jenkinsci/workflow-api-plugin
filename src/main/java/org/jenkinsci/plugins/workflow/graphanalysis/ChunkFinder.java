@@ -25,8 +25,8 @@ public interface ChunkFinder {
     /**
      * Test if the current node is the end of a chunk (inclusive)
      * @param current Node to test for being end
-     *    <p/> For a block, the {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode}
-     *    <p/> For a legacy stage or marker, this will be first node of new stage (previous is the marker)
+     *    <p></p> For a block, the {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode}
+     *    <p></p> For a legacy stage or marker, this will be first node of new stage (previous is the marker)
      * @param previous Previous node, to use in testing chunk
      * @return True if current is the end of a chunk (inclusive)
      */

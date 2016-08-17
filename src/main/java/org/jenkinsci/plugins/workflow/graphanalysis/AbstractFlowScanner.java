@@ -43,9 +43,9 @@ import java.util.Set;
 /**
  * Core APIs and base logic for FlowScanners that extract information from a pipeline execution.
  *
- * <p/>These iterate through the directed acyclic graph (DAG) or "flow graph" of {@link FlowNode}s produced when a pipeline runs.
+ * <p></p>These iterate through the directed acyclic graph (DAG) or "flow graph" of {@link FlowNode}s produced when a pipeline runs.
  *
- * <p/>This provides 6 base APIs to use, in decreasing expressiveness and increasing genericity:
+ * <p></p>This provides 6 base APIs to use, in decreasing expressiveness and increasing genericity:
  * <ul>
  *   - {@link #findFirstMatch(Collection, Collection, Predicate)}: find the first FlowNode matching predicate condition.
  *   - {@link #filteredNodes(Collection, Collection, Predicate)}: return the collection of FlowNodes matching the predicate.
@@ -56,11 +56,11 @@ import java.util.Set;
  *   - Iterable: for syntactic sugar, FlowScanners implement Iterable to allow use in for-each loops once initialized.
  * </ul>
  *
- * <p/>All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #myBlackList} nodes (exclusive) or reach the end of the DAG.
+ * <p></p>All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #myBlackList} nodes (exclusive) or reach the end of the DAG.
  * If blackList nodes are an empty collection or null, APIs will walk to the beginning of the FlowGraph.
  * Multiple blackList nodes are helpful for putting separate bounds on walking different parallel branches.
  *
- * <p/><strong>Key Points:</strong>
+ * <p></p><strong>Key Points:</strong>
  *   <li>There are many helper methods offering syntactic sugar for the above APIs in common use cases (simpler method signatures).</li>
  *   <li>Each implementation provides its own iteration order (described in its javadoc comments),
  *     but it is generally unsafe to rely on parallel branches being visited in a specific order.</li>
@@ -74,7 +74,7 @@ import java.util.Set;
  *      <li>Allows for caching to be added inside a FlowScanner if desired, but caching is only useful when reused.</li>
  *   </ul>
  *
- * <p/><strong>Suggested uses:</strong>
+ * <p></p><strong>Suggested uses:</strong>
  *   <ul>
  *   <li>Implement a {@link FlowNodeVisitor} that collects metrics from each FlowNode visited, and call visitAll to extract the data.</li>
  *   <li>Find all flownodes of a given type (ex: stages), using {@link #filteredNodes(Collection, Collection, Predicate)}</li>

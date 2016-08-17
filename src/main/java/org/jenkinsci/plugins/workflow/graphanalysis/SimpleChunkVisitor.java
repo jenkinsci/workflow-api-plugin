@@ -30,10 +30,10 @@ import javax.annotation.Nonnull;
 
 /**
  * This visitor's callbacks are invoked as we walk through a pipeline flow graph, and it splits it into chunks.
- * <p/> A {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
+ * <p></p> A {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
  *
- * <p/> Implementations get to decide how to use & handle chunks.
- * <p/> <h3>At a minimum they should handle:</h3>
+ * <p></p> Implementations get to decide how to use & handle chunks.
+ * <p></p> <h3>At a minimum they should handle:</h3>
  * <ul>
  *     <li>Unbalanced numbers of chunk start/end calls (for incomplete flows)</li>
  *     <li>A chunk end with no beginning (runs to start of flow, or never began)</li>
@@ -43,9 +43,9 @@ import javax.annotation.Nonnull;
  * </ul>
  *
  * <em>Important implementation note: multiple callbacks can be invoked for a single node depending on its type.</em
- * <p/>For example, we may capture parallels as chunks.
+ * <p></p>For example, we may capture parallels as chunks.
  *
- * <p/><h3>Callbacks Reporting on chunk/parallel information:</h3>
+ * <p></p><h3>Callbacks Reporting on chunk/parallel information:</h3>
  * <ul>
  *     <li>{@link #chunkStart(FlowNode, FlowNode, ForkScanner)} is called on the current node when we hit start of a boundary (inclusive) </li>
  *     <li>{@link #chunkEnd(FlowNode, FlowNode, ForkScanner)} is called when we hit end of a boundary (inclusive)</li>
@@ -94,7 +94,7 @@ public interface SimpleChunkVisitor {
 
     /**
      * Hit the end start of a parallel branch
-     * <p/> May not be invoked if we're inside an in-progress parallel
+     * <p></p> May not be invoked if we're inside an in-progress parallel
      * @param parallelStartNode First node of parallel (BlockStartNode before the branches)
      * @param branchEndNode Final node of the branch (may be BlockEndNode if done, otherwise just the last one executed)
      * @param scanner

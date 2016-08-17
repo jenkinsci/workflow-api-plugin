@@ -31,7 +31,7 @@ import java.util.Iterator;
 
 /** Iterator that may be navigated through a filtered wrapper.
  *
- *  <p/>As a rule, assume that returned Filterators wrap an iterator and pass calls to it.
+ *  <p></p>As a rule, assume that returned Filterators wrap an iterator and pass calls to it.
  *  Thus the iterator position will change if next() is called on the filtered versions.
  *  Note also: you may filter a filterator, if needed.
  *  @author Sam Van Oort

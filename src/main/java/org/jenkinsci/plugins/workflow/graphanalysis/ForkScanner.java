@@ -45,16 +45,16 @@ import java.util.Set;
 
 /**
  * Scanner that will scan down all forks when we hit parallel blocks before continuing, but generally runs in linear order
- * <p/>Think of it as the opposite of {@link DepthFirstScanner}.
+ * <p></p>Think of it as the opposite of {@link DepthFirstScanner}.
  *
- * <p/>This is a fairly efficient way to visit all FlowNodes, and provides three useful guarantees:
+ * <p></p>This is a fairly efficient way to visit all FlowNodes, and provides three useful guarantees:
  * <ul>
  *   <li>Every FlowNode is visited, and visited EXACTLY ONCE (not true for LinearScanner)</li>
  *   <li>All parallel branches are visited before we move past the parallel block (not true for DepthFirstScanner)</li>
  *   <li>For EVERY block, the BlockEndNode is visited before the BlockStartNode (not true for DepthFirstScanner, with parallels)</li>
  * </ul>
  *
- * <p/>The big advantages of this approach:
+ * <p></p>The big advantages of this approach:
  * <ul>
  *     <li>Blocks are visited in the order they end (no backtracking) - helps with working a block at a time</li>
  *     <li>Points are visited in linear order within a block (easy to use for analysis)</li>
@@ -263,7 +263,7 @@ public class ForkScanner extends AbstractFlowScanner {
      * This works by walking back to construct the tree of parallel blocks covering all heads back to the Least Common Ancestor of all heads
      *  (the top parallel block).  One by one, as branches join, we remove them from the list of live pieces and replace with their common ancestor.
      *
-     * <p/> The core algorithm is simple in theory but the many cases render the implementation quite complex. In gist:
+     * <p></p> The core algorithm is simple in theory but the many cases render the implementation quite complex. In gist:
      * <ul>
      *     <li>We track FlowPieces, which are Forks (where branches merge) and FlowSegments (where there's a unforked sequence of nodes)</li>
      *     <li>A map of FlowNode to its containing FlowPiece is created </li>
@@ -283,7 +283,7 @@ public class ForkScanner extends AbstractFlowScanner {
      *     <li>Each time we merge a branch in, we need to remove an entry from enclosing blocks & live pieces</li>
      * </ul>
      *
-     * <p/>  There are some assumptions you need to know about to understand why this works:
+     * <p></p>  There are some assumptions you need to know about to understand why this works:
      * <ul>
      *     <li>None of the pieces have multiple parents, since we only look at enclosing blocks (only be a BlockEndNodes for a parallel block have multipel parents)</li>
      *     <li>No cycles exist in the graph</li>
