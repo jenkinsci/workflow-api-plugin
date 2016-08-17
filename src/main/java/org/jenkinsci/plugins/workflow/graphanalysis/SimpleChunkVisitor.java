@@ -42,7 +42,7 @@ import javax.annotation.Nonnull;
  *     <li>Atom nodes not within the current Chunk (visitor is responsible for handling state)</li>
  * </ul>
  *
- * <em>Important implementation note: multiple callbacks can be invoked for a single node depending on its type.</em
+ * <em>Important implementation note: multiple callbacks can be invoked for a single node depending on its type.</em>
  * <p></p>For example, we may capture parallels as chunks.
  *
  * <p></p><h3>Callbacks Reporting on chunk/parallel information:</h3>
