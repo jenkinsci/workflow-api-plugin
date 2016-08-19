@@ -34,6 +34,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -64,12 +65,15 @@ import java.util.Set;
  *
  * @author Sam Van Oort
  */
+@NotThreadSafe
 public class ForkScanner extends AbstractFlowScanner {
 
+    @CheckForNull
     public NodeType getCurrentType() {
         return currentType;
     }
 
+    @CheckForNull
     public NodeType getNextType() {
         return nextType;
     }
@@ -93,8 +97,8 @@ public class ForkScanner extends AbstractFlowScanner {
 
     private boolean walkingFromFinish = false;
 
-    protected NodeType currentType;
-    protected NodeType nextType;
+    protected NodeType currentType = null;
+    protected NodeType nextType = null;
 
     public ForkScanner() {
 

@@ -86,6 +86,7 @@ import java.util.Set;
  *     </ul></li>
  *   </ul>
  *
+ * <em>Implementations are generally NOT threadsafe and should be so annotated</em>
  * @author Sam Van Oort
  */
 public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filterator<FlowNode> {

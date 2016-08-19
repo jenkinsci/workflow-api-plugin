@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +43,7 @@ import java.util.List;
  * <p></p>This is the fastest and simplest way to walk a flow, because you only care about a single node at a time.
  * @author Sam Van Oort
  */
+@NotThreadSafe
 public class LinearScanner extends AbstractFlowScanner {
 
     @Override

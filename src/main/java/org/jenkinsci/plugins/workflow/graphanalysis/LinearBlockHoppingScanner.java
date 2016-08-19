@@ -30,6 +30,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
 import java.util.List;
 
@@ -54,6 +55,7 @@ import java.util.List;
  *
  * @author Sam Van Oort
  */
+@NotThreadSafe
 public class LinearBlockHoppingScanner extends LinearScanner {
 
     @Override
