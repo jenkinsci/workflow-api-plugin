@@ -66,6 +66,16 @@ public class ForkScannerTest {
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
+    public static Predicate<TestVisitor.CallEntry> predicateForCallEntryType(final TestVisitor.CallType type) {
+        return new Predicate<TestVisitor.CallEntry>() {
+            TestVisitor.CallType myType = type;
+            @Override
+            public boolean apply(TestVisitor.CallEntry input) {
+                return input.type != null && input.type == myType;
+            }
+        };
+    }
+
     /** Flow structure (ID - type)
      2 - FlowStartNode (BlockStartNode)
      3 - Echostep
@@ -367,6 +377,28 @@ public class ForkScannerTest {
         // Start has nothing before it, just the first node (2)
         TestVisitor.CallEntry first = new TestVisitor.CallEntry(TestVisitor.CallType.CHUNK_START, 2, -1, -1, -1);
         first.assertEquals(visitor.calls.get(18));
+
+        int chunkStartCount = Iterables.size(Iterables.filter(visitor.calls, predicateForCallEntryType(TestVisitor.CallType.CHUNK_START)));
+        int chunkEndCount = Iterables.size(Iterables.filter(visitor.calls, predicateForCallEntryType(TestVisitor.CallType.CHUNK_END)));
+        Assert.assertEquals(4, chunkStartCount);
+        Assert.assertEquals(4, chunkEndCount);
+
+        // Verify the AtomNode calls are correct
+        List < TestVisitor.CallEntry > atomNodeCalls = Lists.newArrayList(Iterables.filter(visitor.calls, predicateForCallEntryType(TestVisitor.CallType.ATOM_NODE)));
+        Assert.assertEquals(5, atomNodeCalls.size());
+        for (TestVisitor.CallEntry ce : atomNodeCalls) {
+            int beforeId = ce.ids[0];
+            int atomNodeId = ce.ids[1];
+            int afterId = ce.ids[2];
+            int alwaysEmpty = ce.ids[3];
+            Assert.assertTrue(ce+" beforeNodeId <= 0: "+beforeId, beforeId > 0);
+            Assert.assertTrue(ce + " atomNodeId <= 0: " + atomNodeId, atomNodeId > 0);
+            Assert.assertTrue(ce+" afterNodeId <= 0: "+afterId, afterId > 0);
+            Assert.assertEquals(-1, alwaysEmpty);
+            Assert.assertTrue(ce + "AtomNodeId >= afterNodeId", atomNodeId < afterId);
+            Assert.assertTrue(ce+ "beforeNodeId >= atomNodeId", beforeId < atomNodeId);
+        }
+
 
         List<TestVisitor.CallEntry> parallelCalls = Lists.newArrayList(Iterables.filter(visitor.calls, new Predicate<TestVisitor.CallEntry>() {
             @Override

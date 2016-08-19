@@ -558,7 +558,7 @@ public class ForkScanner extends AbstractFlowScanner {
                 boundary = true;
             }
             if (!boundary) {
-                visitor.atomNode(prev, f, myNext, this);
+                visitor.atomNode(myNext, f, prev, this);
             }
 
             // Trigger on parallels
