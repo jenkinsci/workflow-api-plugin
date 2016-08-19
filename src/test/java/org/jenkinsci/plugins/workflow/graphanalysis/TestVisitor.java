@@ -63,9 +63,15 @@ public class TestVisitor implements SimpleChunkVisitor {
             Assert.assertNotNull(test.type);
             Assert.assertArrayEquals(this.ids, test.ids);
         }
+
+        @Override
+        public String toString() {
+            return "CallEntry: "+type+" Ids: "+Arrays.toString(ids);
+        }
+
     }
 
-    public List<CallEntry> calls = new ArrayList<CallEntry>();
+    public ArrayList<CallEntry> calls = new ArrayList<CallEntry>();
 
     @Override
     public void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner) {
