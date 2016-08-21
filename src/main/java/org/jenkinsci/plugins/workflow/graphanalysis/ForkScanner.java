@@ -97,8 +97,8 @@ public class ForkScanner extends AbstractFlowScanner {
 
     private boolean walkingFromFinish = false;
 
-    protected NodeType currentType = null;
-    protected NodeType nextType = null;
+    NodeType currentType = null;
+    NodeType nextType = null;
 
     public ForkScanner() {
 
@@ -147,12 +147,12 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     /** Tracks state for parallel blocks, so we can ensure all are visited and know the branch starting point */
-    protected static class ParallelBlockStart {
-        protected BlockStartNode forkStart; // This is the node with child branches
-        protected int totalBranches;
-        protected ArrayDeque<FlowNode> unvisited = new ArrayDeque<FlowNode>();  // Remaining branches of this that we have have not visited yet
+    static class ParallelBlockStart {
+        BlockStartNode forkStart; // This is the node with child branches
+        int totalBranches;
+        ArrayDeque<FlowNode> unvisited = new ArrayDeque<FlowNode>();  // Remaining branches of this that we have have not visited yet
 
-        protected ParallelBlockStart(BlockStartNode forkStart, int branchCount) {
+        ParallelBlockStart(BlockStartNode forkStart, int branchCount) {
             this.forkStart = forkStart;
             this.totalBranches = branchCount;
         }
@@ -414,7 +414,7 @@ public class ForkScanner extends AbstractFlowScanner {
      * @param parents Parent nodes that end here
      * @return FlowNode myNext node to visit
      */
-    protected FlowNode hitParallelEnd(BlockEndNode endNode, List<FlowNode> parents, Collection<FlowNode> blackList) {
+    FlowNode hitParallelEnd(BlockEndNode endNode, List<FlowNode> parents, Collection<FlowNode> blackList) {
         BlockStartNode start = endNode.getStartNode();
 
         ArrayDeque<FlowNode> branches = new ArrayDeque<FlowNode>();
@@ -444,7 +444,7 @@ public class ForkScanner extends AbstractFlowScanner {
      * Invoked when we complete parallel block, walking from the head (so encountered after the end)
      * @return FlowNode if we're the last node
      */
-    protected FlowNode hitParallelStart() {
+    FlowNode hitParallelStart() {
         FlowNode output = null;
 
         if (currentParallelStart != null) {
