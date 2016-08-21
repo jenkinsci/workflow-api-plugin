@@ -202,7 +202,6 @@ public class ForkScannerTest {
         Assert.assertEquals(exec.getNode("4"), scanner.currentParallelStartNode);
 
         ForkScanner.ParallelBlockStart start = scanner.currentParallelStart;
-        Assert.assertEquals(2, start.totalBranches);
         Assert.assertEquals(1, start.unvisited.size());
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
 
@@ -329,7 +328,6 @@ public class ForkScannerTest {
         Assert.assertEquals(1, starts.size());
 
         ForkScanner.ParallelBlockStart start = starts.peek();
-        Assert.assertEquals(2, start.totalBranches);
         Assert.assertEquals(2, start.unvisited.size());
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
         Assert.assertArrayEquals(heads.toArray(), start.unvisited.toArray());
@@ -344,11 +342,9 @@ public class ForkScannerTest {
         ForkScanner.ParallelBlockStart inner = starts.getFirst();
         ForkScanner.ParallelBlockStart outer = starts.getLast();
 
-        Assert.assertEquals(2, inner.totalBranches);
         Assert.assertEquals(2, inner.unvisited.size());
         Assert.assertEquals(exec.getNode("12"), inner.forkStart);
 
-        Assert.assertEquals(2, outer.totalBranches);
         Assert.assertEquals(1, outer.unvisited.size());
         Assert.assertEquals(exec.getNode("9"), outer.unvisited.peek());
         Assert.assertEquals(exec.getNode("4"), outer.forkStart);

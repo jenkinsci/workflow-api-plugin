@@ -149,12 +149,10 @@ public class ForkScanner extends AbstractFlowScanner {
     /** Tracks state for parallel blocks, so we can ensure all are visited and know the branch starting point */
     static class ParallelBlockStart {
         BlockStartNode forkStart; // This is the node with child branches
-        int totalBranches;
         ArrayDeque<FlowNode> unvisited = new ArrayDeque<FlowNode>();  // Remaining branches of this that we have have not visited yet
 
-        ParallelBlockStart(BlockStartNode forkStart, int branchCount) {
+        ParallelBlockStart(BlockStartNode forkStart) {
             this.forkStart = forkStart;
-            this.totalBranches = branchCount;
         }
 
         /** Strictly for internal use in the least common ancestor problem */
@@ -245,7 +243,6 @@ public class ForkScanner extends AbstractFlowScanner {
         for (Fork f : parallelForks) {
             // Do processing to assign heads to flowsegments
             ParallelBlockStart start = new ParallelBlockStart();
-            start.totalBranches = f.following.size();
             start.forkStart = f.forkStart;
             start.unvisited = new ArrayDeque<FlowNode>();
 
@@ -426,9 +423,8 @@ public class ForkScanner extends AbstractFlowScanner {
 
         FlowNode output = null;
         if (branches.size() > 0) { // Push another branch start
-            ParallelBlockStart parallelBlockStart = new ParallelBlockStart(start, branches.size());
+            ParallelBlockStart parallelBlockStart = new ParallelBlockStart(start);
             output = branches.pop();
-            parallelBlockStart.totalBranches = parents.size();
             parallelBlockStart.unvisited = branches;
 
             if (currentParallelStart != null) {
