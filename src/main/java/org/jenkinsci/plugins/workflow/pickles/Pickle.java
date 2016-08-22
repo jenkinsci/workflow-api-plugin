@@ -50,7 +50,7 @@ public abstract class Pickle implements Serializable {
      * An implementation should return quickly and avoid acquiring locks in this method itself (as opposed to the future).
      * {@link ListenableFuture#cancel} should be implemented if possible.
      * @param owner an owner handle on which you may, for example, call {@link FlowExecutionOwner#getListener}
-     * @return a future on which {@link ListenableFuture#cancel} might be called; also polite to override {@link ListenableFuture#toString} for diagnostics
+     * @return a future on which {@link ListenableFuture#cancel} might be called; also polite to override {@link Object#toString} for diagnostics
      */
     public ListenableFuture<?> rehydrate(FlowExecutionOwner owner) {
         if (Util.isOverridden(Pickle.class, getClass(), "rehydrate")) {
