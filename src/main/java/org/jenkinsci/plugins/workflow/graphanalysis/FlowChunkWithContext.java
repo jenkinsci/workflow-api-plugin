@@ -7,7 +7,7 @@ import javax.annotation.CheckForNull;
 /** FlowChunk with information about what comes before/after */
 public interface FlowChunkWithContext extends FlowChunk {
 
-    /** Return the node before this chunk, or null if it is the end */
+    /** Return the node before this chunk, or null if it is the beginning */
     @CheckForNull
     FlowNode getNodeBefore();
 

@@ -575,7 +575,7 @@ public class ForkScanner extends AbstractFlowScanner {
                     visitor.parallelBranchStart(parallelStart, myCurrent, this);
                     break;
                 default:
-                    break;
+                    throw new IllegalStateException("Unhandled type for current node");
             }
         }
     }
