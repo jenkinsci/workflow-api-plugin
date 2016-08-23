@@ -109,6 +109,7 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     /** Linear (no parallels) run of FLowNodes */
+    // TODO see if this can be replaced with a FlowChunk acting as a container class for a list of FlowNodes
     static class FlowSegment implements FlowPiece {
         ArrayList<FlowNode> visited = new ArrayList<FlowNode>();
         FlowPiece after;
@@ -125,6 +126,7 @@ public class ForkScanner extends AbstractFlowScanner {
          * @param nodeMapping Mapping of BlockStartNodes to flowpieces (forks or segments)
          * @param joinPoint Node where the branches intersect/meet (fork point)
          * @param joiningBranch Flow piece that is joining this
+         * @throws IllegalStateException When you try to split a segment on a node that it doesn't contain, or invalid graph structure
          * @return Recreated fork
          */
         Fork split(@Nonnull HashMap<FlowNode, FlowPiece> nodeMapping, @Nonnull BlockStartNode joinPoint, @Nonnull FlowPiece joiningBranch) {
@@ -167,6 +169,8 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     /** Internal class used for constructing the LeastCommonAncestor structure */
+    // TODO see if this can be replaced with a FlowChunk acting as a container class for parallels
+    // I.E. ParallelMemoryFlowChunk or similar
     static class Fork extends ParallelBlockStart implements FlowPiece {
         List<FlowPiece> following = new ArrayList<FlowPiece>();
 
@@ -246,7 +250,7 @@ public class ForkScanner extends AbstractFlowScanner {
         ArrayDeque<Fork> parallelForks = new ArrayDeque<Fork>();  // Tracks the discovered forks in order of encounter
 
         for (FlowNode f : heads) {
-            iterators.add(FlowScanningUtils.filterableEnclosingBlocks(f));
+            iterators.add(FlowScanningUtils.fetchEnclosingBlocks(f));
             FlowSegment b = new FlowSegment();
             b.add(f);
             livePieces.add(b);

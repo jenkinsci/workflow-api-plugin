@@ -106,7 +106,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
             return Collections.EMPTY_SET;
         } else  if (nodeCollection.size() == 1) {
             return Collections.singleton(nodeCollection.iterator().next());
-        } else if (nodeCollection instanceof Set) {
+        } else if (nodeCollection instanceof HashSet) {
             return nodeCollection;
         }
         return nodeCollection.size() > MAX_LIST_CHECK_SIZE ? new HashSet<FlowNode>(nodeCollection) : nodeCollection;
@@ -272,7 +272,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} using {@link FlowExecution#getCurrentHeads()}  to get heads and no blackList */
     @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
-        if (exec != null && exec.getCurrentHeads() != null) {
+        if (exec != null && exec.getCurrentHeads() != null && !exec.getCurrentHeads().isEmpty()) {
             return this.findFirstMatch(exec.getCurrentHeads(), null, matchPredicate);
         }
         return null;

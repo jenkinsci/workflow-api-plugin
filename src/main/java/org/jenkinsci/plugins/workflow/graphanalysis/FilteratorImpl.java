@@ -34,9 +34,9 @@ import java.util.Iterator;
  */
 class FilteratorImpl<T> implements Filterator<T> {
     private boolean hasNext = false;
-    private T nextVal;
-    private Iterator<T> wrapped;
-    private Predicate<T> matchCondition;
+    private T nextVal = null;
+    private Iterator<T> wrapped = null;
+    private Predicate<T> matchCondition = null;
 
     public FilteratorImpl<T> filter(Predicate<T> matchCondition) {
         return new FilteratorImpl<T>(this, matchCondition);
