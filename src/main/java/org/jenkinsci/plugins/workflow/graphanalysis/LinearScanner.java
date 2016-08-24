@@ -40,7 +40,7 @@ import java.util.List;
  *
  * <p>Use case: we don't care about parallel branches or know they don't exist, we just want to walk through the top-level blocks.
  *
- * <p>This is the fastest & simplest way to walk a flow, because you only care about a single node at a time.
+ * <p>This is the fastest and simplest way to walk a flow, because you only care about a single node at a time.
  * Nuance: where there are multiple parent nodes (in a parallel block), and one is blacklisted, we'll find the first non-blacklisted one.
  * @author Sam Van Oort
  */
