@@ -30,6 +30,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,7 +39,6 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 /**
  * Core APIs and base logic for FlowScanners that extract information from a pipeline execution.
@@ -78,7 +78,7 @@ import java.util.Set;
  *   <ul>
  *   <li>Implement a {@link FlowNodeVisitor} that collects metrics from each FlowNode visited, and call visitAll to extract the data.</li>
  *   <li>Find all flownodes of a given type (ex: stages), using {@link #filteredNodes(Collection, Collection, Predicate)}</li>
- *   <li>Find the first node with an Error before a specific node</li>
+ *   <li>Find the first node with an {@link org.jenkinsci.plugins.workflow.actions.ErrorAction} before a specific node</li>
  *   <li>Scan through all nodes *just* within a block
  *      <ul>
  *        <li>Use the {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode} as the head</li>
@@ -88,6 +88,7 @@ import java.util.Set;
  *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
+@NotThreadSafe
 public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filterator<FlowNode> {
 
     protected FlowNode myCurrent;
@@ -235,15 +236,16 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * Find the first FlowNode within the iteration order matching a given condition
      * Includes null-checking on arguments to allow directly calling with unchecked inputs (simplifies use).
      * @param heads Head nodes to start walking from
-     * @param endNodes
+     * @param blackListNodes Nodes that are never visited, search stops here (bound is exclusive).
+     *                       If you want to create an inclusive bound, just use a node's parents.
      * @param matchCondition Predicate to match when we've successfully found a given node type
      * @return First matching node, or null if no matches found
      */
     @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
-                                           @CheckForNull Collection<FlowNode> endNodes,
+                                           @CheckForNull Collection<FlowNode> blackListNodes,
                                            Predicate<FlowNode> matchCondition) {
-        if (!setup(heads, endNodes)) {
+        if (!setup(heads, blackListNodes)) {
             return null;
         }
 
@@ -283,7 +285,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * Includes null-checking on arguments to allow directly calling with unchecked inputs (simplifies use).
      * @param heads Nodes to start iterating backward from by visiting their parents.
      * @param blackList Nodes we may not visit or walk beyond.
-     * @param matchCondition Predicate that must be met for nodes to be included in output.
+     * @param matchCondition Predicate that must be met for nodes to be included in output.  Input is always non-null.
      * @return List of flownodes matching the predicate.
      */
     @Nonnull

@@ -24,6 +24,8 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
@@ -43,6 +45,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
@@ -131,6 +134,7 @@ public class ForkScannerTest {
                         "}\n" +
                         "steps['2'] = {\n" +
                         "    echo '2a'\n" +
+                        "    echo '2b'\n" +
                         "    def nested = [:]\n" +
                         "    nested['2-1'] = {\n" +
                         "        echo 'do 2-1'\n" +
@@ -139,7 +143,6 @@ public class ForkScannerTest {
                         "        sleep 1\n" +
                         "        echo '2 section 2'\n" +
                         "    }\n" +
-                        "    echo '2b'\n" +
                         "    parallel nested\n" +
                         "}\n" +
                         "parallel steps\n" +
@@ -278,6 +281,20 @@ public class ForkScannerTest {
         Assert.assertEquals(forked, nodeMap.get(START_PARALLEL));
         Assert.assertEquals(mainBranch, nodeMap.get(exec.getNode("6")));
         Assert.assertEquals(sideBranch, nodeMap.get(exec.getNode("7")));
+    }
+
+    @Test
+    public void testEmptyParallel() throws Exception {
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "EmptyParallel");
+        job.setDefinition(new CpsFlowDefinition(
+                "parallel 'empty1': {}, 'empty2':{} \n" +
+                        "echo 'done' "
+        ));
+        WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        ForkScanner scan = new ForkScanner();
+
+        List<FlowNode> outputs = scan.filteredNodes(b.getExecution().getCurrentHeads(), (Predicate) Predicates.alwaysTrue());
+        Assert.assertEquals(9, outputs.size());
     }
 
     /** Reference the flow graphs in {@link #SIMPLE_PARALLEL_RUN} and {@link #NESTED_PARALLEL_RUN} */

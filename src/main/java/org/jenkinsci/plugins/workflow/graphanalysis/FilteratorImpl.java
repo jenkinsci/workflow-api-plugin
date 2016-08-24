@@ -27,11 +27,13 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Iterator;
 
 /** Filters an iterator against a match predicate by wrapping an iterator
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
+@NotThreadSafe
 class FilteratorImpl<T> implements Filterator<T> {
     private boolean hasNext = false;
     private T nextVal = null;

@@ -30,6 +30,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
 import java.util.List;
 
@@ -49,11 +50,12 @@ import java.util.List;
  * <ul>
  *   <li>Finding out the executor workspace used to run a FlowNode</li>
  *   <li>Finding the start of the parallel block enclosing the current node</li>
- *   <li>Locating the label applying to a given FlowNode (if any)</li>
+ *   <li>Locating the label applying to a given FlowNode (if any) if using labelled blocks</li>
  * </ul>
  *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
+@NotThreadSafe
 public class LinearBlockHoppingScanner extends LinearScanner {
 
     @Override

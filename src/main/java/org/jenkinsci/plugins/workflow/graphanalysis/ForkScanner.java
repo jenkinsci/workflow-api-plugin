@@ -31,6 +31,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -61,6 +62,7 @@ import java.util.Set;
  *
  * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
  */
+@NotThreadSafe
 public class ForkScanner extends AbstractFlowScanner {
 
     // Last element in stack is end of myCurrent parallel start, first is myCurrent start
@@ -82,7 +84,8 @@ public class ForkScanner extends AbstractFlowScanner {
         myNext = null;
     }
 
-    /** If true, we are walking from the flow end node and have a complete view of the flow */
+    /** If true, we are walking from the flow end node and have a complete view of the flow
+     *  Needed because there are implications when not walking from a finished flow (blocks without a {@link BlockEndNode})*/
     public boolean isWalkingFromFinish() {
         return walkingFromFinish;
     }
@@ -264,7 +267,7 @@ public class ForkScanner extends AbstractFlowScanner {
 
             while (itIterator.hasNext()) {
                 Filterator<FlowNode> blockStartIterator = itIterator.next();
-                FlowPiece myPiece = pieceIterator.next();
+                FlowPiece myPiece = pieceIterator.next(); //Safe because we always remove/add with both iterators at once
 
                 // Welp we hit the end of a branch
                 if (!blockStartIterator.hasNext()) {
@@ -316,7 +319,6 @@ public class ForkScanner extends AbstractFlowScanner {
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 1) {
-            //throw new IllegalArgumentException("ForkedFlowScanner can't handle multiple head nodes yet");
             parallelBlockStartStack = leastCommonAncestor(new LinkedHashSet<FlowNode>(heads));
             currentParallelStart = parallelBlockStartStack.pop();
             currentParallelStartNode = currentParallelStart.forkStart;
@@ -415,8 +417,8 @@ public class ForkScanner extends AbstractFlowScanner {
 
         // First we look at the parents of the current node if present
         List<FlowNode> parents = current.getParents();
-        if (parents == null || parents.size() == 0) {
-            // welp done with this node, guess we consult the queue?
+        if (parents.isEmpty()) {
+            // welp, we're done with this node, guess we consult the queue?
         } else if (parents.size() == 1) {
             FlowNode p = parents.get(0);
             if (p == currentParallelStartNode) {
@@ -436,7 +438,7 @@ public class ForkScanner extends AbstractFlowScanner {
                 return possibleOutput;
             }
         } else {
-            throw new IllegalStateException("Found a FlowNode with multiple parents that isn't the end of a block! "+ this.myCurrent.toString());
+            throw new IllegalStateException("Found a FlowNode with multiple parents that isn't the end of a block! "+ this.myCurrent);
         }
 
         if (currentParallelStart != null && currentParallelStart.unvisited.size() > 0) {
