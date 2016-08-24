@@ -58,6 +58,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
         }
         this.visited.clear();
         this.myCurrent = null;
+        this.myNext = null;
     }
 
     @Override
