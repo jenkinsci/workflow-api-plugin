@@ -30,9 +30,9 @@ import javax.annotation.Nonnull;
 
 /**
  * Common container interface for a series of {@link FlowNode}s with a logical start and end.
- * <p></p><p></p> We use this because every plugin has a different way of storing info about the nodes.
+ * <p><p> We use this because every plugin has a different way of storing info about the nodes.
  *
- * <p></p> Common uses:
+ * <p> Common uses:
  * <ul>
  *     <li>A single FlowNode (when coupling with timing/status APIs)</li>
  *     <li>A block (with a {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} and {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode})</li>

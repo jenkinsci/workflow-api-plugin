@@ -42,7 +42,7 @@ public interface FlowNodeAction extends Action {
      * Called by {@link FlowExecution#loadActions(FlowNode)} when
      * actions get loaded from persistent storage.
      *
-     * <p></p>
+     * <p>
      * This is more of an internal API between {@link FlowNode} and
      * {@link FlowExecution}. Not allowed to be called from outside.
      */

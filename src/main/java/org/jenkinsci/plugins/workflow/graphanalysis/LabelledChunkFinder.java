@@ -9,8 +9,10 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * Basically finds stages. *Technically* it's any block of nodes.
- * Creates chunks whenever you have a labelled linear block (not a parallel branch).
+ * Splits a flow execution into {@link FlowChunk}s whenever you have a label.
+ * This works for labelled blocks or single-step labels.
+ *
+ * Useful for collecting stages and parallel branches.
  * @author Sam Van Oort
  */
 public class LabelledChunkFinder implements ChunkFinder {
@@ -19,13 +21,15 @@ public class LabelledChunkFinder implements ChunkFinder {
         return true;
     }
 
+    /** Start is anywhere with a {@link LabelAction} */
     @Override
     public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
         LabelAction la = current.getAction(LabelAction.class);
         return la != null;
     }
 
-    /** End is where you have a label marker before it... or  */
+    /** End is where the previous node is a chunk start
+     * or this is a {@link BlockEndNode} whose {@link BlockStartNode} has a label action */
     @Override
     public boolean isChunkEnd(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
         if (previous == null) {
