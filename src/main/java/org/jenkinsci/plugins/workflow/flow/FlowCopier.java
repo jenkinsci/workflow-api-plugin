@@ -49,7 +49,7 @@ public abstract class FlowCopier implements ExtensionPoint {
     public static abstract class ByRun extends FlowCopier {
 
         /**
-         * Copies metadata between builds
+         * Copies metadata between builds.
          * @param listener a way of logging messages to the copy
          */
         public abstract void copy(Run<?,?> original, Run<?,?> copy, TaskListener listener) throws IOException, InterruptedException;
