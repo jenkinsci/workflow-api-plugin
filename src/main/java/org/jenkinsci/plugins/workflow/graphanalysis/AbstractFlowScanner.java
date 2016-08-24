@@ -68,11 +68,12 @@ import java.util.Set;
  *   <li>FlowScanners are NOT thread safe, for performance reasons and because it is too hard to guarantee.</li>
  *   <li>Many fields and methods are protected: this is intentional to allow building upon the implementations for more complex analyses.</li>
  *   <li>Each FlowScanner stores state internally for several reasons:</li>
- *   <ul>
+ *   <li><ul>
  *      <li>This state can be used to construct more advanced analyses.</li>
  *      <li>FlowScanners can be reinitialized and reused repeatedly: avoids the overheads of creating scanners repeatedly.</li>
  *      <li>Allows for caching to be added inside a FlowScanner if desired, but caching is only useful when reused.</li>
- *   </ul></ul>
+ *   </ul></li>
+ *   </ul>
  *
  * <p><strong>Suggested uses:</strong>
  *   <ul>
