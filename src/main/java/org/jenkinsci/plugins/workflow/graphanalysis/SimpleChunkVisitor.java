@@ -34,7 +34,7 @@ import javax.annotation.Nonnull;
  * This visitor's callbacks are invoked as we walk through a pipeline flow graph, and it splits it into chunks.
  * <p> A {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
  *
- * <p> Implementations get to decide how to use & handle chunks.
+ * <p> Implementations get to decide how to use and handle chunks.
  * <p> <h3>At a minimum they should handle:</h3>
  * <ul>
  *     <li>Unbalanced numbers of chunk start/end calls (for incomplete flows)</li>

@@ -47,13 +47,13 @@ import java.util.Set;
  *
  * <p>This provides 6 base APIs to use, in decreasing expressiveness and increasing genericity:
  * <ul>
- *   - {@link #findFirstMatch(Collection, Collection, Predicate)}: find the first FlowNode matching predicate condition.
- *   - {@link #filteredNodes(Collection, Collection, Predicate)}: return the collection of FlowNodes matching the predicate.
- *   - {@link #visitAll(Collection, FlowNodeVisitor)}: given a {@link FlowNodeVisitor}, invoke {@link FlowNodeVisitor#visit(FlowNode)} on each node and halt when it returns false.
- *   - Iterator: Each FlowScanner can be used as an Iterator for FlowNode-by-FlowNode walking,
- *               after you invoke {@link #setup(Collection, Collection)} to initialize it for iteration.
- *   - {@link Filterator}: If initialized as an Iterator, each FlowScanner can provide a filtered view from the current point in time.
- *   - Iterable: for syntactic sugar, FlowScanners implement Iterable to allow use in for-each loops once initialized.
+ *   <li>{@link #findFirstMatch(Collection, Collection, Predicate)}: find the first FlowNode matching predicate condition.</li>
+ *   <li>{@link #filteredNodes(Collection, Collection, Predicate)}: return the collection of FlowNodes matching the predicate.</li>
+ *   <li>{@link #visitAll(Collection, FlowNodeVisitor)}: given a {@link FlowNodeVisitor}, invoke {@link FlowNodeVisitor#visit(FlowNode)} on each node and halt when it returns false.</li>
+ *   <li>Iterator: Each FlowScanner can be used as an Iterator for FlowNode-by-FlowNode walking,
+ *               after you invoke {@link #setup(Collection, Collection)} to initialize it for iteration.</li>
+ *   <li>{@link Filterator}: If initialized as an Iterator, each FlowScanner can provide a filtered view from the current point in time.</li>
+ *   <li>Iterable: for syntactic sugar, FlowScanners implement Iterable to allow use in for-each loops once initialized.</li>
  * </ul>
  *
  * <p>All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #myBlackList} nodes (exclusive) or reach the end of the DAG.
@@ -61,7 +61,7 @@ import java.util.Set;
  * Multiple blackList nodes are helpful for putting separate bounds on walking different parallel branches.
  *
  * <p><strong>Key Points:</strong>
- *   <li>There are many helper methods offering syntactic sugar for the above APIs in common use cases (simpler method signatures).</li>
+ * <ul><li>There are many helper methods offering syntactic sugar for the above APIs in common use cases (simpler method signatures).</li>
  *   <li>Each implementation provides its own iteration order (described in its javadoc comments),
  *     but it is generally unsafe to rely on parallel branches being visited in a specific order.</li>
  *   <li>Implementations may visit some or all points in the DAG, this should be called out in the class's javadoc comments</li>
@@ -72,7 +72,7 @@ import java.util.Set;
  *      <li>This state can be used to construct more advanced analyses.</li>
  *      <li>FlowScanners can be reinitialized and reused repeatedly: avoids the overheads of creating scanners repeatedly.</li>
  *      <li>Allows for caching to be added inside a FlowScanner if desired, but caching is only useful when reused.</li>
- *   </ul>
+ *   </ul></ul>
  *
  * <p><strong>Suggested uses:</strong>
  *   <ul>
