@@ -26,21 +26,38 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * Interface used when examining a pipeline FlowNode graph node by node, and terminating when a condition is met
- *
- * <p>This is intended to couple with {@link AbstractFlowScanner#visitAll(Collection, FlowNodeVisitor)}
+ * Corresponds to a parallel block, acts as an in-memory container that can plug into status/timing APIs
  * @author Sam Van Oort
  */
-public interface FlowNodeVisitor {
-    /**
-     * Visit the flow node, and indicate if we should continue analysis
-     *
-     * @param f Node to visit
-     * @return False if we should stop visiting nodes
-     */
-    boolean visit(@Nonnull FlowNode f);
+public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements ParallelFlowChunk<MemoryFlowChunk> {
+
+    // LinkedHashMap to preserve insert order
+    private LinkedHashMap<String, MemoryFlowChunk> branches = new LinkedHashMap<String, MemoryFlowChunk>();
+
+    public ParallelMemoryFlowChunk(@Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode) {
+        super (null,firstNode, lastNode, null);
+    }
+
+    public ParallelMemoryFlowChunk(@CheckForNull FlowNode nodeBefore, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
+        super (nodeBefore,firstNode, lastNode, nodeAfter);
+    }
+
+    public void setBranch(@Nonnull String branchName, @Nonnull MemoryFlowChunk branchBlock) {
+        branches.put(branchName, branchBlock);
+    }
+
+    @Override
+    @Nonnull
+    public Map<String,MemoryFlowChunk> getBranches() {
+        return Collections.unmodifiableMap(branches);
+    }
+
 }

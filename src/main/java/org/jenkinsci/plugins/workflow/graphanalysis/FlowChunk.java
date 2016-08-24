@@ -24,20 +24,30 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.Nonnull;
-import java.util.Iterator;
 
-/** Iterator that may be navigated through a filtered wrapper.
+/**
+ * Common container interface for a series of {@link FlowNode}s with a logical start and end.
+ * <p><p> We use this because every plugin has a different way of storing info about the nodes.
  *
- *  <p>As a rule, assume that returned Filterators wrap an iterator and pass calls to it.
- *  Thus the iterator position will change if next() is called on the filtered versions.
- *  Note also: you may filter a filterator, if needed.
- *  @author Sam Van Oort
+ * <p> Common uses:
+ * <ul>
+ *     <li>A single FlowNode (when coupling with timing/status APIs)</li>
+ *     <li>A block (with a {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} and {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode})</li>
+ *     <li>A linear run of marked nodes (such as a legacy stage)</li>
+ *     <li>A parallel block (special case of block)</li>
+ *     <li>A parallel branch within a parallel block</li>
+ *     <li>A mix of types in sequence, such as nested structures</li>
+ * </ul>
+ *
+ * @author Sam Van Oort
  */
-public interface Filterator<T> extends Iterator<T> {
-    /** Returns a filtered view of the iterator, which calls the iterator until matches are found */
+public interface FlowChunk {
     @Nonnull
-    public Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
+    FlowNode getFirstNode();
+
+    @Nonnull
+    FlowNode getLastNode();
 }

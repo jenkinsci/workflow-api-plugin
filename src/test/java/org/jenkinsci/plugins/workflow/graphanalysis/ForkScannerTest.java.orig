@@ -26,8 +26,11 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+<<<<<<< HEAD
+=======
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+>>>>>>> block-scanning-APIs
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.cps.steps.ParallelStep;

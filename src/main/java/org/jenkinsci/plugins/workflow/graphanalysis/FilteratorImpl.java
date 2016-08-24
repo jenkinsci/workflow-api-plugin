@@ -31,7 +31,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Iterator;
 
 /** Filters an iterator against a match predicate by wrapping an iterator
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 @NotThreadSafe
 class FilteratorImpl<T> implements Filterator<T> {

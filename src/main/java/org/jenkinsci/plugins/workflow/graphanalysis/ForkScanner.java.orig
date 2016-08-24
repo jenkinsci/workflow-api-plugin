@@ -126,7 +126,10 @@ public class ForkScanner extends AbstractFlowScanner {
         myNext = null;
     }
 
-    
+<<<<<<< HEAD
+    /** If true, we are walking from the flow end node and have a complete view of the flow
+     *  Needed because there are implications when not walking from a finished flow (blocks without a {@link BlockEndNode})*/
+=======
     // A bit of a dirty hack, but it works around the fact that we need trivial access to classes from workflow-cps
     // For this and only this test. So, we load them from a context that is aware of them.
     // Ex: workflow-cps can automatically set this correctly. Not perfectly graceful but it works.
@@ -147,8 +150,8 @@ public class ForkScanner extends AbstractFlowScanner {
         return f != null && f instanceof BlockEndNode && (f.getParents().size()>1 || isParallelStart(((BlockEndNode) f).getStartNode()));
     }
 
-    /** If true, we are walking from the flow end node and have a complete view of the flow
-     *  Needed because there are implications when not walking from a finished flow (blocks without a {@link BlockEndNode})*/
+    /** If true, we are walking from the flow end node and have a complete view of the flow */
+>>>>>>> block-scanning-APIs
     public boolean isWalkingFromFinish() {
         return walkingFromFinish;
     }

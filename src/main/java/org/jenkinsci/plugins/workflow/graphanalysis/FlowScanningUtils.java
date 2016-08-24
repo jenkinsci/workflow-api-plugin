@@ -31,6 +31,7 @@ import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.actions.StageAction;
+import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.WorkspaceAction;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -39,7 +40,7 @@ import javax.annotation.Nonnull;
 
 /**
  * Library of common functionality when analyzing/walking flow graphs
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public final class FlowScanningUtils {
 

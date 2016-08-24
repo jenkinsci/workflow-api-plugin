@@ -53,7 +53,7 @@ import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
 
 /**
  * Tests for all the core parts of graph analysis except the ForkScanner, internals which is complex enough to merit its own tests
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * @author Sam Van Oort
  */
 public class FlowScannerTest {
 

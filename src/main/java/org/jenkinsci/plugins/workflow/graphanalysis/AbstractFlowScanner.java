@@ -43,38 +43,39 @@ import java.util.NoSuchElementException;
 /**
  * Core APIs and base logic for FlowScanners that extract information from a pipeline execution.
  *
- * <p/>These iterate through the directed acyclic graph (DAG) or "flow graph" of {@link FlowNode}s produced when a pipeline runs.
+ * <p>These iterate through the directed acyclic graph (DAG) or "flow graph" of {@link FlowNode}s produced when a pipeline runs.
  *
- * <p/>This provides 6 base APIs to use, in decreasing expressiveness and increasing genericity:
+ * <p>This provides 6 base APIs to use, in decreasing expressiveness and increasing genericity:
  * <ul>
- *   - {@link #findFirstMatch(Collection, Collection, Predicate)}: find the first FlowNode matching predicate condition.
- *   - {@link #filteredNodes(Collection, Collection, Predicate)}: return the collection of FlowNodes matching the predicate.
- *   - {@link #visitAll(Collection, FlowNodeVisitor)}: given a {@link FlowNodeVisitor}, invoke {@link FlowNodeVisitor#visit(FlowNode)} on each node and halt when it returns false.
- *   - Iterator: Each FlowScanner can be used as an Iterator for FlowNode-by-FlowNode walking,
- *               after you invoke {@link #setup(Collection, Collection)} to initialize it for iteration.
- *   - {@link Filterator}: If initialized as an Iterator, each FlowScanner can provide a filtered view from the current point in time.
- *   - Iterable: for syntactic sugar, FlowScanners implement Iterable to allow use in for-each loops once initialized.
+ *   <li>{@link #findFirstMatch(Collection, Collection, Predicate)}: find the first FlowNode matching predicate condition.</li>
+ *   <li>{@link #filteredNodes(Collection, Collection, Predicate)}: return the collection of FlowNodes matching the predicate.</li>
+ *   <li>{@link #visitAll(Collection, FlowNodeVisitor)}: given a {@link FlowNodeVisitor}, invoke {@link FlowNodeVisitor#visit(FlowNode)} on each node and halt when it returns false.</li>
+ *   <li>Iterator: Each FlowScanner can be used as an Iterator for FlowNode-by-FlowNode walking,
+ *               after you invoke {@link #setup(Collection, Collection)} to initialize it for iteration.</li>
+ *   <li>{@link Filterator}: If initialized as an Iterator, each FlowScanner can provide a filtered view from the current point in time.</li>
+ *   <li>Iterable: for syntactic sugar, FlowScanners implement Iterable to allow use in for-each loops once initialized.</li>
  * </ul>
  *
- * <p/>All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #myBlackList} nodes (exclusive) or reach the end of the DAG.
+ * <p>All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #myBlackList} nodes (exclusive) or reach the end of the DAG.
  * If blackList nodes are an empty collection or null, APIs will walk to the beginning of the FlowGraph.
  * Multiple blackList nodes are helpful for putting separate bounds on walking different parallel branches.
  *
- * <p/><strong>Key Points:</strong>
- *   <li>There are many helper methods offering syntactic sugar for the above APIs in common use cases (simpler method signatures).</li>
+ * <p><strong>Key Points:</strong>
+ * <ul><li>There are many helper methods offering syntactic sugar for the above APIs in common use cases (simpler method signatures).</li>
  *   <li>Each implementation provides its own iteration order (described in its javadoc comments),
  *     but it is generally unsafe to rely on parallel branches being visited in a specific order.</li>
  *   <li>Implementations may visit some or all points in the DAG, this should be called out in the class's javadoc comments</li>
  *   <li>FlowScanners are NOT thread safe, for performance reasons and because it is too hard to guarantee.</li>
  *   <li>Many fields and methods are protected: this is intentional to allow building upon the implementations for more complex analyses.</li>
  *   <li>Each FlowScanner stores state internally for several reasons:</li>
- *   <ul>
+ *   <li><ul>
  *      <li>This state can be used to construct more advanced analyses.</li>
  *      <li>FlowScanners can be reinitialized and reused repeatedly: avoids the overheads of creating scanners repeatedly.</li>
  *      <li>Allows for caching to be added inside a FlowScanner if desired, but caching is only useful when reused.</li>
+ *   </ul></li>
  *   </ul>
  *
- * <p/><strong>Suggested uses:</strong>
+ * <p><strong>Suggested uses:</strong>
  *   <ul>
  *   <li>Implement a {@link FlowNodeVisitor} that collects metrics from each FlowNode visited, and call visitAll to extract the data.</li>
  *   <li>Find all flownodes of a given type (ex: stages), using {@link #filteredNodes(Collection, Collection, Predicate)}</li>
@@ -86,7 +87,8 @@ import java.util.NoSuchElementException;
  *     </ul></li>
  *   </ul>
  *
- * @author <samvanoort@gmail.com>Sam Van Oort</samvanoort@gmail.com>
+ * <em>Implementations are generally NOT threadsafe and should be so annotated</em>
+ * @author Sam Van Oort
  */
 @NotThreadSafe
 public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filterator<FlowNode> {
@@ -186,7 +188,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     protected abstract void setHeads(@Nonnull Collection<FlowNode> filteredHeads);
 
     /**
-     * Actual meat of the iteration, get the next node to visit, using & updating state as needed
+     * Actual meat of the iteration, get the next node to visit, using and updating state as needed
      * @param current Current node to use in generating next value
      * @param blackList Nodes that are not eligible for visiting
      * @return Next node to visit, or null if we've exhausted the node list
