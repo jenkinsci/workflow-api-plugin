@@ -28,6 +28,7 @@ import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashSet;
@@ -36,12 +37,13 @@ import java.util.List;
 
 /** Does a simple and somewhat efficient depth-first search of all FlowNodes in the DAG.
  *
- *  <p></p>Iteration order: depth-first search, revisiting parallel branches once done.
+ *  <p>Iteration order: depth-first search, revisiting parallel branches once done.
  *  With parallel branches, the first branch is explored, then remaining branches are explored in reverse order.
  *
- * <p></p> The behavior is analogous to {@link org.jenkinsci.plugins.workflow.graph.FlowGraphWalker} but faster.
+ * <p> The behavior is analogous to {@link org.jenkinsci.plugins.workflow.graph.FlowGraphWalker} but faster.
  *  @author Sam Van Oort
  */
+@NotThreadSafe
 public class DepthFirstScanner extends AbstractFlowScanner {
 
     protected ArrayDeque<FlowNode> queue;
@@ -56,6 +58,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
         }
         this.visited.clear();
         this.myCurrent = null;
+        this.myNext = null;
     }
 
     @Override

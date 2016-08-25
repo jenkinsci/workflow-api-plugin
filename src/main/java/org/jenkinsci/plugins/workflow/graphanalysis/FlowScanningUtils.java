@@ -33,15 +33,10 @@ import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.actions.StageAction;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.WorkspaceAction;
-import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Library of common functionality when analyzing/walking flow graphs
@@ -58,7 +53,7 @@ public final class FlowScanningUtils {
      * @return Predicate that will match when FlowNode has the action given
      */
     @Nonnull
-    public static  Predicate<FlowNode> nodeHasActionPredicate(@Nonnull final Class<? extends Action> actionClass) {
+    public static  Predicate<FlowNode> hasActionPredicate(@Nonnull final Class<? extends Action> actionClass) {
         return new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
@@ -68,11 +63,6 @@ public final class FlowScanningUtils {
     }
 
     // Default predicates, which may be used for common conditions
-    public static final Predicate<FlowNode> MATCH_HAS_LABEL = nodeHasActionPredicate(LabelAction.class);
-    public static final Predicate<FlowNode> MATCH_IS_STAGE = nodeHasActionPredicate(StageAction.class);
-    public static final Predicate<FlowNode> MATCH_HAS_WORKSPACE = nodeHasActionPredicate(WorkspaceAction.class);
-    public static final Predicate<FlowNode> MATCH_HAS_ERROR = nodeHasActionPredicate(ErrorAction.class);
-    public static final Predicate<FlowNode> MATCH_HAS_LOG = nodeHasActionPredicate(LogAction.class);
     public static final Predicate<FlowNode> MATCH_BLOCK_START = (Predicate)Predicates.instanceOf(BlockStartNode.class);
 
     /**
@@ -83,7 +73,7 @@ public final class FlowScanningUtils {
      * @return Iterator that returns all enclosing BlockStartNodes from the inside out.
      */
     @Nonnull
-    public static Filterator<FlowNode> filterableEnclosingBlocks(@Nonnull FlowNode f) {
+    public static Filterator<FlowNode> fetchEnclosingBlocks(@Nonnull FlowNode f) {
         LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
         scanner.setup(f);
         return scanner.filter(MATCH_BLOCK_START);

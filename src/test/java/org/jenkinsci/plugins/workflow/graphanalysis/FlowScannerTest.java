@@ -88,11 +88,10 @@ public class FlowScannerTest {
         AbstractFlowScanner linear = new LinearScanner();
 
         // ## Bunch of tests for convertToFastCheckable ##
-        Collection<FlowNode> coll = linear.convertToFastCheckable(null);
         Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(null));
         Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(new ArrayList<FlowNode>()));
 
-        coll = linear.convertToFastCheckable(Arrays.asList(intermediateNode));
+        Collection<FlowNode> coll = linear.convertToFastCheckable(Arrays.asList(intermediateNode));
         Assert.assertTrue("Singleton set used for one element", coll instanceof AbstractSet);
         Assert.assertEquals(1, coll.size());
 

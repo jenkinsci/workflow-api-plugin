@@ -6,10 +6,11 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * Simple handler for linear chunks (basic stages, etc), designed to be extended
- * Note: does not handle parallels or nesting
- * Extend {@link #handleChunkDone(MemoryFlowChunk)}  to gather up final chunks
- * Extend {@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} to gather data about nodes in a chunk
+ * Simple handler for linear {@link FlowChunk}s (basic stages, etc), and designed to be extended.
+ * Note: only tracks one chunk at a time, so it won't handle nesting or parallels.
+ * Specifically, it will reset with each chunk start.
+ * Extend {@link #handleChunkDone(MemoryFlowChunk)}  to gather up final chunks.
+ * Extend {@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} to gather data about nodes in a chunk.
  * @author Sam Van Oort
  */
 public class StandardChunkVisitor implements SimpleChunkVisitor {
@@ -17,8 +18,8 @@ public class StandardChunkVisitor implements SimpleChunkVisitor {
     protected MemoryFlowChunk chunk = new MemoryFlowChunk();
 
 
-    /** Override me to do something once the chunk is finished
-     *  Note: the chunk will be mutated directly, so you need to copy it if you want to do something
+    /** Override me to do something once the chunk is finished (such as add it to a list).
+     *  Note: the chunk will be mutated directly, so you need to copy it if you want to do something.
      */
     protected void handleChunkDone(@Nonnull MemoryFlowChunk chunk) {
         // NO-OP initially

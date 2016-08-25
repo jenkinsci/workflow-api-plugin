@@ -30,6 +30,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
 import java.util.List;
 
@@ -37,23 +38,24 @@ import java.util.List;
  * Extension of {@link LinearScanner} that skips nested blocks at the current level, useful for finding enclosing blocks.
  *  <strong>ONLY use this with nodes inside the flow graph</strong>, never the last node of a completed flow (it will jump over the whole flow).
  *
- * <p></p>This is useful where you only care about {@link FlowNode}s that precede this one or are part of an enclosing scope (within a Block).
+ * <p>This is useful where you only care about {@link FlowNode}s that precede this one or are part of an enclosing scope (within a Block).
  *
- * <p></p>Specifically:
+ * <p>Specifically:
  *  <ul>
  *    <li>Where a {@link BlockEndNode} is encountered, the scanner will jump to the {@link BlockStartNode} and go to its first parent.</li>
  *    <li>The only case where you visit branches of a parallel block is if you begin inside it.</li>
  *  </ul>
  *
- * <p></p>Specific use cases:
+ * <p>Specific use cases:
  * <ul>
  *   <li>Finding out the executor workspace used to run a FlowNode</li>
  *   <li>Finding the start of the parallel block enclosing the current node</li>
- *   <li>Locating the label applying to a given FlowNode (if any)</li>
+ *   <li>Locating the label applying to a given FlowNode (if any) if using labelled blocks</li>
  * </ul>
  *
  * @author Sam Van Oort
  */
+@NotThreadSafe
 public class LinearBlockHoppingScanner extends LinearScanner {
 
     @Override

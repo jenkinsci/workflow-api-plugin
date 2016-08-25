@@ -63,7 +63,6 @@
     </pluginRepositories>
     <properties>
         <jenkins.version>1.642.3</jenkins.version>
-        <additionalparam>-Xdoclint:none</additionalparam>
     </properties>
     <dependencies>
         <dependency>
