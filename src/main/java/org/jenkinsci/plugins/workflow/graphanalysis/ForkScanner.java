@@ -39,6 +39,8 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -303,15 +305,22 @@ public class ForkScanner extends AbstractFlowScanner {
      *
      * @param heads
      */
-    ArrayDeque<ParallelBlockStart> leastCommonAncestor(@Nonnull Set<FlowNode> heads) {
+    ArrayDeque<ParallelBlockStart> leastCommonAncestor(@Nonnull final Set<FlowNode> heads) {
         HashMap<FlowNode, FlowPiece> branches = new HashMap<FlowNode, FlowPiece>();
         ArrayList<Filterator<FlowNode>> iterators = new ArrayList<Filterator<FlowNode>>();
         ArrayList<FlowPiece> livePieces = new ArrayList<FlowPiece>();
 
         ArrayDeque<Fork> parallelForks = new ArrayDeque<Fork>();  // Tracks the discovered forks in order of encounter
 
+        Predicate<FlowNode> notAHead = new Predicate<FlowNode>() {  // Filter out pre-existing heads
+            Collection<FlowNode> checkHeads = convertToFastCheckable(heads);
+
+            @Override
+            public boolean apply(FlowNode input) { return !(checkHeads.contains(input)); }
+        };
+
         for (FlowNode f : heads) {
-            iterators.add(FlowScanningUtils.fetchEnclosingBlocks(f));
+            iterators.add(FlowScanningUtils.fetchEnclosingBlocks(f).filter(notAHead));  // We can do this because Parallels always meet at a BlockStartNode
             FlowSegment b = new FlowSegment();
             b.add(f);
             livePieces.add(b);
@@ -349,7 +358,7 @@ public class ForkScanner extends AbstractFlowScanner {
                     pieceIterator.remove();
                     pieceIterator.add(newSegment);
                     branches.put(nextBlockStart, newSegment);
-                } else if (existingPiece != null) {  // Always not null. We're merging into another thing, we're going to elliminate a branch
+                } else if (existingPiece != null) {  // Always not null. We're merging into another thing, we're going to eliminate a branch
                     if (existingPiece instanceof Fork) {
                         ((Fork) existingPiece).following.add(myPiece);
                     } else { // Split a flow segment so it forks against this one

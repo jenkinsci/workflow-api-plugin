@@ -51,6 +51,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -346,6 +347,22 @@ public class ForkScannerTest {
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
         Assert.assertArrayEquals(heads.toArray(), start.unvisited.toArray());
 
+        // Ensure no issues with single start triggering least common ancestor
+        heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("4")));
+        scan.setup(heads);
+        Assert.assertNull(scan.currentParallelStart);
+        Assert.assertTrue(scan.parallelBlockStartStack == null || scan.parallelBlockStartStack.isEmpty());
+
+        // Empty fork
+        heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("6"), exec.getNode("7")));
+        starts = scan.leastCommonAncestor(heads);
+        Assert.assertEquals(1, starts.size());
+        ForkScanner.ParallelBlockStart pbs = starts.pop();
+        Assert.assertEquals(exec.getNode("4"), pbs.forkStart);
+        Assert.assertEquals(2, pbs.unvisited.size());
+        Assert.assertTrue(pbs.unvisited.contains(exec.getNode("6")));
+        Assert.assertTrue(pbs.unvisited.contains(exec.getNode("7")));
+
         /** Now we do the same with nested run */
         exec = NESTED_PARALLEL_RUN.getExecution();
         heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
@@ -362,6 +379,10 @@ public class ForkScannerTest {
         Assert.assertEquals(1, outer.unvisited.size());
         Assert.assertEquals(exec.getNode("9"), outer.unvisited.peek());
         Assert.assertEquals(exec.getNode("4"), outer.forkStart);
+
+        heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
+        starts = scan.leastCommonAncestor(heads);
+        Assert.assertEquals(2, starts.size());
     }
 
     /** For nodes, see {@link #SIMPLE_PARALLEL_RUN} */
@@ -433,7 +454,7 @@ public class ForkScannerTest {
 
     }
 
-    /** Checks for off-by one cases with multiple parallel */
+    /** Checks for off-by one cases with multiple parallel, and with the leastCommonAncestor */
     @Test
     public void testTripleParallel() throws Exception {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "TripleParallel");
@@ -482,5 +503,16 @@ public class ForkScannerTest {
         );
         Assert.assertEquals(6, parallels.size());
         Assert.assertEquals(17, visitor.calls.size());
+
+        // Test the least common ancestor implementation with triplicate
+        FlowNode[] branchHeads = {exec.getNode("7"), exec.getNode("8"), exec.getNode("9")};
+        ArrayDeque<ForkScanner.ParallelBlockStart> starts = f.leastCommonAncestor(new HashSet<FlowNode>(Arrays.asList(branchHeads)));
+        Assert.assertEquals(1, starts.size());
+        ForkScanner.ParallelBlockStart pbs = starts.pop();
+        Assert.assertEquals(exec.getNode("4"), pbs.forkStart);
+        Assert.assertEquals(3, pbs.unvisited.size());
+        Assert.assertTrue(pbs.unvisited.contains(exec.getNode("7")));
+        Assert.assertTrue(pbs.unvisited.contains(exec.getNode("8")));
+        Assert.assertTrue(pbs.unvisited.contains(exec.getNode("9")));
     }
 }
