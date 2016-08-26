@@ -1,4 +1,28 @@
 target
 work
-.idea
+
+# IntelliJ project files 
 *.iml
+*.iws
+*.ipr
+.idea
+out
+
+# eclipse project file
+.settings
+.classpath
+.project
+build
+
+# vim
+*~
+*.swp
+
+# ctags
+tags
+
+# OS X
+.DS_Store
+
+# mvn versions:set
+pom.xml.versionsBackup
