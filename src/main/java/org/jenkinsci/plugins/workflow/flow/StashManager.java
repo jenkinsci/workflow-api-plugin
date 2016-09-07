@@ -26,28 +26,38 @@ package org.jenkinsci.plugins.workflow.flow;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
+import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.FilePath;
+import hudson.Launcher.LocalLauncher;
 import hudson.Util;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.org.apache.tools.tar.TarInputStream;
 import hudson.util.DirScanner;
 import hudson.util.io.ArchiverFactory;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import jenkins.model.ArtifactManager;
 import jenkins.model.Jenkins;
+import jenkins.util.BuildListenerAdapter;
+import jenkins.util.VirtualFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.tools.tar.TarEntry;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
-
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import java.io.*;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Manages per-build stashes of files.
@@ -212,6 +222,45 @@ public class StashManager {
          */
         public boolean shouldClearAll(@Nonnull Run<?,?> build) {
             return true;
+        }
+
+    }
+
+    @Restricted(DoNotUse.class)
+    @Extension public static class CopyStashesAndArtifacts extends FlowCopier.ByRun {
+
+        @Override public void copy(Run<?,?> original, Run<?,?> copy, TaskListener listener) throws IOException, InterruptedException {
+            // TODO ArtifactManager should define an optimized operation to copy from another, or VirtualFile should define copyRecursive
+            VirtualFile srcroot = original.getArtifactManager().root();
+            FilePath dstDir = createTmpDir();
+            try {
+                Map<String,String> files = new HashMap<>();
+                for (String path : srcroot.list("**/*")) {
+                    files.put(path, path);
+                    InputStream in = srcroot.child(path).open();
+                    try {
+                        dstDir.child(path).copyFrom(in);
+                    } finally {
+                        IOUtils.closeQuietly(in);
+                    }
+                }
+                if (!files.isEmpty()) {
+                    listener.getLogger().println("Copying " + files.size() + " artifact(s) from " + original.getDisplayName());
+                    copy.getArtifactManager().archive(dstDir, new LocalLauncher(listener), new BuildListenerAdapter(listener), files);
+                }
+            } finally {
+                dstDir.deleteRecursive();
+            }
+
+            StashManager.copyAll(original, copy);
+        }
+
+        private FilePath createTmpDir() throws IOException {
+            File dir = File.createTempFile("artifact", "copy");
+            if (!(dir.delete() && dir.mkdirs())) {
+                throw new IOException("Failed to create temporary directory " + dir.getPath());
+            }
+            return new FilePath(dir);
         }
 
     }
