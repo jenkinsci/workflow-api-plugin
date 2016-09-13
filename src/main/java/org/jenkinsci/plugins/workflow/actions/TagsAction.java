@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2013-2014, CloudBees, Inc.
+ * Copyright (c) 2016, CloudBees, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,76 +30,95 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Collections;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * Tracks arbitrary annotations on FlowNode used for a variety of purposes
  * This is designed to have a single action on the FlowNode to track all tags, for sanity.
- * Flexible implementation of JENKINS-26522
+ * Flexible implementation of JENKINS-26522, with Strings for the annotation.
  */
 public class TagsAction implements Action{
     private static final String displayName = "Tags";
     private static final String urlSuffix = "tags";
 
-    private LinkedHashSet<String> tags = new LinkedHashSet<String>();
+    private LinkedHashMap<String, String> tags = new LinkedHashMap<String, String>();
 
-    public boolean addTag(@Nonnull String tag) {
-        return tags.add(tag);
+    /**
+     * Add a tag key:value pair to this FlowNode, null or empty values are ignored
+     * Inputs are CheckForNull so you can directly pass in values without nullchecks upfront.
+     * @param tag Tag to add to, null or empty values are no-ops
+     * @param value Tag to add to, null or empty values are no-ops
+     */
+    public void addTag(@CheckForNull String tag, @@CheckForNull String value) {
+        if (tag != null && value != null && !tag.isEmpty() && !value.isEmpty()) {
+            tags.put(tag, value);
+        }
     }
 
-    public boolean removeTag(@Nonnull String tag) {
+    /**
+     * Remove a tag mapping
+     * Input is CheckForNull so you can directly pass in values without nullchecks upfront.
+     * @param tag Tag to add to, null or empty values are no-ops
+     * @return True if we had something to remove, else false
+     */
+    public boolean removeTag(@CheckForNull String tag) {
         if (tag == null || tag.isEmpty()) {
             return false;
         }
-        return tags.remove(tag);
+        return tags.remove(tag) != null;
     }
 
-    public boolean hasTag(@CheckForNull  String tag) {
+    /**
+     * Get the value for a tag, null if not set
+     * Input is CheckForNull so you can directly pass in values without nullchecks upfront.
+     * @param tag Tag of interest to, null or empty values are no-ops
+     * @return Tag value or null if not set
+     */
+    @CheckForNull
+    public String getTagValue(@CheckForNull String tag) {
         if (tag == null || tag.isEmpty()) {
-            return false;
+            return null;
         }
-        return tags.contains(tag);
+        return tags.get(tag);
     }
 
+    /**
+     * Get the set of tag-value mappings
+     * @return Unmodifiable view of tag-value mappings
+     */
     @Nonnull
-    public Set<String> getTags() {
-        return Collections.unmodifiableSet(tags);
+    public Set<Map.Entry<String,String>> getTagMappings() {
+        return Collections.unmodifiableSet(tags.entrySet());
     }
 
-    public static boolean hasTag(@Nonnull FlowNode node, @CheckForNull String tagName) {
-        if (tagName == null || tagName.isEmpty()) {
-            return false;
-        }
-        TagsAction tag = node.getAction(TagsAction.class);
-        if (tag == null) {
-            return false;
-        } else {
-            return tag.hasTag(tagName);
-        }
-    }
+    // Static convenience methods
 
+    /**
+     * Get the set of tag-value mappings for a node
+     * @return Unmodifiable view of tag-value mappings
+     */
     @Nonnull
-    public static Set<String> getTags(@Nonnull  FlowNode node) {
-        TagsAction tag = node.getAction(TagsAction.class);
-        return (tag == null) ? (Set)(Collections.emptySet()) : tag.getTags();
+    public static Set<Map.Entry<String,String>> getTagMappings(@Nonnull  FlowNode node) {
+        TagsAction tagAction = node.getAction(TagsAction.class);
+        return (tagAction == null) ? (Set)(Collections.emptySet()) : tagAction.getTagMappings();
     }
 
-    /** Convenience method */
-    public static boolean addTag(@Nonnull FlowNode node, @CheckForNull String newTag) {
-        if (newTag == null || newTag.isEmpty()) {
-            return false;
+    /**
+     * Get the value for a tag on a flownode, null if not set (convenience)
+     * Input is CheckForNull so you can directly pass in values without nullchecks upfront.
+     * @param tag Tag of interest to, null or empty values are no-ops
+     * @return Tag value or null if not set
+     */
+    @CheckForNull
+    public static String getTagValue(@Nonnull FlowNode node, @CheckForNull String tag) {
+        if (tag == null || tag.isEmpty()) {
+            return null;
         }
 
-        TagsAction tag = node.getAction(TagsAction.class);
-        if (tag != null) {
-            return tag.addTag(newTag);
-        } else { // This needs to be atomic when adding, so we set up the action before attaching
-            tag = new TagsAction();
-            tag.addTag(newTag);
-            node.addAction(tag);
-            return true;
-        }
+        TagsAction tagAction = node.getAction(TagsAction.class);
+        return (tagAction == null) ? null : tagAction.getTagValue(tag);
     }
 
     @Override
