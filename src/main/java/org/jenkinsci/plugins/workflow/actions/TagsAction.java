@@ -85,12 +85,12 @@ public class TagsAction implements Action{
     }
 
     /**
-     * Get the set of tag-value mappings
+     * Get the tag-value mappings
      * @return Unmodifiable view of tag-value mappings
      */
     @Nonnull
-    public Set<Map.Entry<String,String>> getTagMappings() {
-        return Collections.unmodifiableSet(tags.entrySet());
+    public Map<String,String> getTags() {
+        return Collections.unmodifiableMap(tags);
     }
 
     // Static convenience methods
@@ -100,9 +100,9 @@ public class TagsAction implements Action{
      * @return Unmodifiable view of tag-value mappings
      */
     @Nonnull
-    public static Set<Map.Entry<String,String>> getTagMappings(@Nonnull  FlowNode node) {
+    public static Map<String,String> getTags(@Nonnull  FlowNode node) {
         TagsAction tagAction = node.getAction(TagsAction.class);
-        return (tagAction == null) ? (Set)(Collections.emptySet()) : tagAction.getTagMappings();
+        return (tagAction == null) ? (Map)(Collections.emptyMap()) : tagAction.getTags();
     }
 
     /**
