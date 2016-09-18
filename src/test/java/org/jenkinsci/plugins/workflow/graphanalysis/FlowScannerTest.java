@@ -364,13 +364,19 @@ public class FlowScannerTest {
         // We're going to test the ForkScanner in more depth since this is its natural use
         scanner = new ForkScanner();
         scanner.setup(heads);
-        assertNodeOrder("ForkedScanner", scanner, 15, 14, 13, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
+        assertNodeOrder("ForkedScanner", scanner, 15, 14, 13,
+                    12, 11, 10, 7,// One parallel
+                    9, 8, 6, // other parallel
+                4, 3, 2); // end bit
         scanner.setup(heads, Collections.singleton(exec.getNode("9")));
         assertNodeOrder("ForkedScanner", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
 
         // Test forkscanner midflow
         scanner.setup(exec.getNode("14"));
-        assertNodeOrder("ForkedScanner", scanner, 14, 13, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
+        assertNodeOrder("ForkedScanner", scanner, 14, 13,
+                    12, 11, 10, 7, // Last parallel
+                    9, 8, 6, // First parallel
+                4, 3, 2); // end bit
 
         // Test forkscanner inside a parallel
 

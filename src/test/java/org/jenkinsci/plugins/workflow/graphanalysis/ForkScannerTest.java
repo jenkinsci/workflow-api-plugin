@@ -206,21 +206,42 @@ public class ForkScannerTest {
         Assert.assertEquals(1, start.unvisited.size());
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
 
-        Assert.assertEquals(exec.getNode("9"), scanner.next());
+        /** Flow structure (ID - type)
+         2 - FlowStartNode (BlockStartNode)
+         3 - Echostep
+         4 - ParallelStep (StepStartNode) (start branches)
+         6 - ParallelStep (StepStartNode) (start branch 1), ParallelLabelAction with branchname=1
+         7 - ParallelStep (StepStartNode) (start branch 2), ParallelLabelAction with branchname=2
+         8 - EchoStep, (branch 1) parent=6
+         9 - StepEndNode, (end branch 1) startId=6, parentId=8
+         10 - EchoStep, (branch 2) parentId=7
+         11 - EchoStep, (branch 2) parentId = 10
+         12 - StepEndNode (end branch 2)  startId=7  parentId=11,
+         13 - StepEndNode (close branches), parentIds = 9,12, startId=4
+         14 - EchoStep
+         15 - FlowEndNode (BlockEndNode)
+         */
+
+        Assert.assertEquals(exec.getNode("12"), scanner.next()); //12
         Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.getCurrentType());
         Assert.assertEquals(ForkScanner.NodeType.NORMAL, scanner.getNextType());
-        Assert.assertEquals(exec.getNode("8"), scanner.next());
+        Assert.assertEquals(exec.getNode("11"), scanner.next());
+        Assert.assertEquals(ForkScanner.NodeType.NORMAL, scanner.getCurrentType());
+        Assert.assertEquals(exec.getNode("10"), scanner.next());
         Assert.assertEquals(ForkScanner.NodeType.NORMAL, scanner.getCurrentType());
         Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_START, scanner.getNextType());
+        Assert.assertEquals(exec.getNode("7"), scanner.next());
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_START, scanner.getCurrentType());
+
+        // Next branch, branch 1 (since we visit in reverse)
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.getNextType());
+        Assert.assertEquals(exec.getNode("9"), scanner.next());
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.getCurrentType());
+        Assert.assertEquals(exec.getNode("8"), scanner.next());
+        Assert.assertEquals(ForkScanner.NodeType.NORMAL, scanner.getCurrentType());
         Assert.assertEquals(exec.getNode("6"), scanner.next());
         Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_START, scanner.getCurrentType());
-        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.getNextType());
-        FlowNode f = scanner.next();
-        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, scanner.getCurrentType());
-        Assert.assertEquals(ForkScanner.NodeType.NORMAL, scanner.getNextType());
-        Assert.assertEquals(exec.getNode("12"), f);
-
-        // Now we test the least common ancestor bits
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_START, scanner.getNextType());
     }
 
     /** Reference the flow graphs in {@link #SIMPLE_PARALLEL_RUN} and {@link #NESTED_PARALLEL_RUN} */
@@ -445,12 +466,12 @@ public class ForkScannerTest {
         //Tests for parallel handling
         // Start to end, in reverse order
 
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 9).assertEquals(parallelCalls.get(1));
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 6).assertEquals(parallelCalls.get(2));
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 12).assertEquals(parallelCalls.get(3));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 12).assertEquals(parallelCalls.get(1));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 7).assertEquals(parallelCalls.get(2));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_END, 4, 9).assertEquals(parallelCalls.get(3));
 
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 7).assertEquals(parallelCalls.get(4));
-        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_START, 4, 7).assertEquals(parallelCalls.get(5));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_BRANCH_START, 4, 6).assertEquals(parallelCalls.get(4));
+        new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_START, 4, 6).assertEquals(parallelCalls.get(5));
 
     }
 
