@@ -50,10 +50,11 @@ import java.util.Set;
  * Scanner that will scan down all forks when we hit parallel blocks before continuing, but generally runs in linear order
  * <p>Think of it as the opposite of {@link DepthFirstScanner}.
  *
- * <p>This is a fairly efficient way to visit all FlowNodes, and provides three useful guarantees:
+ * <p>This is a fairly efficient way to visit all FlowNodes, and provides four useful guarantees:
  * <ul>
- *   <li>Every FlowNode is visited, and visited EXACTLY ONCE (not true for LinearScanner)</li>
+ *   <li>Every FlowNode is visited, and visited EXACTLY ONCE (not true for LinearScanner, which misses some)</li>
  *   <li>All parallel branches are visited before we move past the parallel block (not true for DepthFirstScanner)</li>
+ *   <li>For parallels, we visit branches in reverse order (in fitting with end to start general flow)</li>
  *   <li>For EVERY block, the BlockEndNode is visited before the BlockStartNode (not true for DepthFirstScanner, with parallels)</li>
  * </ul>
  *
@@ -436,7 +437,7 @@ public class ForkScanner extends AbstractFlowScanner {
         ArrayDeque<FlowNode> branches = new ArrayDeque<FlowNode>();
         for (FlowNode f : parents) {
             if (!blackList.contains(f)) {
-                branches.add(f);
+                branches.addFirst(f);
             }
         }
 
