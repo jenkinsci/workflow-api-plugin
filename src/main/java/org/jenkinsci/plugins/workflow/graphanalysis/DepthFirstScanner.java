@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
@@ -31,6 +32,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -38,9 +40,11 @@ import java.util.List;
 /** Does a simple and somewhat efficient depth-first search of all FlowNodes in the DAG.
  *
  *  <p>Iteration order: depth-first search, revisiting parallel branches once done.
- *  With parallel branches, the first branch is explored, then remaining branches are explored in reverse order.
  *
  * <p> The behavior is analogous to {@link org.jenkinsci.plugins.workflow.graph.FlowGraphWalker} but faster.
+ *  With parallel branches, the last branch is explored, then remaining branches are explored in reverse order.
+ *  This keeps ordering compatibility with FlowGraphWalker.
+ *
  *  @author Sam Van Oort
  */
 @NotThreadSafe
@@ -80,7 +84,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
 
         // Walk through parents of current node
         List<FlowNode> parents = current.getParents();  // Can't be null
-        for (FlowNode f : parents) {
+        for (FlowNode f : Lists.reverse(parents)) {
             // Only ParallelStep nodes may be visited multiple times... but we can't just filter those
             // because that's in workflow-cps plugin which depends on this one.
             if (!blackList.contains(f) && !(f instanceof BlockStartNode && visited.contains(f))) {
