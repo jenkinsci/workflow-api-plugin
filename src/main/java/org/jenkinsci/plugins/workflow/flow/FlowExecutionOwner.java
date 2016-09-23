@@ -24,11 +24,14 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
+import hudson.console.ConsoleNote;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -116,6 +119,17 @@ public abstract class FlowExecutionOwner implements Serializable {
      */
     public @Nonnull TaskListener getListener() throws IOException {
         return TaskListener.NULL;
+    }
+
+    /**
+     * Gets the current log stream.
+     * May receive EOF even while a build is in progress.
+     * This is the raw log which may contain encoded {@link ConsoleNote}s.
+     * The encoding is assumed to be UTF-8.
+     * The caller should perform buffering if desired.
+     */
+    public @Nonnull InputStream getLog() throws IOException {
+        return new ByteArrayInputStream(new byte[0]);
     }
 
     /**
