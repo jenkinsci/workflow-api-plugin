@@ -26,8 +26,10 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterators;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -354,7 +356,16 @@ public class FlowScannerTest {
         // Depth first scanner and with blacklist
         scanner = new DepthFirstScanner();
         scanner.setup(heads);
-        assertNodeOrder("Depth first", scanner, 15, 14, 13, 9, 8, 6, 4, 3, 2, 12, 11, 10, 7);
+
+        // Compatibility test for ordering
+        assertNodeOrder("FlowGraphWalker", new FlowGraphWalker(exec), 15, 14, 13,
+                9, 8, 6, // Branch 1
+                4, 3, 2, // Before parallel
+                12, 11, 10, 7); // Branch 2
+        assertNodeOrder("Depth first", new FlowGraphWalker(exec), 15, 14, 13,
+                9, 8, 6, // Branch 1
+                4, 3, 2, // Before parallel
+                12, 11, 10, 7); // Branch 2
         scanner.setup(heads, Collections.singleton(exec.getNode("9")));
         assertNodeOrder("Linear", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
 
@@ -379,7 +390,6 @@ public class FlowScannerTest {
                 4, 3, 2); // end bit
 
         // Test forkscanner inside a parallel
-
         List<FlowNode> startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("12"));
         scanner.setup(startingPoints);
         assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
@@ -456,6 +466,9 @@ public class FlowScannerTest {
         AbstractFlowScanner scanner = new DepthFirstScanner();
         Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(7, matches.size());
+
+        scanner.setup(heads);
+        Assert.assertTrue("FlowGraphWalker differs from DepthFirstScanner", Iterators.elementsEqual(new FlowGraphWalker(exec).iterator(), scanner.iterator()));
 
 
         // We're going to test the ForkScanner in more depth since this is its natural use
