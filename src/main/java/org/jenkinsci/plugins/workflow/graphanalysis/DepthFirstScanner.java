@@ -24,23 +24,34 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+import java.lang.reflect.Array;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 
 /** Does a simple and somewhat efficient depth-first search of all FlowNodes in the DAG.
  *
  *  <p>Iteration order: depth-first search, revisiting parallel branches once done.
- *  With parallel branches, the first branch is explored, then remaining branches are explored in reverse order.
  *
  * <p> The behavior is analogous to {@link org.jenkinsci.plugins.workflow.graph.FlowGraphWalker} but faster.
+ *  With parallel branches, the first branch is explored, then remaining branches are explored in order.
+ *  This keeps ordering compatibility with {@link org.jenkinsci.plugins.workflow.graph.FlowGraphWalker} - it can be a drop-in replacement.
+ *
  *  @author Sam Van Oort
  */
 @NotThreadSafe
@@ -63,30 +74,41 @@ public class DepthFirstScanner extends AbstractFlowScanner {
 
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
-        Iterator<FlowNode> it = heads.iterator();
-        if (it.hasNext()) {
-            FlowNode f = it.next();
-            myCurrent = f;
-            myNext = f;
+        if (heads.isEmpty()) {
+            return;
         }
-        while (it.hasNext()) {
-            queue.add(it.next());
+        ArrayList<FlowNode>  nodes = new ArrayList<FlowNode>(heads);
+        for(int i=nodes.size()-1; i >= 0; i--) {
+            queue.push(nodes.get(i));
         }
+        myCurrent = queue.pop();
+        myNext = myCurrent;
+    }
+
+    // Can be overridden with a more specific test
+    protected boolean possibleParallelStart(FlowNode f) {
+        return f instanceof BlockStartNode;
+    }
+
+    protected boolean testCandidate(FlowNode f, Collection<FlowNode> blackList) {
+        return !blackList.contains(f) && !((possibleParallelStart(f)) && visited.contains(f));
     }
 
     @Override
-    protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
+    protected FlowNode next(@Nonnull FlowNode current, @Nonnull final Collection<FlowNode> blackList) {
         FlowNode output = null;
 
         // Walk through parents of current node
         List<FlowNode> parents = current.getParents();  // Can't be null
-        for (FlowNode f : parents) {
-            // Only ParallelStep nodes may be visited multiple times... but we can't just filter those
-            // because that's in workflow-cps plugin which depends on this one.
-            if (!blackList.contains(f) && !(f instanceof BlockStartNode && visited.contains(f))) {
-                if (output == null ) {
-                    output = f;  // Do direct assignment rather than needless push/pop
-                } else {
+        if (parents.size() == 1) {  // Common case, make it more efficient
+            FlowNode f = parents.get(0);
+            if (testCandidate(f, blackList)) {
+                output = f;
+            }
+        } else if (parents.size() > 1) { // Add the branches in reverse order
+            for(int i=parents.size()-1; i>=0; i--) {
+                FlowNode f = parents.get(i);
+                if (testCandidate(f, blackList)) {
                     queue.push(f);
                 }
             }
