@@ -116,6 +116,8 @@ public abstract class FlowExecutionOwner implements Serializable {
     /**
      * Gets a listener to which we may print general messages.
      * Normally {@link StepContext#get} should be used, but in some cases there is no associated step.
+     * <p>The listener should be remotable: if sent to an agent, messages printed to it should still appear in {@link #getLog}.
+     * The same will then apply to calls to {@link StepContext#get} on {@link TaskListener}.
      */
     public @Nonnull TaskListener getListener() throws IOException {
         return TaskListener.NULL;
