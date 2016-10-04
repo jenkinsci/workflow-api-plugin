@@ -29,6 +29,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.cps.steps.ParallelStep;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -37,6 +38,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -535,5 +537,61 @@ public class ForkScannerTest {
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("7")));
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("8")));
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("9")));
+    }
+
+    private void testParallelFindsLast(WorkflowJob job, String semaphoreName) throws Exception {
+        ForkScanner scan = new ForkScanner();
+        ChunkFinder labelFinder = new LabelledChunkFinder();
+
+        System.out.println("Testing that semaphore step is always the last step for chunk with "+job.getName());
+        WorkflowRun run  = job.scheduleBuild2(0).getStartCondition().get();
+        SemaphoreStep.waitForStart(semaphoreName+"/1", run);
+
+            /*if (run.getExecution() == null) {
+                Thread.sleep(1000);
+            }*/
+
+        TestVisitor visitor = new TestVisitor();
+        scan.setup(run.getExecution().getCurrentHeads());
+        scan.visitSimpleChunks(visitor, labelFinder);
+        TestVisitor.CallEntry entry = visitor.calls.get(0);
+        Assert.assertEquals(TestVisitor.CallType.CHUNK_END, entry.type);
+        FlowNode lastNode = run.getExecution().getNode(Integer.toString(entry.ids[0]));
+        Assert.assertEquals("Wrong End Node: ("+lastNode.getId()+") "+lastNode.getDisplayName(), "semaphore", lastNode.getDisplayFunctionName());
+
+        SemaphoreStep.success(semaphoreName+"/1", null);
+        r.waitForCompletion(run);
+    }
+
+    @Test
+    public void testParallelCorrectEndNodeForVisitor() throws Exception {
+        WorkflowJob jobPauseFirst = r.jenkins.createProject(WorkflowJob.class, "PauseFirst");
+        jobPauseFirst.setDefinition(new CpsFlowDefinition("" +
+                "stage 'primero'\n" +
+                "parallel 'wait' : {sleep 1; semaphore 'wait1';}, \n" +
+                " 'final': { echo 'succeed';} "
+        ));
+
+        WorkflowJob jobPauseSecond = r.jenkins.createProject(WorkflowJob.class, "PauseSecond");
+        jobPauseSecond.setDefinition(new CpsFlowDefinition("" +
+                "stage 'primero'\n" +
+                "parallel 'success' : {echo 'succeed'}, \n" +
+                " 'pause':{ sleep 1; semaphore 'wait2'; }\n"
+                ));
+
+        WorkflowJob jobPauseMiddle = r.jenkins.createProject(WorkflowJob.class, "PauseMiddle");
+        jobPauseSecond.setDefinition(new CpsFlowDefinition("" +
+                "stage 'primero'\n" +
+                "parallel 'success' : {echo 'succeed'}, \n" +
+                " 'pause':{ sleep 1; semaphore 'wait3'; }, \n" +
+                " 'final': { echo 'succeed-final';} "
+        ));
+
+        ForkScanner scan = new ForkScanner();
+        ChunkFinder labelFinder = new LabelledChunkFinder();
+
+        testParallelFindsLast(jobPauseFirst, "wait1");
+        testParallelFindsLast(jobPauseSecond, "wait2");
+        testParallelFindsLast(jobPauseMiddle, "wait3");
     }
 }

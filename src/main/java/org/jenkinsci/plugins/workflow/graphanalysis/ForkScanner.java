@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
+import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
@@ -553,11 +554,40 @@ public class ForkScanner extends AbstractFlowScanner {
         scanner.visitSimpleChunks(visitor, finder);
     }
 
-    /** Walk through flows  */
+    @CheckForNull
+    private static FlowNode findLastStartedNode(@Nonnull List<FlowNode> candidates) {
+        if (candidates.size() == 0) {
+            return null;
+        } else if (candidates.size() == 1) {
+            return candidates.get(0);
+        } else {
+            FlowNode returnOut = candidates.get(0);
+            long startTime = Long.MIN_VALUE;
+            for(FlowNode f : candidates) {
+                TimingAction ta = f.getAction(TimingAction.class);
+                if (ta != null) {
+                    long myStart = ta.getStartTime();
+                    if (myStart > startTime) {
+                        returnOut = f;
+                        startTime = myStart;
+                    }
+                }
+            }
+            return returnOut;
+        }
+    }
+
+    /** Walk through flows */
     public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         FlowNode prev = null;
         if (finder.isStartInsideChunk() && hasNext()) {
-            visitor.chunkEnd(this.myNext, null, this);
+            if (currentParallelStart == null ) {
+                visitor.chunkEnd(this.myNext, null, this);
+            } else { // Last node is the last started branch
+                List<FlowNode> branchEnds = new ArrayList<FlowNode>(currentParallelStart.unvisited);
+                branchEnds.add(this.myNext);
+                visitor.chunkEnd(this.findLastStartedNode(branchEnds), null, this);
+            }
         }
         while(hasNext()) {
             prev = (myCurrent != myNext) ? myCurrent : null;
