@@ -44,6 +44,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.junit.Assert;
 
@@ -563,8 +564,10 @@ public class ForkScannerTest {
         r.waitForCompletion(run);
     }
 
+    @Issue("JENKINS-38536")
     @Test
     public void testParallelCorrectEndNodeForVisitor() throws Exception {
+        // Verify that SimpleBlockVisitor actually gets the *real* last node not just the last declared branch
         WorkflowJob jobPauseFirst = r.jenkins.createProject(WorkflowJob.class, "PauseFirst");
         jobPauseFirst.setDefinition(new CpsFlowDefinition("" +
                 "stage 'primero'\n" +
@@ -580,7 +583,7 @@ public class ForkScannerTest {
                 ));
 
         WorkflowJob jobPauseMiddle = r.jenkins.createProject(WorkflowJob.class, "PauseMiddle");
-        jobPauseSecond.setDefinition(new CpsFlowDefinition("" +
+        jobPauseMiddle.setDefinition(new CpsFlowDefinition("" +
                 "stage 'primero'\n" +
                 "parallel 'success' : {echo 'succeed'}, \n" +
                 " 'pause':{ sleep 1; semaphore 'wait3'; }, \n" +

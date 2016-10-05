@@ -554,6 +554,10 @@ public class ForkScanner extends AbstractFlowScanner {
         scanner.visitSimpleChunks(visitor, finder);
     }
 
+    /** Ensures we find the last *begun* node when there are multiple heads (parallel branches)
+     *  This means that the simpleBlockVisitor gets the *actual* last node, not just the end of the last declared branch
+     *  (See issue JENKINS-38536)
+     */
     @CheckForNull
     private static FlowNode findLastStartedNode(@Nonnull List<FlowNode> candidates) {
         if (candidates.size() == 0) {
@@ -565,12 +569,11 @@ public class ForkScanner extends AbstractFlowScanner {
             long startTime = Long.MIN_VALUE;
             for(FlowNode f : candidates) {
                 TimingAction ta = f.getAction(TimingAction.class);
-                if (ta != null) {
-                    long myStart = ta.getStartTime();
-                    if (myStart > startTime) {
-                        returnOut = f;
-                        startTime = myStart;
-                    }
+                // Null timing with multiple heads is probably a node where the GraphListener hasn't fired to add TimingAction yet
+                long myStart = (ta == null) ? System.currentTimeMillis() : ta.getStartTime();
+                if (myStart > startTime) {
+                    returnOut = f;
+                    startTime = myStart;
                 }
             }
             return returnOut;
@@ -586,7 +589,13 @@ public class ForkScanner extends AbstractFlowScanner {
             } else { // Last node is the last started branch
                 List<FlowNode> branchEnds = new ArrayList<FlowNode>(currentParallelStart.unvisited);
                 branchEnds.add(this.myNext);
-                visitor.chunkEnd(this.findLastStartedNode(branchEnds), null, this);
+                FlowNode lastStarted = this.findLastStartedNode(branchEnds);
+                if (lastStarted != null) {
+                    visitor.chunkEnd(lastStarted, null, this);
+                } else {
+                    throw new IllegalStateException("Flow is inside parallel block, but shows no executing heads!");
+                }
+
             }
         }
         while(hasNext()) {
