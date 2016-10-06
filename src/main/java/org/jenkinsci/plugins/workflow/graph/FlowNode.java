@@ -248,6 +248,26 @@ public abstract class FlowNode extends Actionable implements Saveable {
         this.actions = new CopyOnWriteArrayList<Action>(actions);
     }
 
+
+    // Much faster check of actions because it does not trigger the TransientActionFactory
+    @Override
+    public <T extends Action> T getAction(Class<T> type) {
+        // Need to check and see if this will cause issues -- better to change in place if we can
+        // Otherwise we need to do changes in many places to use a new, fast API
+        List<Action> acts = (actions == null) ? getActions() : actions;
+        for (Action a : acts) {
+            if (type.isInstance(a)) {
+                return type.cast(a);
+            }
+        }
+        return null;
+    }
+
+    // Replaces the legacy getAction method for the few cases we really need it
+    public <T extends Action> T getActionComplete(Class<T> type) {
+        return super.getAction(type);
+    }
+
 /*
     We can't use Actionable#actions to store actions because they aren't transient,
     and we need to store actions elsewhere because this is the only mutable pat of FlowNode.
