@@ -249,9 +249,13 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
 
-    // Much faster check of actions because it does not trigger the TransientActionFactory
-    @Override
-    public <T extends Action> T getAction(Class<T> type) {
+    /**
+     * Return a persistent action o(transient actions are not included)
+     * @param type Action type to look for
+     * @param <T> Action type to look for
+     * @return First attached action of given type, or null if none found
+     */
+    public <T extends Action> T getDirectAction(Class<T> type) {
         // Need to check and see if this will cause issues -- better to change in place if we can
         // Otherwise we need to do changes in many places to use a new, fast API
         List<Action> acts = (actions == null) ? getActions() : actions;
@@ -261,11 +265,6 @@ public abstract class FlowNode extends Actionable implements Saveable {
             }
         }
         return null;
-    }
-
-    // Replaces the legacy getAction method for the few cases we really need it
-    public <T extends Action> T getActionComplete(Class<T> type) {
-        return super.getAction(type);
     }
 
 /*
