@@ -510,7 +510,7 @@ public class ForkScanner extends AbstractFlowScanner {
                     return temp;
                 }
             } else if (!blackList.contains(p)) {
-                if (p instanceof BlockStartNode && p.getAction(ThreadNameAction.class) != null) {
+                if (p instanceof BlockStartNode && p.getDirectAction(ThreadNameAction.class) != null) {
                     nextType = NodeType.PARALLEL_BRANCH_START;
                 } else if (ForkScanner.isParallelEnd(p)) {
                     nextType = NodeType.PARALLEL_END;
