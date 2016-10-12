@@ -15,6 +15,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 public class NotExecutedNodeAction extends InvisibleAction {
 
     public static boolean isExecuted(FlowNode node) {
-        return (node.getAction(NotExecutedNodeAction.class) == null);
+        return (node.getDirectAction(NotExecutedNodeAction.class) == null);
     }
 }
