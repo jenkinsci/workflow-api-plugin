@@ -12,9 +12,9 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
  *
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-public class NotExecutedNodeAction extends InvisibleAction {
+public class NotExecutedNodeAction extends InvisibleAction implements PersistentAction {
 
     public static boolean isExecuted(FlowNode node) {
-        return (node.getDirectAction(NotExecutedNodeAction.class) == null);
+        return (node.getAction(NotExecutedNodeAction.class) == null);
     }
 }

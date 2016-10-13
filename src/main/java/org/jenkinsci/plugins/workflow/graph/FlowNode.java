@@ -33,6 +33,7 @@ import hudson.search.SearchItem;
 import java.io.IOException;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
@@ -42,6 +43,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
+import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
@@ -104,7 +106,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * This is just a convenience method.
      */
     public final @CheckForNull ErrorAction getError() {
-        return getDirectAction(ErrorAction.class);
+        return getAction(ErrorAction.class);
     }
 
     public @Nonnull FlowExecution getExecution() {
@@ -167,7 +169,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Exported
     public String getDisplayName() {
-        LabelAction a = getDirectAction(LabelAction.class);
+        LabelAction a = getAction(LabelAction.class);
         if (a!=null)    return a.getDisplayName();
         else            return getTypeDisplayName();
     }
@@ -177,7 +179,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         if (functionName == null) {
             return getDisplayName();
         } else {
-            LabelAction a = getDirectAction(LabelAction.class);
+            LabelAction a = getAction(LabelAction.class);
             if (a != null) {
                 return functionName + " (" + a.getDisplayName() + ")";
             } else {
@@ -244,29 +246,29 @@ public abstract class FlowNode extends Actionable implements Saveable {
      *
      * This method provides such an opportunity for subtypes.
      */
-    protected void setActions(List<Action> actions) {
-        this.actions = new CopyOnWriteArrayList<Action>(actions);
+    protected synchronized void setActions(List<Action> actions) {
+            this.actions = new CopyOnWriteArrayList<Action>(actions);
     }
 
-
-    /**
-     * Return a persistent action o(transient actions are not included)
-     * @param type Action type to look for
-     * @param <T> Action type to look for
-     * @return First attached action of given type, or null if none found
-     */
-    public <T extends Action> T getDirectAction(Class<T> type) {
-        // Need to check and see if this will cause issues -- better to change in place if we can
-        // Otherwise we need to do changes in many places to use a new, fast API
-        List<Action> acts = (actions == null) ? getActions() : actions;
-        for (Action a : acts) {
-            if (type.isInstance(a)) {
-                return type.cast(a);
+    @Override
+    public <T extends Action> T getAction(Class<T> type) {
+        if (type.isAssignableFrom(PersistentAction.class)) {
+            List<Action> acts = (actions == null) ? getActions() : actions;
+            for (Action a : acts) {
+                if (type.isInstance(a)) {
+                    return type.cast(a);
+                }
             }
+            return null;
+        } else {
+            for (Action a : getAllActions()) {
+                if (type.isInstance(a)) {
+                    return type.cast(a);
+                }
+            }
+            return null;
         }
-        return null;
     }
-
 /*
     We can't use Actionable#actions to store actions because they aren't transient,
     and we need to store actions elsewhere because this is the only mutable pat of FlowNode.
@@ -295,6 +297,11 @@ public abstract class FlowNode extends Actionable implements Saveable {
             public void add(int index, Action element) {
                 actions.add(index, element);
                 persist();
+            }
+
+            @Override
+            public Iterator<Action> iterator() {
+                return actions.iterator();
             }
 
             @Override

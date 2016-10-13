@@ -198,7 +198,7 @@ public abstract class FlowExecution implements FlowActionStorage {
             return null;
 
         FlowNode e = heads.get(0);
-        ErrorAction error = e.getDirectAction(ErrorAction.class);
+        ErrorAction error = e.getAction(ErrorAction.class);
         if (error==null)    return null;        // successful completion
 
         return error.getError();

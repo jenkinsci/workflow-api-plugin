@@ -37,7 +37,7 @@ import org.jenkinsci.plugins.workflow.FilePathUtils;
 /**
  * Represents the fact that a step run on a particular workspace.
  */
-public abstract class WorkspaceAction implements Action {
+public abstract class WorkspaceAction implements PersistentAction {
 
     /** The {@link Node#getNodeName} of the workspace. */
     public abstract @Nonnull String getNode();

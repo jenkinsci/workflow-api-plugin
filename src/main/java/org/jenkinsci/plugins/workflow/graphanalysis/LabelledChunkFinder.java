@@ -24,7 +24,7 @@ public class LabelledChunkFinder implements ChunkFinder {
     /** Start is anywhere with a {@link LabelAction} */
     @Override
     public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
-        LabelAction la = current.getDirectAction(LabelAction.class);
+        LabelAction la = current.getAction(LabelAction.class);
         return la != null;
     }
 

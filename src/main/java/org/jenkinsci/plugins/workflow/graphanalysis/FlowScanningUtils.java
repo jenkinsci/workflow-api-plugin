@@ -57,7 +57,7 @@ public final class FlowScanningUtils {
         return new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
-                return (input != null && input.getDirectAction(actionClass) != null);
+                return (input != null && input.getAction(actionClass) != null);
             }
         };
     }
