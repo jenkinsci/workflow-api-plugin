@@ -107,7 +107,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * This is just a convenience method.
      */
     public final @CheckForNull ErrorAction getError() {
-        return getAction(ErrorAction.class);
+        return getDirectAction(ErrorAction.class);
     }
 
     public @Nonnull FlowExecution getExecution() {
@@ -170,7 +170,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Exported
     public String getDisplayName() {
-        LabelAction a = getAction(LabelAction.class);
+        LabelAction a = getDirectAction(LabelAction.class);
         if (a!=null)    return a.getDisplayName();
         else            return getTypeDisplayName();
     }
@@ -180,7 +180,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         if (functionName == null) {
             return getDisplayName();
         } else {
-            LabelAction a = getAction(LabelAction.class);
+            LabelAction a = getDirectAction(LabelAction.class);
             if (a != null) {
                 return functionName + " (" + a.getDisplayName() + ")";
             } else {
@@ -252,7 +252,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 //            this._wrapper = new ListWrapper(this);
     }
 
-    private  <T extends Action> T getDirectAction(Class<T> type) {
+    public <T extends Action> T getDirectAction(Class<T> type) {
         if (actions == null) {
             loadActions();
         }
