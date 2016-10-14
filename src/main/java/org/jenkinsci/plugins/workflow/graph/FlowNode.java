@@ -264,17 +264,21 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return null;
     }
 
+    private <T extends Action> T getMaybeTransientAction(Class<T> type) {
+        for (Action a : getAllActions()) {
+            if (type.isInstance(a)) {
+                return type.cast(a);
+            }
+        }
+        return null;
+    }
+
     @Override
     public <T extends Action> T getAction(Class<T> type) {
         if (PersistentAction.class.isAssignableFrom(type)) {
             return getDirectAction(type);
         } else {
-            for (Action a : getAllActions()) {
-                if (type.isInstance(a)) {
-                    return type.cast(a);
-                }
-            }
-            return null;
+            return getMaybeTransientAction(type);
         }
     }
 
