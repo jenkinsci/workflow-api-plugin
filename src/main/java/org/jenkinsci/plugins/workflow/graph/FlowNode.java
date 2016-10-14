@@ -253,10 +253,11 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     /**
-     * Return the first persistent action on the FlowNode, without consulting
-     * @param type
-     * @param <T>
-     * @return
+     * Return the first persistent action on the FlowNode, without consulting TransientActionFactories
+     * Used here because it is much faster to invoke a less-conditional, monomorphic method (50% faster)
+     * @param type Class of action
+     * @param <T>  Action type
+     * @return First persistent action or null if not found
      */
     public <T extends Action> T getPersistentAction(@Nonnull Class<T> type) {
         if (actions == null) {
@@ -270,6 +271,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return null;
     }
 
+    /** Split out so it can be tightly JIT compiled since the callsite cannot be overridden, benchmarked as a win */
     private <T extends Action> T getMaybeTransientAction(Class<T> type) {
         for (Action a : getAllActions()) {
             if (type.isInstance(a)) {
