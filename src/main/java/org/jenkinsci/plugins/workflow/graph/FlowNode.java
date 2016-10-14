@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.graph;
 
 import com.google.common.collect.ImmutableList;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
@@ -248,18 +249,25 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     protected synchronized void setActions(List<Action> actions) {
             this.actions = new CopyOnWriteArrayList<Action>(actions);
+//            this._wrapper = new ListWrapper(this);
+    }
+
+    private <T extends Action> T getDirectAction(Class<T> type) {
+        if (actions == null) {
+            getActions();
+        }
+        for (Action a : actions) {
+            if (type.isInstance(a)) {
+                return type.cast(a);
+            }
+        }
+        return null;
     }
 
     @Override
     public <T extends Action> T getAction(Class<T> type) {
-        if (type.isAssignableFrom(PersistentAction.class)) {
-            List<Action> acts = (actions == null) ? getActions() : actions;
-            for (Action a : acts) {
-                if (type.isInstance(a)) {
-                    return type.cast(a);
-                }
-            }
-            return null;
+        if (PersistentAction.class.isAssignableFrom(type)) {
+            return getDirectAction(type);
         } else {
             for (Action a : getAllActions()) {
                 if (type.isInstance(a)) {
@@ -269,68 +277,95 @@ public abstract class FlowNode extends Actionable implements Saveable {
             return null;
         }
     }
-/*
+
+    /*
     We can't use Actionable#actions to store actions because they aren't transient,
-    and we need to store actions elsewhere because this is the only mutable pat of FlowNode.
+    and we need to store actions elsewhere because this is the only mutable part of FlowNode.
 
     So we create a separate transient field and store List of them there, and intercept every mutation.
- */
+    */
+    private static class ListWrapper extends AbstractList<Action> {
+        FlowNode node;
+        CopyOnWriteArrayList<Action> myActions;
+
+        ListWrapper(FlowNode n) {
+            myActions = n.actions;
+            node = n;
+        }
+
+        @Override
+        public Action get(int index) {
+            return myActions.get(index);
+        }
+
+        @Override
+        public void add(int index, Action element) {
+            myActions.add(index, element);
+            node.persistSafe();
+        }
+
+        @Override
+        public boolean add(Action value) {
+            myActions.add(value);
+            node.persistSafe();
+            return true;
+        }
+
+        @Override
+        public Iterator<Action> iterator() {
+            return myActions.iterator();
+        }
+
+        @Override
+        public Action remove(int index) {
+            Action old = myActions.remove(index);
+            node.persistSafe();
+            return old;
+        }
+
+        @Override
+        public Action set(int index, Action element) {
+            Action old = myActions.set(index, element);
+            node.persistSafe();
+            return old;
+        }
+
+        @Override
+        public int size() {
+            return myActions.size();
+        }
+    }
+
+    private synchronized void loadActions() {
+        if (actions != null) {
+            return; //Mutation while we acquired lock
+        }
+        try {
+            actions = new CopyOnWriteArrayList<Action>(exec.loadActions(this));
+        } catch (IOException e) {
+            LOGGER.log(WARNING, "Failed to load actions for FlowNode id=" + id, e);
+            actions = new CopyOnWriteArrayList<Action>();
+        }
+    }
+
     @Exported
     @Override
-    public synchronized List<Action> getActions() {
-                if (actions==null) {
-                    try {
-                        actions = new CopyOnWriteArrayList<Action>(exec.loadActions(this));
-                    } catch (IOException e) {
-                        LOGGER.log(WARNING, "Failed to load actions for FlowNode id=" + id, e);
-                        actions = new CopyOnWriteArrayList<Action>();
-                    }
-                }
+    @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "CopyOnWrite ArrayList, and field modification is synchronized")
+    public List<Action> getActions() {
+        if (actions==null) {
+            loadActions();
+        }
+        return new ListWrapper(this);
+    }
 
-        return new AbstractList<Action>() {
-            @Override
-            public Action get(int index) {
-                return actions.get(index);
-            }
-
-            @Override
-            public void add(int index, Action element) {
-                actions.add(index, element);
-                persist();
-            }
-
-            @Override
-            public Iterator<Action> iterator() {
-                return actions.iterator();
-            }
-
-            @Override
-            public Action remove(int index) {
-                Action old = actions.remove(index);
-                persist();
-                return old;
-            }
-
-            @Override
-            public Action set(int index, Action element) {
-                Action old = actions.set(index, element);
-                persist();
-                return old;
-            }
-
-            @Override
-            public int size() {
-                return actions.size();
-            }
-
-            private void persist() {
-                try {
-                    save();
-                } catch (IOException e) {
-                    LOGGER.log(WARNING, "failed to save actions for FlowNode id=" + id, e);
-                }
-            }
-        };
+    @Override
+    public void addAction(@Nonnull Action a) {
+        if (a==null) throw new IllegalArgumentException();
+        if (actions == null) {
+            loadActions();
+        }
+        actions.add(a);
+        persistSafe();
     }
 
     /**
@@ -339,6 +374,15 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     public void save() throws IOException {
         exec.saveActions(this, actions);
+    }
+
+    // Persist, handling possible IOException
+    private void persistSafe() {
+        try {
+            save();
+        } catch (IOException e) {
+            LOGGER.log(WARNING, "failed to save actions for FlowNode id=" + this.id, e);
+        }
     }
 
     @Override
