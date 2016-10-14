@@ -252,9 +252,9 @@ public abstract class FlowNode extends Actionable implements Saveable {
 //            this._wrapper = new ListWrapper(this);
     }
 
-    private <T extends Action> T getDirectAction(Class<T> type) {
+    private  <T extends Action> T getDirectAction(Class<T> type) {
         if (actions == null) {
-            getActions();
+            loadActions();
         }
         for (Action a : actions) {
             if (type.isInstance(a)) {
@@ -278,64 +278,6 @@ public abstract class FlowNode extends Actionable implements Saveable {
         }
     }
 
-    /*
-    We can't use Actionable#actions to store actions because they aren't transient,
-    and we need to store actions elsewhere because this is the only mutable part of FlowNode.
-
-    So we create a separate transient field and store List of them there, and intercept every mutation.
-    */
-    private static class ListWrapper extends AbstractList<Action> {
-        FlowNode node;
-        CopyOnWriteArrayList<Action> myActions;
-
-        ListWrapper(FlowNode n) {
-            myActions = n.actions;
-            node = n;
-        }
-
-        @Override
-        public Action get(int index) {
-            return myActions.get(index);
-        }
-
-        @Override
-        public void add(int index, Action element) {
-            myActions.add(index, element);
-            node.persistSafe();
-        }
-
-        @Override
-        public boolean add(Action value) {
-            myActions.add(value);
-            node.persistSafe();
-            return true;
-        }
-
-        @Override
-        public Iterator<Action> iterator() {
-            return myActions.iterator();
-        }
-
-        @Override
-        public Action remove(int index) {
-            Action old = myActions.remove(index);
-            node.persistSafe();
-            return old;
-        }
-
-        @Override
-        public Action set(int index, Action element) {
-            Action old = myActions.set(index, element);
-            node.persistSafe();
-            return old;
-        }
-
-        @Override
-        public int size() {
-            return myActions.size();
-        }
-    }
-
     private synchronized void loadActions() {
         if (actions != null) {
             return; //Mutation while we acquired lock
@@ -350,22 +292,61 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Exported
     @Override
-    @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "CopyOnWrite ArrayList, and field modification is synchronized")
+    @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "CopyOnWrite ArrayList, and field load & modification is synchronized")
     public List<Action> getActions() {
         if (actions==null) {
             loadActions();
         }
-        return new ListWrapper(this);
-    }
+        /*
+        We can't use Actionable#actions to store actions because they aren't transient,
+        and we need to store actions elsewhere because this is the only mutable part of FlowNode.
 
-    @Override
-    public void addAction(@Nonnull Action a) {
-        if (a==null) throw new IllegalArgumentException();
-        if (actions == null) {
-            loadActions();
-        }
-        actions.add(a);
-        persistSafe();
+        So we create a separate transient field and store List of them there, and intercept every mutation.
+        */
+        return new AbstractList<Action>() {
+
+                @Override
+                public Action get(int index) {
+                    return actions.get(index);
+                }
+
+                @Override
+                public void add(int index, Action element) {
+                    actions.add(index, element);
+                    persistSafe();
+                }
+
+                @Override
+                public boolean add(Action value) {
+                    actions.add(value);
+                    persistSafe();
+                    return true;
+                }
+
+                @Override
+                public Iterator<Action> iterator() {
+                    return actions.iterator();
+                }
+
+                @Override
+                public Action remove(int index) {
+                    Action old = actions.remove(index);
+                    persistSafe();
+                    return old;
+                }
+
+                @Override
+                public Action set(int index, Action element) {
+                    Action old = actions.set(index, element);
+                    persistSafe();
+                    return old;
+                }
+
+                @Override
+                public int size() {
+                    return actions.size();
+                }
+        };
     }
 
     /**
