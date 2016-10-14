@@ -15,6 +15,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 public class NotExecutedNodeAction extends InvisibleAction implements PersistentAction {
 
     public static boolean isExecuted(FlowNode node) {
-        return (node.getDirectAction(NotExecutedNodeAction.class) == null);
+        return (node.getPersistentAction(NotExecutedNodeAction.class) == null);
     }
 }
