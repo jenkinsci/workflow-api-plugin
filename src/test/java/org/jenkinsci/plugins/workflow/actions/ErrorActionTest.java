@@ -73,7 +73,7 @@ public class ErrorActionTest {
     @Test
     public void simpleException() throws Exception {
         final String EXPECTED = "For testing purpose";
-        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, r.getTestDescription().getMethodName());
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
         job.setDefinition(new CpsFlowDefinition(String.format(
                 "node {\n"
                         + "throw new Exception('%s');\n"
@@ -92,15 +92,18 @@ public class ErrorActionTest {
     @Issue("JENKINS-34488")
     @Test
     public void unserializableForSecurityReason() throws Exception {
-        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, r.getTestDescription().getMethodName());
+        final String FAILING_EXPRESSION = "(2 + 2) == 5";
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
         // "assert false" throws org.codehaus.groovy.runtime.powerassert.PowerAssertionError,
         // which is rejected by remoting.
-        job.setDefinition(new CpsFlowDefinition(
+        job.setDefinition(new CpsFlowDefinition(String.format(
                 "node {\n"
-                        + "assert false;\n"
-                + "}"
-        ));
+                        + "assert %s;\n"
+                + "}",
+                FAILING_EXPRESSION
+        )));
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get());
+        r.assertLogContains(FAILING_EXPRESSION, b); // ensure that failed with the assertion.
         List<ErrorAction> errorActionList = extractErrorActions(b.asFlowExecutionOwner().get());
         assertThat(errorActionList, Matchers.not(Matchers.empty()));
         for (ErrorAction e : errorActionList) {
