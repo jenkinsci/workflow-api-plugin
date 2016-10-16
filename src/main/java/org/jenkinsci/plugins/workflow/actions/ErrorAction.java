@@ -54,6 +54,10 @@ public class ErrorAction implements Action {
      * an equivalent that captures the same details but serializes nicely.
      */
     private boolean isUnserializableException(Throwable error) {
+        if (error == null) {
+            // This shouldn't happen.
+            return false;
+        }
         try {
             // Some exceptions are refused to be serialized for security reasons.
             // (E.g. PowerAssertionError thrown by "assert false")
