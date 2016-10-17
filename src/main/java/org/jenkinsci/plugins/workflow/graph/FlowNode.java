@@ -49,6 +49,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
@@ -249,17 +250,19 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     protected synchronized void setActions(List<Action> actions) {
             this.actions = new CopyOnWriteArrayList<Action>(actions);
-//            this._wrapper = new ListWrapper(this);
     }
 
     /**
-     * Return the first persistent action on the FlowNode, without consulting TransientActionFactories
-     * Used here because it is much faster to invoke a less-conditional, monomorphic method (50% faster)
+     * Return the first nontransient {@link Action} on the FlowNode, without consulting {@link jenkins.model.TransientActionFactory}s
+     * <p> This is not restricted to just Actions implementing {@link PersistentAction} but usually they should.
+     * Used here because it is much faster than base {@link ##getAction(Class)} method.
      * @param type Class of action
      * @param <T>  Action type
-     * @return First persistent action or null if not found
+     * @return First nontransient action or null if not found.
      */
-    public <T extends Action> T getPersistentAction(@Nonnull Class<T> type) {
+    @CheckForNull
+    @Restricted(NoExternalUse.class)  // Limit use to workflow-api packages until we have a case where we need the performance badly.
+    public final <T extends Action> T getPersistentAction(@Nonnull Class<T> type) {
         if (actions == null) {
             loadActions();
         }
@@ -282,6 +285,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     @Override
+    @CheckForNull
     public <T extends Action> T getAction(Class<T> type) {
         // Delegates internally to methods that are not overloads, which are more subject to inlining and optimization
         // Normally a micro-optimization, but these methods are invoked *heavily* and improves performance 5%
