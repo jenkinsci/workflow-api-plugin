@@ -255,7 +255,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     /**
      * Return the first nontransient {@link Action} on the FlowNode, without consulting {@link jenkins.model.TransientActionFactory}s
      * <p> This is not restricted to just Actions implementing {@link PersistentAction} but usually they should.
-     * Used here because it is much faster than base {@link ##getAction(Class)} method.
+     * Used here because it is much faster than base {@link #getAction(Class)} method.
      * @param type Class of action
      * @param <T>  Action type
      * @return First nontransient action or null if not found.
