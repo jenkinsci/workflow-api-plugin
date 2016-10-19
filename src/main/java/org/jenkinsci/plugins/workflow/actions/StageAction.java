@@ -37,7 +37,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
  * or only within a single thread of an execution (branch of the flow graph).
  * <p>The standard implementation is attached by {@code StageStep} and is linear within an execution (threads are ignored).
  */
-public interface StageAction extends Action {
+public interface StageAction extends PersistentAction {
 
     /**
      * Gets the name of the stage.

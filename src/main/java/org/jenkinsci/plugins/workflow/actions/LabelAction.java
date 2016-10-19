@@ -33,7 +33,7 @@ import hudson.model.Action;
  * @author Kohsuke Kawaguchi
  * @author Jesse Glick
  */
-public class LabelAction implements Action {
+public class LabelAction implements PersistentAction {
     private final String displayName;
 
     public LabelAction(String displayName) {

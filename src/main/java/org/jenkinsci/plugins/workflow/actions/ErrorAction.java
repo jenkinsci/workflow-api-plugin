@@ -38,7 +38,7 @@ import hudson.model.Action;
  *
  * @author Kohsuke Kawaguchi
  */
-public class ErrorAction implements Action {
+public class ErrorAction implements PersistentAction {
     private final Throwable error;
 
     public ErrorAction(Throwable error) {
