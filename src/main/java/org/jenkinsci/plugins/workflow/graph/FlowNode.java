@@ -263,9 +263,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @CheckForNull
     @Restricted(NoExternalUse.class)  // Limit use to workflow-api packages until we have a case where we need the performance badly.
     public final <T extends Action> T getPersistentAction(@Nonnull Class<T> type) {
-        if (actions == null) {
-            loadActions();
-        }
+        loadActions();
         for (Action a : actions) {
             if (type.isInstance(a)) {
                 return type.cast(a);
@@ -299,7 +297,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     private synchronized void loadActions() {
         if (actions != null) {
-            return; //Mutation while we acquired lock
+            return;
         }
         try {
             actions = new CopyOnWriteArrayList<Action>(exec.loadActions(this));
@@ -313,9 +311,8 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Override
     @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "CopyOnWrite ArrayList, and field load & modification is synchronized")
     public List<Action> getActions() {
-        if (actions==null) {
-            loadActions();
-        }
+        loadActions();
+
         /*
         We can't use Actionable#actions to store actions because they aren't transient,
         and we need to store actions elsewhere because this is the only mutable part of FlowNode.
@@ -333,13 +330,6 @@ public abstract class FlowNode extends Actionable implements Saveable {
                 public void add(int index, Action element) {
                     actions.add(index, element);
                     persistSafe();
-                }
-
-                @Override
-                public boolean add(Action value) {
-                    actions.add(value);
-                    persistSafe();
-                    return true;
                 }
 
                 @Override
