@@ -32,6 +32,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -66,9 +67,13 @@ public class LinearBlockHoppingScanner extends LinearScanner {
 
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
-        if (heads.size() > 0) {
-            this.myCurrent = jumpBlockScan(heads.iterator().next(), myBlackList);
+        Iterator<FlowNode> it = heads.iterator();
+        if (it.hasNext()) {
+            this.myCurrent = jumpBlockScan(it.next(), myBlackList);
             this.myNext = this.myCurrent;
+            if (it.hasNext()) {
+                throw new IllegalArgumentException("Multiple heads not supported for linear scanners");
+            }
         }
     }
 
