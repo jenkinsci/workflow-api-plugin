@@ -35,7 +35,7 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
  * Associated with a node which has some log text.
  * So if {@link StepContext} is asked for {@link TaskListener}, the {@link FlowExecution} should attach this action to the contextual {@link FlowNode}.
  */
-public abstract class LogAction implements Action {
+public abstract class LogAction implements PersistentAction {
     /**
      * Access the log file and expose it to the UI with the progressive logging functionality
      */

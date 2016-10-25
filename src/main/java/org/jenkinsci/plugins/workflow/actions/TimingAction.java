@@ -42,7 +42,7 @@ public class TimingAction implements Action {
     }
 
     public static long getStartTime(FlowNode flowNode) {
-        TimingAction timingAction = flowNode.getAction(TimingAction.class);
+        TimingAction timingAction = flowNode.getPersistentAction(TimingAction.class);
         if (timingAction != null) {
             return timingAction.getStartTime();
         } else {

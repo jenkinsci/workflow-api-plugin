@@ -40,8 +40,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -511,7 +509,7 @@ public class ForkScanner extends AbstractFlowScanner {
                     return temp;
                 }
             } else if (!blackList.contains(p)) {
-                if (p instanceof BlockStartNode && p.getAction(ThreadNameAction.class) != null) {
+                if (p instanceof BlockStartNode && p.getPersistentAction(ThreadNameAction.class) != null) {
                     nextType = NodeType.PARALLEL_BRANCH_START;
                 } else if (ForkScanner.isParallelEnd(p)) {
                     nextType = NodeType.PARALLEL_END;

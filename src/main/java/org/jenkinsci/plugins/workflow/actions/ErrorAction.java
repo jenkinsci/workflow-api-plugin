@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import groovy.lang.MissingMethodException;
+import hudson.remoting.ClassFilter;
 import hudson.remoting.ProxyException;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.graph.AtomNode;
@@ -37,7 +38,7 @@ import hudson.model.Action;
  *
  * @author Kohsuke Kawaguchi
  */
-public class ErrorAction implements Action {
+public class ErrorAction implements PersistentAction {
     private final Throwable error;
 
     public ErrorAction(Throwable error) {
@@ -53,6 +54,19 @@ public class ErrorAction implements Action {
      * an equivalent that captures the same details but serializes nicely.
      */
     private boolean isUnserializableException(Throwable error) {
+        if (error == null) {
+            // This shouldn't happen.
+            return false;
+        }
+        try {
+            // Some exceptions are refused to be serialized for security reasons.
+            // (E.g. PowerAssertionError thrown by "assert false")
+            // See also hudson.util.XStream2
+            ClassFilter.DEFAULT.check(error.getClass());
+            ClassFilter.DEFAULT.check(error.getClass().getName());
+        } catch (SecurityException x) {
+            return true;
+        }
         return error instanceof MultipleCompilationErrorsException ||
                error instanceof MissingMethodException;
     }
