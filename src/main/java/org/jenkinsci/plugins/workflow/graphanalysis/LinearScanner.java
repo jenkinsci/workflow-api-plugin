@@ -33,6 +33,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
 /**
@@ -50,6 +52,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 @NotThreadSafe
 public class LinearScanner extends AbstractFlowScanner {
 
+    private static final Logger LOGGER = Logger.getLogger(LinearScanner.class.getName());
+
     @Override
     protected void reset() {
         this.myCurrent = null;
@@ -59,7 +63,7 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
+     * @param filteredHeads Head nodes that have been filtered against blackList. <strong>Do not pass multiple heads.</strong>
      */
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
@@ -68,7 +72,7 @@ public class LinearScanner extends AbstractFlowScanner {
             this.myCurrent = it.next();
             this.myNext = this.myCurrent;
             if (it.hasNext()) {
-                throw new IllegalArgumentException("Multiple heads not supported for linear scanners");
+                LOGGER.log(Level.WARNING, null, new IllegalArgumentException("Multiple heads not supported for linear scanners"));
             }
         }
     }
@@ -91,7 +95,6 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
      * @deprecated prefer {@link #filteredNodes(FlowNode, Predicate)}
      */
     @Deprecated
@@ -104,7 +107,7 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
+     * @param heads Nodes to start iterating backward from by visiting their parents. <strong>Do not pass multiple heads.</strong>
      */
     @Override
     public List<FlowNode> filteredNodes(Collection<FlowNode> heads, Collection<FlowNode> blackList, Predicate<FlowNode> matchCondition) {
@@ -113,7 +116,6 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
      * @deprecated prefer {@link #findFirstMatch(FlowNode, Predicate)}
      */
     @Deprecated
@@ -126,7 +128,7 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
+     * @param heads Head nodes to start walking from. <strong>Do not pass multiple heads.</strong>
      */
     @Override
     public FlowNode findFirstMatch(Collection<FlowNode> heads, Collection<FlowNode> blackListNodes, Predicate<FlowNode> matchCondition) {
@@ -137,7 +139,7 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
+     * @param heads <strong>Do not pass multiple heads.</strong>
      */
     @Override
     public void visitAll(Collection<FlowNode> heads, FlowNodeVisitor visitor) {
@@ -148,7 +150,7 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
+     * @param heads Nodes to start walking the DAG backwards from. <strong>Do not pass multiple heads.</strong>
      */
     @Override
     public void visitAll(Collection<FlowNode> heads, Collection<FlowNode> blackList, FlowNodeVisitor visitor) {
@@ -157,7 +159,6 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are present
      * @deprecated unsafe to call
      */
     @Deprecated
@@ -168,7 +169,6 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
      * @deprecated prefer {@link #setup(FlowNode)}
      */
     @Deprecated
@@ -179,7 +179,6 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @throws IllegalArgumentException if multiple heads are passed
      * @deprecated prefer {@link #setup(FlowNode, Collection)}
      */
     @Deprecated

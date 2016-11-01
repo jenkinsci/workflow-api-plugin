@@ -34,6 +34,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Extension of {@link LinearScanner} that skips nested blocks at the current level, useful for finding enclosing blocks.
@@ -59,6 +61,8 @@ import java.util.List;
 @NotThreadSafe
 public class LinearBlockHoppingScanner extends LinearScanner {
 
+    private static final Logger LOGGER = Logger.getLogger(LinearBlockHoppingScanner.class.getName());
+
     @Override
     public boolean setup(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList) {
         boolean possiblyStartable = super.setup(heads, blackList);
@@ -72,7 +76,7 @@ public class LinearBlockHoppingScanner extends LinearScanner {
             this.myCurrent = jumpBlockScan(it.next(), myBlackList);
             this.myNext = this.myCurrent;
             if (it.hasNext()) {
-                throw new IllegalArgumentException("Multiple heads not supported for linear scanners");
+                LOGGER.log(Level.WARNING, null, new IllegalArgumentException("Multiple heads not supported for linear scanners"));
             }
         }
     }
