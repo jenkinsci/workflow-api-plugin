@@ -32,6 +32,7 @@ import hudson.model.BallColor;
 import hudson.model.Saveable;
 import hudson.search.SearchItem;
 import java.io.IOException;
+import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -61,7 +62,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     private transient List<FlowNode> parents;
     private final List<String> parentIds;
 
-    private final String id;
+    private String id;
 
     // this is a copy-on-write array so synchronization isn't needed between reader & writer.
     @edu.umd.cs.findbugs.annotations.SuppressWarnings("IS2_INCONSISTENT_SYNC")
@@ -89,6 +90,19 @@ public abstract class FlowNode extends Actionable implements Saveable {
             ids.add(n.id);
         }
         return ids;
+    }
+
+    private Object readResolve() throws ObjectStreamException {
+        // Ensure we deduplicate strings upon deserialization
+        if (this.id != null) {
+            this.id = this.id.intern();
+        }
+        if (parentIds != null) {
+            for (int i=0; i<parentIds.size(); i++) {
+                parentIds.set(i, parentIds.get(i).intern());
+            }
+        }
+        return this;
     }
 
     /**
