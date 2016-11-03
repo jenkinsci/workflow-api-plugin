@@ -59,10 +59,10 @@ import org.kohsuke.stapler.export.ExportedBean;
  */
 @ExportedBean
 public abstract class FlowNode extends Actionable implements Saveable {
-    protected transient List<FlowNode> parents;
-    protected List<String> parentIds;
+    private transient List<FlowNode> parents;
+    private List<String> parentIds;
 
-    protected String id;
+    private String id;
 
     // this is a copy-on-write array so synchronization isn't needed between reader & writer.
     @edu.umd.cs.findbugs.annotations.SuppressWarnings("IS2_INCONSISTENT_SYNC")
