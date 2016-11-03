@@ -59,10 +59,10 @@ import org.kohsuke.stapler.export.ExportedBean;
  */
 @ExportedBean
 public abstract class FlowNode extends Actionable implements Saveable {
-    private transient List<FlowNode> parents;
-    private final List<String> parentIds;
+    protected transient List<FlowNode> parents;
+    protected List<String> parentIds;
 
-    private String id;
+    protected String id;
 
     // this is a copy-on-write array so synchronization isn't needed between reader & writer.
     @edu.umd.cs.findbugs.annotations.SuppressWarnings("IS2_INCONSISTENT_SYNC")
@@ -92,7 +92,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return ids;
     }
 
-    private Object readResolve() throws ObjectStreamException {
+    protected Object readResolve() throws ObjectStreamException {
         // Ensure we deduplicate strings upon deserialization
         if (this.id != null) {
             this.id = this.id.intern();
