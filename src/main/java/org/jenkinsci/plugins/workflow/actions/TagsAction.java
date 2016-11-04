@@ -39,7 +39,7 @@ import java.util.Set;
  * This is designed to have a single action on the FlowNode to track all tags, for sanity.
  * Flexible implementation of JENKINS-26522, with Strings for the annotation.
  */
-public class TagsAction implements Action{
+public class TagsAction implements PersistentAction {
     private static final String displayName = "Tags";
     private static final String urlSuffix = "tags";
 
