@@ -33,7 +33,7 @@
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
     <artifactId>workflow-api</artifactId>
-    <!-- For downstream deps -- changed upon release --> 
+    <!-- For downstream deps, changed upon release --> 
     <version>2.6-dedup-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline: API</name>
