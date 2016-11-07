@@ -24,13 +24,18 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
 /**
  * Scans through the flow graph in strictly linear fashion, visiting only the first branch in parallel blocks.
@@ -47,6 +52,8 @@ import java.util.List;
 @NotThreadSafe
 public class LinearScanner extends AbstractFlowScanner {
 
+    private static final Logger LOGGER = Logger.getLogger(LinearScanner.class.getName());
+
     @Override
     protected void reset() {
         this.myCurrent = null;
@@ -54,11 +61,19 @@ public class LinearScanner extends AbstractFlowScanner {
         this.myBlackList = Collections.EMPTY_SET;
     }
 
+    /**
+     * {@inheritDoc}
+     * @param filteredHeads Head nodes that have been filtered against blackList. <strong>Do not pass multiple heads.</strong>
+     */
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
-        if (heads.size() > 0) {
-            this.myCurrent = heads.iterator().next();
+        Iterator<FlowNode> it = heads.iterator();
+        if (it.hasNext()) {
+            this.myCurrent = it.next();
             this.myNext = this.myCurrent;
+            if (it.hasNext()) {
+                LOGGER.log(Level.WARNING, null, new IllegalArgumentException("Multiple heads not supported for linear scanners"));
+            }
         }
     }
 
@@ -77,4 +92,99 @@ public class LinearScanner extends AbstractFlowScanner {
         }
         return null;
     }
+
+    /**
+     * {@inheritDoc}
+     * @deprecated prefer {@link #filteredNodes(FlowNode, Predicate)}
+     */
+    @Deprecated
+    @Override
+    public List<FlowNode> filteredNodes(Collection<FlowNode> heads, Predicate<FlowNode> matchPredicate) {
+        return super.filteredNodes(heads, matchPredicate);
+    }
+
+    // TODO not deprecated since there is no apparent direct replacement yet
+
+    /**
+     * {@inheritDoc}
+     * @param heads Nodes to start iterating backward from by visiting their parents. <strong>Do not pass multiple heads.</strong>
+     */
+    @Override
+    public List<FlowNode> filteredNodes(Collection<FlowNode> heads, Collection<FlowNode> blackList, Predicate<FlowNode> matchCondition) {
+        return super.filteredNodes(heads, blackList, matchCondition);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @deprecated prefer {@link #findFirstMatch(FlowNode, Predicate)}
+     */
+    @Deprecated
+    @Override
+    public FlowNode findFirstMatch(Collection<FlowNode> heads, Predicate<FlowNode> matchPredicate) {
+        return super.findFirstMatch(heads, matchPredicate);
+    }
+
+    // TODO not deprecated since there is no apparent direct replacement yet
+
+    /**
+     * {@inheritDoc}
+     * @param heads Head nodes to start walking from. <strong>Do not pass multiple heads.</strong>
+     */
+    @Override
+    public FlowNode findFirstMatch(Collection<FlowNode> heads, Collection<FlowNode> blackListNodes, Predicate<FlowNode> matchCondition) {
+        return super.findFirstMatch(heads, blackListNodes, matchCondition);
+    }
+
+    // TODO not deprecated since there is no apparent direct replacement yet
+
+    /**
+     * {@inheritDoc}
+     * @param heads <strong>Do not pass multiple heads.</strong>
+     */
+    @Override
+    public void visitAll(Collection<FlowNode> heads, FlowNodeVisitor visitor) {
+        super.visitAll(heads, visitor);
+    }
+
+    // TODO not deprecated since there is no apparent direct replacement yet
+
+    /**
+     * {@inheritDoc}
+     * @param heads Nodes to start walking the DAG backwards from. <strong>Do not pass multiple heads.</strong>
+     */
+    @Override
+    public void visitAll(Collection<FlowNode> heads, Collection<FlowNode> blackList, FlowNodeVisitor visitor) {
+        super.visitAll(heads, blackList, visitor);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @deprecated unsafe to call
+     */
+    @Deprecated
+    @Override
+    public FlowNode findFirstMatch(FlowExecution exec, Predicate<FlowNode> matchPredicate) {
+        return super.findFirstMatch(exec, matchPredicate);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @deprecated prefer {@link #setup(FlowNode)}
+     */
+    @Deprecated
+    @Override
+    public boolean setup(Collection<FlowNode> heads) {
+        return super.setup(heads);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @deprecated prefer {@link #setup(FlowNode, Collection)}
+     */
+    @Deprecated
+    @Override
+    public boolean setup(Collection<FlowNode> heads, Collection<FlowNode> blackList) {
+        return super.setup(heads, blackList);
+    }
+
 }
