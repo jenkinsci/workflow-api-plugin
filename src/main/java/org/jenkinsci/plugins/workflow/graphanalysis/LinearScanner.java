@@ -63,7 +63,7 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @param filteredHeads Head nodes that have been filtered against blackList. <strong>Do not pass multiple heads.</strong>
+     * @param heads Head nodes that have been filtered against blackList. <strong>Do not pass multiple heads.</strong>
      */
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
