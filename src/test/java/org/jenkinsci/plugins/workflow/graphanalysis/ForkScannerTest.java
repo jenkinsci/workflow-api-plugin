@@ -457,20 +457,16 @@ public class ForkScannerTest {
         FlowExecution exec = b.getExecution();
         ForkScanner scan = new ForkScanner();
 
-        // Test different start points in branch A & B
+        // Test different start points in branch A & B, 20 and 19 were one error case.
         for (int i=0; i < 4; i++) {
             for (int j=0; j<5; j++) {
                 int branchANodeId = i+20;
                 int branchBNodeId = j+15;
+                System.out.println("Starting test with nodes "+branchANodeId+","+branchBNodeId);
                 ArrayList<FlowNode> starts = new ArrayList<FlowNode>();
                 FlowTestUtils.addNodesById(starts, exec, branchANodeId, branchBNodeId);
                 List<FlowNode> all = scan.filteredNodes(starts, Predicates.<FlowNode>alwaysTrue());
-                try {
-                    Assert.assertEquals(new HashSet<FlowNode>(all).size(), all.size());
-                } catch (Throwable t) {
-                    System.out.println("Error starting with nodes: "+branchANodeId+" "+branchBNodeId);
-                    throw t;
-                }
+                Assert.assertEquals(new HashSet<FlowNode>(all).size(), all.size());
                 scan.reset();
             }
         }
