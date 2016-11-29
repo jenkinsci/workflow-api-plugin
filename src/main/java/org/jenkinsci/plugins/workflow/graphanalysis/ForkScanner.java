@@ -328,7 +328,9 @@ public class ForkScanner extends AbstractFlowScanner {
         }
 
         // Walk through, merging flownodes one-by-one until everything has merged to one ancestor
-        while (iterators.size() > 1) {
+        boolean mergedAll = false;
+		// Ends when we merged all branches together, or hit the start of the flow without it
+        while (!mergedAll && iterators.size() > 0) {
             ListIterator<Filterator<FlowNode>> itIterator = iterators.listIterator();
             ListIterator<FlowPiece> pieceIterator = livePieces.listIterator();
 
@@ -375,6 +377,9 @@ public class ForkScanner extends AbstractFlowScanner {
                     // Merging removes the piece & its iterator from heads
                     itIterator.remove();
                     pieceIterator.remove();
+                    if (iterators.size() == 1) { // Merged in the final branch
+                        mergedAll = true;
+                    }
                 }
             }
         }
@@ -387,6 +392,7 @@ public class ForkScanner extends AbstractFlowScanner {
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 1) {
             parallelBlockStartStack = leastCommonAncestor(new LinkedHashSet<FlowNode>(heads));
+            assert parallelBlockStartStack.size() > 0;
             currentParallelStart = parallelBlockStartStack.pop();
             currentParallelStartNode = currentParallelStart.forkStart;
             myCurrent = currentParallelStart.unvisited.pop();
