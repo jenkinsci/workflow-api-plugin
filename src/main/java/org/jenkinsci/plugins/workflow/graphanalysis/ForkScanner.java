@@ -329,7 +329,7 @@ public class ForkScanner extends AbstractFlowScanner {
 
         // Walk through, merging flownodes one-by-one until everything has merged to one ancestor
         boolean mergedAll = false;
-		// Ends when we merged all branches together, or hit the start of the flow without it
+        // Ends when we merged all branches together, or hit the start of the flow without it
         while (!mergedAll && iterators.size() > 0) {
             ListIterator<Filterator<FlowNode>> itIterator = iterators.listIterator();
             ListIterator<FlowPiece> pieceIterator = livePieces.listIterator();

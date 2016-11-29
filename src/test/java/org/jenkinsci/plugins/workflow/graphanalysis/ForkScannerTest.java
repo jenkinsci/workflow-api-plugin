@@ -408,25 +408,25 @@ public class ForkScannerTest {
     }
 
     @Test
+    @Issue("JENKINS-38089")
     public void testVariousParallelCombos() throws Exception {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "ParallelTimingBug");
         job.setDefinition(new CpsFlowDefinition(
-                "stage 'test' \n" +
-                        "    parallel([\n" +  // ID 5 is start
-                        "        'unit': {\n" +
-                        "          retry(1) {\n" +
-                        "            sleep 1;\n" +
-                        "            sleep 10; echo 'hello'; \n" +
-                        "          }\n" +
-                        "        },\n" +
-                        "        'otherunit': {\n" +
-                        "            retry(1) {\n" +
-                        "              sleep 1;\n" +
-                        "              sleep 5; \n" +
-                        "              echo 'goodbye'   \n" +
-                        "            }\n" +
-                        "        }\n" +  // end of branch:
-                        "    ])\n"
+            // Seemingly gratuitous sleep steps are because original issue required specific timing to reproduce
+            // TODO test to see if we still need them to reproduce JENKINS-38089
+            "stage 'test' \n" +
+            "    parallel 'unit': {\n" +
+            "          retry(1) {\n" +
+            "            sleep 1;\n" +
+            "            sleep 10; echo 'hello'; \n" +
+            "          }\n" +
+            "        }, 'otherunit': {\n" +
+            "            retry(1) {\n" +
+            "              sleep 1;\n" +
+            "              sleep 5; \n" +
+            "              echo 'goodbye'   \n" +
+            "            }\n" +
+            "        }"
         ));
         /*Node dump follows, format:
         [ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block end node]
