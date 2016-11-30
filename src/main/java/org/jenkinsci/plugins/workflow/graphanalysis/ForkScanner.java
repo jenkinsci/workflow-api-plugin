@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
+import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
@@ -328,7 +329,7 @@ public class ForkScanner extends AbstractFlowScanner {
 
         // Walk through, merging flownodes one-by-one until everything has merged to one ancestor
         boolean mergedAll = false;
-		// Ends when we merged all branches together, or hit the start of the flow without it
+        // Ends when we merged all branches together, or hit the start of the flow without it
         while (!mergedAll && iterators.size() > 0) {
             ListIterator<Filterator<FlowNode>> itIterator = iterators.listIterator();
             ListIterator<FlowPiece> pieceIterator = livePieces.listIterator();
@@ -557,11 +558,49 @@ public class ForkScanner extends AbstractFlowScanner {
         scanner.visitSimpleChunks(visitor, finder);
     }
 
-    /** Walk through flows  */
+    /** Ensures we find the last *begun* node when there are multiple heads (parallel branches)
+     *  This means that the simpleBlockVisitor gets the *actual* last node, not just the end of the last declared branch
+     *  (See issue JENKINS-38536)
+     */
+    @CheckForNull
+    private static FlowNode findLastStartedNode(@Nonnull List<FlowNode> candidates) {
+        if (candidates.size() == 0) {
+            return null;
+        } else if (candidates.size() == 1) {
+            return candidates.get(0);
+        } else {
+            FlowNode returnOut = candidates.get(0);
+            long startTime = Long.MIN_VALUE;
+            for(FlowNode f : candidates) {
+                TimingAction ta = f.getAction(TimingAction.class);
+                // Null timing with multiple heads is probably a node where the GraphListener hasn't fired to add TimingAction yet
+                long myStart = (ta == null) ? System.currentTimeMillis() : ta.getStartTime();
+                if (myStart > startTime) {
+                    returnOut = f;
+                    startTime = myStart;
+                }
+            }
+            return returnOut;
+        }
+    }
+
+    /** Walk through flows */
     public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         FlowNode prev = null;
         if (finder.isStartInsideChunk() && hasNext()) {
-            visitor.chunkEnd(this.myNext, null, this);
+            if (currentParallelStart == null ) {
+                visitor.chunkEnd(this.myNext, null, this);
+            } else { // Last node is the last started branch
+                List<FlowNode> branchEnds = new ArrayList<FlowNode>(currentParallelStart.unvisited);
+                branchEnds.add(this.myNext);
+                FlowNode lastStarted = this.findLastStartedNode(branchEnds);
+                if (lastStarted != null) {
+                    visitor.chunkEnd(lastStarted, null, this);
+                } else {
+                    throw new IllegalStateException("Flow is inside parallel block, but shows no executing heads!");
+                }
+
+            }
         }
         while(hasNext()) {
             prev = (myCurrent != myNext) ? myCurrent : null;
