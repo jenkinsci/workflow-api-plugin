@@ -11,7 +11,7 @@ import org.jenkinsci.plugins.workflow.steps.BodyInvoker;
  *
  * @author Kohsuke Kawaguchi
  */
-public class BodyInvocationAction extends InvisibleAction implements FlowNodeAction {
+public class BodyInvocationAction extends InvisibleAction implements FlowNodeAction, PersistentAction {
     /*
      * @param stepBlock
      *      Reference to the block that signifies the enclosing block (which corresponds

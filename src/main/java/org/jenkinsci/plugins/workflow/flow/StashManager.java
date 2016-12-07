@@ -119,13 +119,8 @@ public class StashManager {
         if (!storage.isFile()) {
             throw new AbortException("No such saved stash ‘" + name + "’");
         }
-        InputStream is = new FileInputStream(storage);
-        try {
-            workspace.untarFrom(is, FilePath.TarCompression.GZIP);
-            // currently nothing to print; listener is a placeholder
-        } finally {
-            is.close();
-        }
+        new FilePath(storage).untar(workspace, FilePath.TarCompression.GZIP);
+        // currently nothing to print; listener is a placeholder
     }
 
     /**

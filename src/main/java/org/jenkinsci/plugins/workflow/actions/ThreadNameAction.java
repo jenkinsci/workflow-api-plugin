@@ -32,7 +32,7 @@ import javax.annotation.Nonnull;
  *
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-public interface ThreadNameAction extends Action {
+public interface ThreadNameAction extends PersistentAction {
 
     @Nonnull
     String getThreadName();

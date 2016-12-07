@@ -29,19 +29,21 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.cps.steps.ParallelStep;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
-import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.junit.Assert;
 
@@ -49,7 +51,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -406,6 +407,74 @@ public class ForkScannerTest {
         Assert.assertEquals(2, starts.size());
     }
 
+    @Test
+    @Issue("JENKINS-38089")
+    public void testVariousParallelCombos() throws Exception {
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "ParallelTimingBug");
+        job.setDefinition(new CpsFlowDefinition(
+            // Seemingly gratuitous sleep steps are because original issue required specific timing to reproduce
+            // TODO test to see if we still need them to reproduce JENKINS-38089
+            "stage 'test' \n" +
+            "    parallel 'unit': {\n" +
+            "          retry(1) {\n" +
+            "            sleep 1;\n" +
+            "            sleep 10; echo 'hello'; \n" +
+            "          }\n" +
+            "        }, 'otherunit': {\n" +
+            "            retry(1) {\n" +
+            "              sleep 1;\n" +
+            "              sleep 5; \n" +
+            "              echo 'goodbye'   \n" +
+            "            }\n" +
+            "        }"
+        ));
+        /*Node dump follows, format:
+        [ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block end node]
+        Action format:
+        - actionClassName actionDisplayName
+        ------------------------------------------------------------------------------------------
+        [2]{}FlowStartNode Start of Pipeline
+        [3]{2}StepAtomNode test
+        [4]{3}StepStartNode Execute in parallel : Start
+        [6]{4}StepStartNode Branch: unit
+        [7]{4}StepStartNode Branch: otherunit
+            A [8]{6}StepStartNode Retry the body up to N times : Start
+            A [9]{8}StepStartNode Retry the body up to N times : Body : Start
+          B [10]{7}StepStartNode Retry the body up to N times : Start
+          B [11]{10}StepStartNode Retry the body up to N times : Body : Start
+            A [12]{9}StepAtomNode Sleep
+          B [13]{11}StepAtomNode Sleep
+            A [14]{12}StepAtomNode Sleep
+          B [15]{13}StepAtomNode Sleep
+          B [16]{15}StepAtomNode Print Message
+          B [17]{16}StepEndNode Retry the body up to N times : Body : End  [st=11]
+          B [18]{17}StepEndNode Retry the body up to N times : End  [st=10]
+          B [19]{18}StepEndNode Execute in parallel : Body : End  [st=7]
+            A [20]{14}StepAtomNode Print Message
+            A [21]{20}StepEndNode Retry the body up to N times : Body : End  [st=9]
+            A [22]{21}StepEndNode Retry the body up to N times : End  [st=8]
+            A [23]{22}StepEndNode Execute in parallel : Body : End  [st=6]
+        [24]{23,19}StepEndNode Execute in parallel : End  [st=4]
+        [25]{24}FlowEndNode End of Pipeline  [st=2]*/
+        WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        FlowExecution exec = b.getExecution();
+        ForkScanner scan = new ForkScanner();
+
+        // Test different start points in branch A & B, 20 and 19 were one error case.
+        for (int i=0; i < 4; i++) {
+            for (int j=0; j<5; j++) {
+                int branchANodeId = i+20;
+                int branchBNodeId = j+15;
+                System.out.println("Starting test with nodes "+branchANodeId+","+branchBNodeId);
+                ArrayList<FlowNode> starts = new ArrayList<FlowNode>();
+                FlowTestUtils.addNodesById(starts, exec, branchANodeId, branchBNodeId);
+                List<FlowNode> all = scan.filteredNodes(starts, Predicates.<FlowNode>alwaysTrue());
+                Assert.assertEquals(new HashSet<FlowNode>(all).size(), all.size());
+                scan.reset();
+            }
+        }
+    }
+
     /** For nodes, see {@link #SIMPLE_PARALLEL_RUN} */
     @Test
     public void testSimpleVisitor() throws Exception {
@@ -535,5 +604,63 @@ public class ForkScannerTest {
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("7")));
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("8")));
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("9")));
+    }
+
+    private void testParallelFindsLast(WorkflowJob job, String semaphoreName) throws Exception {
+        ForkScanner scan = new ForkScanner();
+        ChunkFinder labelFinder = new LabelledChunkFinder();
+
+        System.out.println("Testing that semaphore step is always the last step for chunk with "+job.getName());
+        WorkflowRun run  = job.scheduleBuild2(0).getStartCondition().get();
+        SemaphoreStep.waitForStart(semaphoreName+"/1", run);
+
+            /*if (run.getExecution() == null) {
+                Thread.sleep(1000);
+            }*/
+
+        TestVisitor visitor = new TestVisitor();
+        scan.setup(run.getExecution().getCurrentHeads());
+        scan.visitSimpleChunks(visitor, labelFinder);
+        TestVisitor.CallEntry entry = visitor.calls.get(0);
+        Assert.assertEquals(TestVisitor.CallType.CHUNK_END, entry.type);
+        FlowNode lastNode = run.getExecution().getNode(Integer.toString(entry.ids[0]));
+        Assert.assertEquals("Wrong End Node: ("+lastNode.getId()+") "+lastNode.getDisplayName(), "semaphore", lastNode.getDisplayFunctionName());
+
+        SemaphoreStep.success(semaphoreName+"/1", null);
+        r.waitForCompletion(run);
+    }
+
+    @Issue("JENKINS-38536")
+    @Test
+    public void testParallelCorrectEndNodeForVisitor() throws Exception {
+        // Verify that SimpleBlockVisitor actually gets the *real* last node not just the last declared branch
+        WorkflowJob jobPauseFirst = r.jenkins.createProject(WorkflowJob.class, "PauseFirst");
+        jobPauseFirst.setDefinition(new CpsFlowDefinition("" +
+                "stage 'primero'\n" +
+                "parallel 'wait' : {sleep 1; semaphore 'wait1';}, \n" +
+                " 'final': { echo 'succeed';} "
+        ));
+
+        WorkflowJob jobPauseSecond = r.jenkins.createProject(WorkflowJob.class, "PauseSecond");
+        jobPauseSecond.setDefinition(new CpsFlowDefinition("" +
+                "stage 'primero'\n" +
+                "parallel 'success' : {echo 'succeed'}, \n" +
+                " 'pause':{ sleep 1; semaphore 'wait2'; }\n"
+                ));
+
+        WorkflowJob jobPauseMiddle = r.jenkins.createProject(WorkflowJob.class, "PauseMiddle");
+        jobPauseMiddle.setDefinition(new CpsFlowDefinition("" +
+                "stage 'primero'\n" +
+                "parallel 'success' : {echo 'succeed'}, \n" +
+                " 'pause':{ sleep 1; semaphore 'wait3'; }, \n" +
+                " 'final': { echo 'succeed-final';} "
+        ));
+
+        ForkScanner scan = new ForkScanner();
+        ChunkFinder labelFinder = new LabelledChunkFinder();
+
+        testParallelFindsLast(jobPauseFirst, "wait1");
+        testParallelFindsLast(jobPauseSecond, "wait2");
+        testParallelFindsLast(jobPauseMiddle, "wait3");
     }
 }

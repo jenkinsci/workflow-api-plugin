@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
+import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
@@ -39,8 +40,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -329,7 +328,9 @@ public class ForkScanner extends AbstractFlowScanner {
         }
 
         // Walk through, merging flownodes one-by-one until everything has merged to one ancestor
-        while (iterators.size() > 1) {
+        boolean mergedAll = false;
+        // Ends when we merged all branches together, or hit the start of the flow without it
+        while (!mergedAll && iterators.size() > 0) {
             ListIterator<Filterator<FlowNode>> itIterator = iterators.listIterator();
             ListIterator<FlowPiece> pieceIterator = livePieces.listIterator();
 
@@ -376,6 +377,9 @@ public class ForkScanner extends AbstractFlowScanner {
                     // Merging removes the piece & its iterator from heads
                     itIterator.remove();
                     pieceIterator.remove();
+                    if (iterators.size() == 1) { // Merged in the final branch
+                        mergedAll = true;
+                    }
                 }
             }
         }
@@ -388,6 +392,7 @@ public class ForkScanner extends AbstractFlowScanner {
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 1) {
             parallelBlockStartStack = leastCommonAncestor(new LinkedHashSet<FlowNode>(heads));
+            assert parallelBlockStartStack.size() > 0;
             currentParallelStart = parallelBlockStartStack.pop();
             currentParallelStartNode = currentParallelStart.forkStart;
             myCurrent = currentParallelStart.unvisited.pop();
@@ -510,7 +515,7 @@ public class ForkScanner extends AbstractFlowScanner {
                     return temp;
                 }
             } else if (!blackList.contains(p)) {
-                if (p instanceof BlockStartNode && p.getAction(ThreadNameAction.class) != null) {
+                if (p instanceof BlockStartNode && p.getPersistentAction(ThreadNameAction.class) != null) {
                     nextType = NodeType.PARALLEL_BRANCH_START;
                 } else if (ForkScanner.isParallelEnd(p)) {
                     nextType = NodeType.PARALLEL_END;
@@ -553,11 +558,49 @@ public class ForkScanner extends AbstractFlowScanner {
         scanner.visitSimpleChunks(visitor, finder);
     }
 
-    /** Walk through flows  */
+    /** Ensures we find the last *begun* node when there are multiple heads (parallel branches)
+     *  This means that the simpleBlockVisitor gets the *actual* last node, not just the end of the last declared branch
+     *  (See issue JENKINS-38536)
+     */
+    @CheckForNull
+    private static FlowNode findLastStartedNode(@Nonnull List<FlowNode> candidates) {
+        if (candidates.size() == 0) {
+            return null;
+        } else if (candidates.size() == 1) {
+            return candidates.get(0);
+        } else {
+            FlowNode returnOut = candidates.get(0);
+            long startTime = Long.MIN_VALUE;
+            for(FlowNode f : candidates) {
+                TimingAction ta = f.getAction(TimingAction.class);
+                // Null timing with multiple heads is probably a node where the GraphListener hasn't fired to add TimingAction yet
+                long myStart = (ta == null) ? System.currentTimeMillis() : ta.getStartTime();
+                if (myStart > startTime) {
+                    returnOut = f;
+                    startTime = myStart;
+                }
+            }
+            return returnOut;
+        }
+    }
+
+    /** Walk through flows */
     public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         FlowNode prev = null;
         if (finder.isStartInsideChunk() && hasNext()) {
-            visitor.chunkEnd(this.myNext, null, this);
+            if (currentParallelStart == null ) {
+                visitor.chunkEnd(this.myNext, null, this);
+            } else { // Last node is the last started branch
+                List<FlowNode> branchEnds = new ArrayList<FlowNode>(currentParallelStart.unvisited);
+                branchEnds.add(this.myNext);
+                FlowNode lastStarted = this.findLastStartedNode(branchEnds);
+                if (lastStarted != null) {
+                    visitor.chunkEnd(lastStarted, null, this);
+                } else {
+                    throw new IllegalStateException("Flow is inside parallel block, but shows no executing heads!");
+                }
+
+            }
         }
         while(hasNext()) {
             prev = (myCurrent != myNext) ? myCurrent : null;
