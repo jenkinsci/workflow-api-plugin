@@ -29,6 +29,7 @@ import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -129,8 +130,10 @@ public abstract class FlowExecutionOwner implements Serializable {
      * This is the raw log which may contain encoded {@link ConsoleNote}s.
      * The encoding is assumed to be UTF-8.
      * The caller should perform buffering if desired.
+     * @param start the start position to begin reading from (normally 0)
+     * @throws EOFException if the start position is larger than the log size (or you may simply return EOF immediately when read)
      */
-    public @Nonnull InputStream getLog() throws IOException {
+    public @Nonnull InputStream getLog(long start) throws IOException {
         return new ByteArrayInputStream(new byte[0]);
     }
 
