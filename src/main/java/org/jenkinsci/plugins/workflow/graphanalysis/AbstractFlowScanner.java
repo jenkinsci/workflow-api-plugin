@@ -319,6 +319,14 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
     }
 
+    @Nonnull
+    public List<FlowNode> filteredNodes(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
+        if (exec == null) {
+            return Collections.emptyList();
+        }
+        return this.filteredNodes(exec.getCurrentHeads(), null, matchPredicate);
+    }
+
     /**
      * Given a {@link FlowNodeVisitor}, invoke {@link FlowNodeVisitor#visit(FlowNode)} on each node and halt early if it returns false.
      * Includes null-checking on all but the visitor, to allow directly calling with unchecked inputs (simplifies use).
