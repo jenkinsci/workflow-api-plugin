@@ -29,19 +29,13 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import java.util.Collections;
 import java.util.Map;
 
 /**
- * Stores some or all of the information used to configure the {@link Step} run for a {@link FlowNode}.
- * This is used to allow inspecting information supplied in the pipeline script and otherwise not retained at runtime.
- *
- * There is flexibility in what information is retained, to allow for:
- * <ul>
- *     <li>Serializing and storing the original Step, for simplicity.</li>
- *     <li>Storing just the parameters, if this can be done more efficiently or the complete Step can't be kept.</li>
- *     <li>Storing some of the parameters, with others masked out</li>
- *     <li>Separating parameters excluded for security (masking sensitive info), or for size reasons</li>
- * </ul>
+ * Stores some or all of the information used to create and configure the {@link Step} executed by a {@link FlowNode}.
+ * This allows you to inspect information supplied in the pipeline script and otherwise discarded at runtime.
+ * Supplied parameter values can be hidden and replaced with a {@link NotStoredReason} for security or performance.
  */
 public abstract class StepInfoAction implements PersistentAction {
 
@@ -50,7 +44,7 @@ public abstract class StepInfoAction implements PersistentAction {
         /** Denotes an unsafe value that cannot be stored/displayed due to sensitive info */
         MASKED_VALUE,
 
-        /** Denotes an object that is oversized and thus not serialized */
+        /** Denotes an object that is too big to retain, such as strings exceeding {@link #MAX_STRING_LENGTH} */
         OVERSIZE_VALUE
     }
 
@@ -73,35 +67,52 @@ public abstract class StepInfoAction implements PersistentAction {
     }
 
     /**
-     * Obtain the actual {@link Step} if we can have it, otherwise null.
-     * @return Actual Step, or null if none.
-     */
-    @CheckForNull
-    public abstract Step getStep();
-
-
-    /**
-     * Get the map of parameters for the {@link Step}Step, with a {@link NotStoredReason} instead of the value
+     * Get the map of parameters for the {@link Step}, with a {@link NotStoredReason} instead of the value
      *  if part of the parameters are not retained.
      * @return The parameters for the Step.
      */
     @Nonnull
-    public abstract Map<String,Object> getParameters();
+    public Map<String,Object> getParameters() {
+        return Collections.unmodifiableMap(getParametersInternal());
+    }
+
+    @Nonnull
+    public Map<String, Object> getNodeParameters(@Nonnull  FlowNode m) {
+        StepInfoAction act = m.getPersistentAction(StepInfoAction.class);
+        return (act != null) ? act.getParameters() : (Map)(Collections.emptyMap());
+    }
+
+    /**
+     * Return a fast view of internal parameters, without creating immutable wrappers
+     * @return Internal parameters
+     */
+    @Nonnull
+    protected abstract Map<String, Object> getParametersInternal();
 
     /**
      * Get the value of a parameter, or null if not present/not stored.
+     * Use {@link #getParameterValueOrReason(String)} if you want to return the {@link NotStoredReason} rather than null.
      * @param parameterName Parameter name of step to look up.
-     * @return Parameter value.
+     * @return Parameter value or null if not present/not stored.
      */
+    @CheckForNull
     public Object getParameterValue(@Nonnull String parameterName) {
-        Map<String, Object> vals = getParameters();
-        Object val = vals.get(parameterName);
+        Object val = getParameterValueOrReason(parameterName);
         return (val == null || val instanceof NotStoredReason) ? null : val;
     }
 
     /**
+     * Get the parameter value or its {@link NotStoredReason} if it has been intentionally omitted.
+     * @param parameterName Name of step parameter to find value for
+     * @return Parameter value, null if nonexistent/null, or NotStoredReason if it existed by was masked out.
+     */
+    @CheckForNull
+    public Object getParameterValueOrReason(@Nonnull String parameterName) {
+        return getParametersInternal().get(parameterName);
+    }
+
+    /**
      * Test if {@link Step} parameters are persisted in an unaltered form.
-     * Generally we should be able to get a non-null result for {@link #getStep()} if this returns true.
      * @return True if full parameters are retained, false if some have been removed for security, size, or other reasons.
      */
     public abstract boolean isFullParameters();
