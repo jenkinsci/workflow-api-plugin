@@ -77,7 +77,7 @@ public abstract class StepInfoAction implements PersistentAction {
     }
 
     @Nonnull
-    public Map<String, Object> getNodeParameters(@Nonnull  FlowNode m) {
+    public static Map<String, Object> getNodeParameters(@Nonnull  FlowNode m) {
         StepInfoAction act = m.getPersistentAction(StepInfoAction.class);
         return (act != null) ? act.getParameters() : (Map)(Collections.emptyMap());
     }
