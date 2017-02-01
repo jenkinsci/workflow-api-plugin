@@ -30,6 +30,7 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -77,9 +78,34 @@ public abstract class StepInfoAction implements PersistentAction {
     }
 
     @Nonnull
-    public static Map<String, Object> getNodeParameters(@Nonnull  FlowNode m) {
-        StepInfoAction act = m.getPersistentAction(StepInfoAction.class);
+    public static Map<String, Object> getNodeParameters(@Nonnull  FlowNode n) {
+        StepInfoAction act = n.getPersistentAction(StepInfoAction.class);
         return (act != null) ? act.getParameters() : (Map)(Collections.emptyMap());
+    }
+
+    /**
+     * Get just the fully stored, non-null parameters
+     * This means the parameters with all {@link NotStoredReason} values removed, as well as all null values
+     * @param n FlowNode to get parameters for
+     * @return Map of all completely stored parameters
+     */
+    @Nonnull
+    public static Map<String, Object> getFilteredNodeParameters(@Nonnull FlowNode n) {
+        StepInfoAction act = n.getPersistentAction(StepInfoAction.class);
+        if (act == null) {
+            return Collections.emptyMap();
+        }
+        Map<String, Object> internalParams = act.getParametersInternal();
+        if (internalParams.size() == 0) {
+            return Collections.emptyMap();
+        }
+        HashMap<String, Object> filteredParameters = new HashMap<String, Object>();
+        for (Map.Entry<String, Object> entry : internalParams.entrySet()) {
+            if (entry.getValue() != null && !(entry.getValue() instanceof NotStoredReason)) {
+                filteredParameters.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return filteredParameters;
     }
 
     /**
