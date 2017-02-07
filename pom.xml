@@ -33,7 +33,6 @@
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
     <artifactId>workflow-api</artifactId>
-    <!-- Temporary version to allow use in related PRs, will revert before merge -->
     <version>2.9-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline: API</name>
