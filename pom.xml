@@ -34,7 +34,7 @@
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
     <artifactId>workflow-api</artifactId>
     <!-- Temporary version to allow use in related PRs, will revert before merge -->
-    <version>2.9-stepnode-SNAPSHOT</version>
+    <version>2.9-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline: API</name>
     <url>https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+API+Plugin</url>
