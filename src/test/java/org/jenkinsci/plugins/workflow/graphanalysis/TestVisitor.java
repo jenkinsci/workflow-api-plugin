@@ -5,9 +5,12 @@ import org.junit.Assert;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Test visitor class, tracks invocations of methods
@@ -66,7 +69,47 @@ public class TestVisitor implements SimpleChunkVisitor {
 
         @Override
         public String toString() {
-            return "CallEntry: "+type+" Ids: "+Arrays.toString(ids);
+            StringBuilder builder = new StringBuilder("CallEntry: ")
+                    .append(type).append('-');
+            switch (type) {
+                case ATOM_NODE:
+                    builder.append("Before/Current/After:")
+                            .append(ids[0]).append('/')
+                            .append(ids[1]).append('/')
+                            .append(ids[2]);
+                    break;
+                case CHUNK_START:
+                    builder.append("StartNode/BeforeNode:")
+                            .append(ids[0]).append('/')
+                            .append(ids[1]);
+                    break;
+                case CHUNK_END:
+                    builder.append("EndNode/AfterNode:")
+                            .append(ids[0]).append('/')
+                            .append(ids[1]);
+                    break;
+                case PARALLEL_START:
+                    builder.append("ParallelStartNode/OneBranchStartNode:")
+                            .append(ids[0]).append('/')
+                            .append(ids[1]);
+                    break;
+                case PARALLEL_END:
+                    builder.append("ParallelStartNode/ParallelEndNode:")
+                            .append(ids[0]).append('/')
+                            .append(ids[1]);
+                    break;
+                case PARALLEL_BRANCH_START:
+                    builder.append("ParallelStart/BranchStart:")
+                            .append(ids[0]).append('/')
+                            .append(ids[1]);
+                    break;
+                case PARALLEL_BRANCH_END:
+                    builder.append("ParallelStart/BranchEnd:")
+                            .append(ids[0]).append('/')
+                            .append(ids[1]);
+                    break;
+            }
+            return builder.toString();
         }
 
     }
@@ -106,5 +149,80 @@ public class TestVisitor implements SimpleChunkVisitor {
     @Override
     public void atomNode(@CheckForNull FlowNode before, @Nonnull FlowNode atomNode, @CheckForNull FlowNode after, @Nonnull ForkScanner scan) {
         calls.add(new CallEntry(CallType.ATOM_NODE, before, atomNode, after));
+    }
+
+    public void assertNoDupes() throws Exception {
+        List<CallEntry> entries = new ArrayList<CallEntry>();
+        for (CallEntry ce : this.calls) {
+            if (entries.contains(ce)) {
+                Assert.fail("Duplicate call: "+ce.toString());
+            }
+        }
+    }
+
+    public void assertMatchingParallelBranchStartEnd() throws Exception {
+        // Map the parallel start node to the start/end nodes for all branches
+        HashMap<Integer, List<Integer>> branchStartIds = new HashMap<Integer, List<Integer>>();
+        HashMap<Integer, List<Integer>> branchEndIds = new HashMap<Integer, List<Integer>>();
+
+        for (CallEntry ce : this.calls) {
+            if (ce.type == CallType.PARALLEL_BRANCH_END) {
+                List<Integer> ends = branchEndIds.get(ce.ids[0]);
+                if (ends == null) {
+                    ends = new ArrayList<Integer>();
+                }
+                ends.add(ce.ids[1]);
+                branchEndIds.put(ce.ids[0], ends);
+            } else if (ce.type == CallType.PARALLEL_BRANCH_START) {
+                List<Integer> ends = branchStartIds.get(ce.ids[0]);
+                if (ends == null) {
+                    ends = new ArrayList<Integer>();
+                }
+                ends.add(ce.ids[1]);
+                branchStartIds.put(ce.ids[0], ends);
+            }
+        }
+
+        // First check every parallel with branch starts *also* has branch ends and the same number of them
+        for (Map.Entry<Integer, List<Integer>> startEntry : branchStartIds.entrySet()) {
+            List<Integer> ends = branchEndIds.get(startEntry.getKey());
+            Assert.assertNotNull("Parallels with a branch start event(s) but no branch end event(s), parallel start node id: "+startEntry.getKey(), ends);
+            Assert.assertEquals("Parallels must have matching numbers of start and end events, but don't -- for parallel starting with: "+
+                startEntry.getKey(), startEntry.getValue().size(), ends.size());
+        }
+
+        // Verify the reverse is true: if we have a branch end, there are branch starts (count equality was checked above)
+        for (Map.Entry<Integer, List<Integer>> endEntry : branchEndIds.entrySet()) {
+            List<Integer> starts = branchStartIds.get(endEntry.getKey());
+            Assert.assertNotNull("Parallels with a branch end event(s) but no matching branch start event(s), parallel start node id: "+endEntry.getKey(), starts);
+        }
+    }
+
+    /** Verify that we have balanced start/end for parallels */
+    public void assertMatchingParallelStartEnd() throws Exception {
+        // It's like balancing parentheses, starts and ends must be equal
+        ArrayDeque<Integer> openParallelStarts = new ArrayDeque<Integer>();
+
+        for (CallEntry ce : this.calls) {
+            if (ce.type == CallType.PARALLEL_END) {
+                openParallelStarts.push(ce.ids[0]);
+            } else if (ce.type == CallType.PARALLEL_START) {
+                if (openParallelStarts.size() > 0) {
+                    Assert.assertEquals("Parallel start and end events must point to the same parallel start node ID",
+                            openParallelStarts.peekLast(), new Integer(ce.ids[0])
+                    );
+                    openParallelStarts.pop();
+                }
+                // More parallel starts than ends is *legal* because we may have an in-progress parallel without an end created.
+            }
+        }
+
+        if (openParallelStarts.size() > 0) {
+            StringBuilder sb = new StringBuilder();
+            for (Integer parallelStartId : openParallelStarts) {
+                sb.append(parallelStartId).append(',');
+            }
+            Assert.fail("Parallel ends with no starts, for parallel(s) with start nodes IDs: "+sb.toString());
+        }
     }
 }
