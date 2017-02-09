@@ -171,13 +171,6 @@ public class ForkScannerTest {
         this.NESTED_PARALLEL_RUN = b;
     }
 
-    public static Predicate<FlowNode> PARALLEL_START_PREDICATE = new Predicate<FlowNode>() {
-        @Override
-        public boolean apply(FlowNode input) {
-            return input != null && input instanceof StepStartNode && (((StepStartNode) input).getDescriptor().getClass() == ParallelStep.DescriptorImpl.class);
-        }
-    };
-
     /** Runs some basic sanity tests of iteration and visitor use */
     private void sanityTestIterationAndVisiter(List<FlowNode> heads) throws Exception {
         ForkScanner scan = new ForkScanner();
@@ -200,7 +193,6 @@ public class ForkScannerTest {
         // Initial case
         ForkScanner scanner = new ForkScanner();
         scanner.setup(heads, null);
-        ForkScanner.setParallelStartPredicate(PARALLEL_START_PREDICATE);
         Assert.assertNull(scanner.currentParallelStart);
         Assert.assertNull(scanner.currentParallelStartNode);
         Assert.assertNotNull(scanner.parallelBlockStartStack);
@@ -504,7 +496,6 @@ public class ForkScannerTest {
     /** For nodes, see {@link #SIMPLE_PARALLEL_RUN} */
     @Test
     public void testSimpleVisitor() throws Exception {
-        ForkScanner.setParallelStartPredicate(PARALLEL_START_PREDICATE);
         FlowExecution exec = this.SIMPLE_PARALLEL_RUN.getExecution();
         ForkScanner f = new ForkScanner();
         f.setup(exec.getCurrentHeads());
@@ -570,11 +561,6 @@ public class ForkScannerTest {
         new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_START, 4, 6).assertEquals(parallelCalls.get(5));
     }
 
-    @Before
-    public void setupParallelStartPredicate() {
-        ForkScanner.setParallelStartPredicate(PARALLEL_START_PREDICATE);
-    }
-
     /** Checks for off-by one cases with multiple parallel, and with the leastCommonAncestor */
     @Test
     public void testTripleParallel() throws Exception {
@@ -590,8 +576,6 @@ public class ForkScannerTest {
                 "}" // Node 15 is UI branch end node, Node 16 is Parallel End node, Node 17 is FlowWendNode
         ));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-
-        ForkScanner.setParallelStartPredicate(PARALLEL_START_PREDICATE);
         FlowExecution exec = b.getExecution();
         ForkScanner f = new ForkScanner();
         List<FlowNode> heads = exec.getCurrentHeads();
