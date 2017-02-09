@@ -8,7 +8,9 @@ import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +27,10 @@ public class TestVisitor implements SimpleChunkVisitor {
         PARALLEL_BRANCH_START,
         PARALLEL_BRANCH_END
     }
+
+    /** Call types that can't be invoked multiple times for a single node */
+    public static final EnumSet<CallType> UNDUPLICABLE_CALLS = EnumSet.of(CallType.ATOM_NODE, CallType.CHUNK_START, CallType.CHUNK_END);
+
 
     public static class CallEntry {
         CallType type;
@@ -152,10 +158,39 @@ public class TestVisitor implements SimpleChunkVisitor {
     }
 
     public void assertNoDupes() throws Exception {
+        // Full equality check
         List<CallEntry> entries = new ArrayList<CallEntry>();
+        HashSet<Integer> visitedAtomOrChunkNodes = new HashSet<Integer>();
+
         for (CallEntry ce : this.calls) {
+            // Complete equality check
             if (entries.contains(ce)) {
                 Assert.fail("Duplicate call: "+ce.toString());
+            }
+            // A node is either a start or end to a chunk, or an atom (a node within a chunk)
+            if (UNDUPLICABLE_CALLS.contains(ce.type)) {
+                int idToCheck = (ce.type == CallType.ATOM_NODE) ? ce.ids[1] : ce.ids[0];
+                if (visitedAtomOrChunkNodes.contains(idToCheck)) {
+                    Assert.fail("Illegally duplicated chunk events for flownode "+idToCheck+" as of "+ce);
+                } else {
+                    visitedAtomOrChunkNodes.add(idToCheck);
+                }
+            }
+        }
+    }
+
+    public void assertAllNodesGotChunkEvents(Iterable<FlowNode> nodes) {
+        HashSet<String> ids = new HashSet<String>();
+        for (CallEntry ce : this.calls) {
+            // A node is either a start or end to a chunk, or an atom (a node within a chunk)
+            if (UNDUPLICABLE_CALLS.contains(ce.type)) {
+                int idToCheck = (ce.type == CallType.ATOM_NODE) ? ce.ids[1] : ce.ids[0];
+                ids.add(Integer.toString(idToCheck));
+            }
+        }
+        for (FlowNode f : nodes) {
+            if(!ids.contains(f.getId())) {
+                Assert.fail("No chunk callbacks for flownode: "+f);
             }
         }
     }
