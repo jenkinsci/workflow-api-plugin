@@ -13,6 +13,27 @@
  *     <li><em>Visit every block in a predictable order, from end to start?</em> {@link org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner}</li>
  *     <li><em>Fastest way to find preceding sibling or enclosing nodes?</em> {@link org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner}</li>
  * </ol>
+ *
+ * <p> Methods to iterate through flow graph and break it into chunks (regions) of interest, with nesting possible & reporting of branches:
+ * <p><em>Basic APIs</em>
+ * <ol>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.ChunkFinder} - API to define conditions for starting/ending a chunk</li>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.SimpleChunkVisitor} - Visitor API that accepts callbacks for chunk boundaries/contenst + parallel branching</li>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.FlowChunk} - A region of interest, defined by its first and last nodes</li>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.FlowChunkWithContext} - A FlowChunk that knows about the nodes before/after it,
+ *          to give context for determining success/failure and the time taken to execute</li>
+ * </ol>
+ *
+ * <p><em>Data structures and implementations:</em>
+ * <ul>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.MemoryFlowChunk} - A FlowChunkWithContext that just directly stores FlowNodes</li>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.ParallelFlowChunk}</li>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.ParallelMemoryFlowChunk}</li>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.StandardChunkVisitor} - a basic concrete implementation of SimpleChunkVisitor that
+ *                tracks one chunk at a time (no nesting) and runs a callback when the chunk is done</li>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.LabelledChunkFinder} - ChunkFinder that matches against nodes with a label</li>
+ *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.BlockChunkFinder} - ChunkFinder that creates chunks from blocks</li>
+ * </ul>
  */
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
