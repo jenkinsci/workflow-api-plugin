@@ -26,19 +26,24 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.StepNode;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -128,11 +133,29 @@ public class ForkScanner extends AbstractFlowScanner {
         myNext = null;
     }
 
+    public static class IsParallelPredicate implements Predicate<FlowNode> {
+        static final String PARALLEL_DESCRIPTOR_CLASSNAME = "org.jenkinsci.plugins.workflow.cps.steps.ParallelStep";
+
+        @Override
+        public boolean apply(@Nullable FlowNode input) {
+            if (input == null || !(input instanceof StepNode && input instanceof BlockStartNode)) {
+                return false;
+            } else {
+                StepDescriptor desc = ((StepNode)input).getDescriptor();
+                return desc != null && PARALLEL_DESCRIPTOR_CLASSNAME.equals(desc.getId());
+            }
+        }
+
+        @Override
+        public boolean equals(@Nullable Object object) {
+            return object != null && object instanceof IsParallelPredicate;
+        }
+    }
     
     // A bit of a dirty hack, but it works around the fact that we need trivial access to classes from workflow-cps
     // For this and only this test. So, we load them from a context that is aware of them.
     // Ex: workflow-cps can automatically set this correctly. Not perfectly graceful but it works.
-    private static Predicate<FlowNode> parallelStartPredicate = Predicates.alwaysFalse();
+    private static Predicate<FlowNode> parallelStartPredicate = new IsParallelPredicate();
 
     // Invoke this passing a test against the ParallelStep conditions
     public static void setParallelStartPredicate(@Nonnull Predicate<FlowNode> pred) {
@@ -549,18 +572,24 @@ public class ForkScanner extends AbstractFlowScanner {
     public static void visitSimpleChunks(@Nonnull Collection<FlowNode> heads, @Nonnull Collection<FlowNode> blacklist, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         ForkScanner scanner = new ForkScanner();
         scanner.setup(heads, blacklist);
+        if (scanner.getParallelDepth() > 0) {
+//            visitor.parallelEnd(scanner.getCurrentParallelStartNode(), scanner.myCurrent, scanner);
+        }
         scanner.visitSimpleChunks(visitor, finder);
     }
 
     public static void visitSimpleChunks(@Nonnull Collection<FlowNode> heads, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         ForkScanner scanner = new ForkScanner();
         scanner.setup(heads);
+        if (scanner.getParallelDepth() > 0) {
+//            visitor.parallelEnd(scanner.getCurrentParallelStartNode(), scanner.myCurrent, scanner);
+        }
         scanner.visitSimpleChunks(visitor, finder);
     }
 
     /** Ensures we find the last *begun* node when there are multiple heads (parallel branches)
      *  This means that the simpleBlockVisitor gets the *actual* last node, not just the end of the last declared branch
-     *  (See issue JENKINS-38536)
+     *  ()
      */
     @CheckForNull
     private static FlowNode findLastStartedNode(@Nonnull List<FlowNode> candidates) {
@@ -584,23 +613,34 @@ public class ForkScanner extends AbstractFlowScanner {
         }
     }
 
+    /** Trivial sorting of the current in-progress branches (See issue JENKINS-38536)... does not handle nesting correctly though */
+    void sortParallelByTime() {
+        // FIXME add nesting support by storing a full tree structure for branches and not the overly complex queue system
+        if (this.currentParallelStart == null) {  // Not in parallel
+            return;
+        }
+        ArrayList<FlowNode> ends = new ArrayList<FlowNode>();
+        ends.addAll(this.currentParallelStart.unvisited);
+        ends.add(this.myNext);
+        Collections.sort(ends, FlowScanningUtils.TIME_ORDER_COMPARATOR);
+        this.currentParallelStart.unvisited.clear();
+        this.currentParallelStart.unvisited.addAll(Lists.reverse(ends));
+        this.myCurrent = this.currentParallelStart.unvisited.pop();
+        this.myNext = this.currentParallelStart.unvisited.pop();
+        this.nextType = NodeType.PARALLEL_BRANCH_END;
+        this.currentType = NodeType.PARALLEL_BRANCH_END;
+    }
+
     /** Walk through flows */
     public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         FlowNode prev = null;
-        if (finder.isStartInsideChunk() && hasNext()) {
-            if (currentParallelStart == null ) {
-                visitor.chunkEnd(this.myNext, null, this);
-            } else { // Last node is the last started branch
-                List<FlowNode> branchEnds = new ArrayList<FlowNode>(currentParallelStart.unvisited);
-                branchEnds.add(this.myNext);
-                FlowNode lastStarted = this.findLastStartedNode(branchEnds);
-                if (lastStarted != null) {
-                    visitor.chunkEnd(lastStarted, null, this);
-                } else {
-                    throw new IllegalStateException("Flow is inside parallel block, but shows no executing heads!");
-                }
-
-            }
+        // We can't just  fire the extra chunkEnd event
+        // We need to look at the parallels structure, and for each parallel re-sort the nodes by their timing info...
+        // IFF they are open when beginning (if complete, it is irrelevant)
+        sortParallelByTime();
+        boolean needsEnd = false;
+        if (finder.isStartInsideChunk()) {
+            needsEnd = true;
         }
         while(hasNext()) {
             prev = (myCurrent != myNext) ? myCurrent : null;
@@ -611,9 +651,10 @@ public class ForkScanner extends AbstractFlowScanner {
                 visitor.chunkStart(myCurrent, myNext, this);
                 boundary = true;
             }
-            if (finder.isChunkEnd(myCurrent, prev)) {
+            if (needsEnd || finder.isChunkEnd(myCurrent, prev)) {
                 visitor.chunkEnd(myCurrent, prev, this);
                 boundary = true;
+                needsEnd = false;
             }
             if (!boundary) {
                 visitor.atomNode(myNext, f, prev, this);
