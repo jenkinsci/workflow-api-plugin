@@ -8,11 +8,13 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * Matches start and end of a block.  Any block
+ * Matches start and end of a block.  Any block!
  * @author Sam Van Oort
  */
 public class BlockChunkFinder implements ChunkFinder {
 
+    /** NOTE: you will need to handle cases where you have a start node where the end node has not been generated yet!
+     *  This means you need to keep nodes around even after hitting the EndNode */
     @Override
     public boolean isStartInsideChunk() {
         return false;

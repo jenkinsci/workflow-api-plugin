@@ -133,6 +133,9 @@ public class ForkScanner extends AbstractFlowScanner {
         myNext = null;
     }
 
+    /** Works with workflow-cps 2.26 and up, otherwise you'll need to provide your own predicate
+     *   However this is better than the previous (always false predicate).
+     */
     public static class IsParallelPredicate implements Predicate<FlowNode> {
         static final String PARALLEL_DESCRIPTOR_CLASSNAME = "org.jenkinsci.plugins.workflow.cps.steps.ParallelStep";
 

@@ -39,12 +39,20 @@ import javax.annotation.Nonnull;
  *
  * <p><em>Callback types</em>
  * <p> There are two kinds of callbacks - chunk callbacks, and parallel structure callbacks
- * <p> Chunk Callbacks: only ONE of these can be invoked for a given {@link FlowNode}, and <em>every</em> FlowNode gets one.</p>
+ * <p><em>Chunk Callbacks:</em>
  * <ul>
  *     <li>{@link #chunkStart(FlowNode, FlowNode, ForkScanner)} - detected the start of a chunk beginning with a node</li>
  *     <li>{@link #chunkEnd(FlowNode, FlowNode, ForkScanner)} - detected the end of a chunk, terminating with a node </li>
  *     <li>{@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} - most nodes, which aren't boundaries of chunks</li>
  * </ul>
+ *
+ * <p><p><em>Chunk callback rules:</em>
+ * <ol>
+ *     <li>For a single node, it may have EITHER OR BOTH chunkStart and chunkEnd events</li>
+ *     <li>For {@link ChunkFinder} implementations that match the {@link BlockStartNode} and {@link BlockEndNode} should never have both for a single</li>
+ *     <li>You cannot have multiple of any of these callbacks for the same flownode</li>
+ *     <li>You cannot have a atomNode callback AND a start/end for the same flownode</li>
+ * </ol>
  *
  * <p>Parallel Structure Callbacks: Zero, One, or Multiple may be invoked for any given FlowNode</p>
  * <p>These are used to provide awareness of parallel/branching structures if they need special handling
