@@ -49,9 +49,10 @@ import javax.annotation.Nonnull;
  * <p><p><em>Chunk callback rules:</em>
  * <ol>
  *     <li>For a single node, it may have EITHER OR BOTH chunkStart and chunkEnd events</li>
+ *     <li>Every node that doesn't get a startChunk/endChunk callback gets an atomNode callback.</li>
  *     <li>For {@link ChunkFinder} implementations that match the {@link BlockStartNode} and {@link BlockEndNode} should never have both for a single</li>
- *     <li>You cannot have multiple of any of these callbacks for the same flownode</li>
- *     <li>You cannot have a atomNode callback AND a start/end for the same flownode</li>
+ *     <li>You cannot have multiple of any of the same specific type of callbacks for the same flownode</li>
+ *     <li>You cannot have a atomNode callback AND a start/end for the same flownode (application of the above).</li>
  * </ol>
  *
  * <p>Parallel Structure Callbacks: Zero, One, or Multiple may be invoked for any given FlowNode</p>
