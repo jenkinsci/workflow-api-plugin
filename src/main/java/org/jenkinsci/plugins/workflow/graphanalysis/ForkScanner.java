@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
@@ -154,10 +153,9 @@ public class ForkScanner extends AbstractFlowScanner {
             return object != null && object instanceof IsParallelPredicate;
         }
     }
-    
-    // A bit of a dirty hack, but it works around the fact that we need trivial access to classes from workflow-cps
-    // For this and only this test. So, we load them from a context that is aware of them.
-    // Ex: workflow-cps can automatically set this correctly. Not perfectly graceful but it works.
+
+    /** Originally a workaround to deal with needing the {@link StepDescriptor} to determine if a node is a parallel start
+     *  Now tidily solved by {@link IsParallelPredicate}*/
     private static Predicate<FlowNode> parallelStartPredicate = new IsParallelPredicate();
 
     // Invoke this passing a test against the ParallelStep conditions
@@ -619,6 +617,7 @@ public class ForkScanner extends AbstractFlowScanner {
     /** Trivial sorting of the current in-progress branches (See issue JENKINS-38536)... does not handle nesting correctly though */
     void sortParallelByTime() {
         // FIXME add nesting support by storing a full tree structure for branches and not the overly complex queue system
+        // FIXME this is horribly broken!!
         if (this.currentParallelStart == null) {  // Not in parallel
             return;
         }
@@ -640,7 +639,7 @@ public class ForkScanner extends AbstractFlowScanner {
         // We can't just  fire the extra chunkEnd event
         // We need to look at the parallels structure, and for each parallel re-sort the nodes by their timing info...
         // IFF they are open when beginning (if complete, it is irrelevant)
-        sortParallelByTime();
+//        sortParallelByTime();
         boolean needsEnd = false;
         if (finder.isStartInsideChunk()) {
             needsEnd = true;

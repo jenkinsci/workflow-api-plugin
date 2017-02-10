@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.junit.Assert;
+import org.jvnet.hudson.test.Issue;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -70,6 +71,19 @@ public class TestVisitor implements SimpleChunkVisitor {
             Assert.assertNotNull(test);
             Assert.assertNotNull(test.type);
             Assert.assertArrayEquals(this.ids, test.ids);
+        }
+
+        /** Return ID of the node pointed at by this event or null if none */
+        @CheckForNull
+        public Integer getNodeId() {
+            int idOfInterest = -1;
+            if (this.type == CallType.ATOM_NODE || this.type == CallType.PARALLEL_END ||
+                    this.type == CallType.PARALLEL_BRANCH_START || this.type == CallType.PARALLEL_BRANCH_END) {
+                idOfInterest = ids[1];
+            } else {
+                idOfInterest = ids[0];
+            }
+            return (idOfInterest == -1) ? null : idOfInterest;
         }
 
         @Override
@@ -156,6 +170,21 @@ public class TestVisitor implements SimpleChunkVisitor {
         calls.add(new CallEntry(CallType.ATOM_NODE, before, atomNode, after));
     }
 
+    public void reset() {
+        this.calls.clear();
+    }
+
+    /** Get all call entries of given type */
+    public List<TestVisitor.CallEntry> filteredCallsByType(TestVisitor.CallType type) {
+        ArrayList<TestVisitor.CallEntry> output = new ArrayList<TestVisitor.CallEntry>();
+        for (TestVisitor.CallEntry ce : calls) {
+            if (ce.type == type) {
+                output.add(ce);
+            }
+        }
+        return output;
+    }
+
     /** Tests that the rules laid out in {@link SimpleChunkVisitor} javadocs are followed.
      *  Specifically: no atomNode dupes for the same node, no atomNode with a start/end for the same node*/
     public void assertNoDupes() throws Exception {
@@ -194,6 +223,19 @@ public class TestVisitor implements SimpleChunkVisitor {
                         Assert.assertTrue("Duplicate chunkEnd callback for node "+idToCheck+" with "+ce, added);
                     }
                 }
+            }
+        }
+    }
+
+    /** Parallel callback events CANNOT have nulls for the parallel start node */
+    @Issue("JENKINS-39841")
+    public void assertNoIllegalNullsInEvents() throws Exception {
+        for (CallEntry ce : calls) {
+            Integer id = ce.getNodeId();
+            Assert.assertNotNull("Callback with illegally null node: "+ce, id);
+            if (ce.type == CallType.PARALLEL_START || ce.type == CallType.PARALLEL_END
+                    || ce.type == CallType.PARALLEL_BRANCH_START || ce.type == CallType.PARALLEL_BRANCH_END) {
+                Assert.assertNotNull("Parallel event with illegally null parallel start node ID: "+ce, ce.ids[0]);
             }
         }
     }

@@ -24,10 +24,12 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.cps.steps.ParallelStep;
@@ -46,15 +48,16 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
@@ -171,18 +174,20 @@ public class ForkScannerTest {
         this.NESTED_PARALLEL_RUN = b;
     }
 
-    /** Runs some basic sanity tests of iteration and visitor use */
+    /** Runs a fairly extensive suite of sanity tests of iteration and visitor use */
     private void sanityTestIterationAndVisiter(List<FlowNode> heads) throws Exception {
         ForkScanner scan = new ForkScanner();
         TestVisitor test = new TestVisitor();
         scan.setup(heads);
         scan.visitSimpleChunks(test, new LabelledChunkFinder());
+        test.assertNoIllegalNullsInEvents();
         test.assertNoDupes();
         Assert.assertEquals(new DepthFirstScanner().allNodes(heads).size(),
                 new ForkScanner().allNodes(heads).size());
         test.assertMatchingParallelStartEnd();
         test.assertMatchingParallelBranchStartEnd();
         test.assertAllNodesGotChunkEvents(new DepthFirstScanner().allNodes(heads));
+        assertNoMissingParallelEvents(heads);
     }
 
     @Test
@@ -359,6 +364,63 @@ public class ForkScannerTest {
 
         List<FlowNode> outputs = scan.filteredNodes(b.getExecution().getCurrentHeads(), (Predicate) Predicates.alwaysTrue());
         Assert.assertEquals(9, outputs.size());
+    }
+
+    private Function<FlowNode, String> NODE_TO_ID = new Function<FlowNode, String>() {
+        @Override
+        public String apply(@Nullable FlowNode input) {
+            return (input != null) ? input.getId() : null;
+        }
+    };
+
+    private Function<TestVisitor.CallEntry, String> CALL_TO_NODE_ID = new Function<TestVisitor.CallEntry, String>() {
+        @Override
+        public String apply(@Nullable TestVisitor.CallEntry input) {
+            return (input != null && input.getNodeId() != null) ? input.getNodeId().toString() : null;
+        }
+    };
+
+    /** Verifies we're not doing anything wacky with  */
+    private void assertNoMissingParallelEvents(List<FlowNode> heads) throws Exception {
+        DepthFirstScanner allScan = new DepthFirstScanner();
+        TestVisitor visit = new TestVisitor();
+        ForkScanner forkScan = new ForkScanner();
+
+        // First look for parallel branch start events
+        List<FlowNode> matches = allScan.filteredNodes(heads, FlowScanningUtils.hasActionPredicate(ThreadNameAction.class));
+        forkScan.setup(heads);
+        forkScan.visitSimpleChunks(visit, new LabelledChunkFinder());
+        Set<String> callIds = new HashSet<String>(Lists.transform(visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_START), CALL_TO_NODE_ID));
+        for (String id : Lists.transform(matches, NODE_TO_ID)) {
+            if (!callIds.contains(id)) {
+                Assert.fail("Parallel Branch start node without an appropriate parallelBranchStart callback: "+id);
+            }
+        }
+
+        // Look for parallel starts
+        matches = allScan.filteredNodes(heads, new Predicate<FlowNode>() {
+            @Override
+            public boolean apply(@Nullable FlowNode input) {
+                return input != null && input instanceof StepStartNode && ((StepStartNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
+                        && input.getPersistentAction(ThreadNameAction.class) == null;
+            }
+        });
+        visit.reset();
+        forkScan.setup(heads);
+        forkScan.visitSimpleChunks(visit, new LabelledChunkFinder());
+        callIds = new HashSet<String>(Lists.transform(visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_START), CALL_TO_NODE_ID));
+        for (String id : Lists.transform(matches, NODE_TO_ID)) {
+            if (!callIds.contains(id)) {
+                Assert.fail("Parallel start node without an appropriate parallelStart callback: "+id);
+            }
+        }
+        // Parallel Ends should be handled by the checks that blocks are balanced.
+    }
+
+    @Test
+    @Issue("JENKINS-39839")
+    public void testSingleBranchParallel() throws Exception {
+        // TODO implement body with a single branch parallel
     }
 
     /** Reference the flow graphs in {@link #SIMPLE_PARALLEL_RUN} and {@link #NESTED_PARALLEL_RUN} */
