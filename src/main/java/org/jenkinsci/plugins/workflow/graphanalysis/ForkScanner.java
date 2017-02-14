@@ -135,7 +135,7 @@ public class ForkScanner extends AbstractFlowScanner {
     /** Works with workflow-cps 2.26 and up, otherwise you'll need to provide your own predicate
      *   However this is better than the previous (always false predicate).
      */
-    public static class IsParallelPredicate implements Predicate<FlowNode> {
+    public static class IsParallelStartPredicate implements Predicate<FlowNode> {
         static final String PARALLEL_DESCRIPTOR_CLASSNAME = "org.jenkinsci.plugins.workflow.cps.steps.ParallelStep";
 
         @Override
@@ -144,19 +144,19 @@ public class ForkScanner extends AbstractFlowScanner {
                 return false;
             } else {
                 StepDescriptor desc = ((StepNode)input).getDescriptor();
-                return desc != null && PARALLEL_DESCRIPTOR_CLASSNAME.equals(desc.getId());
+                return desc != null && PARALLEL_DESCRIPTOR_CLASSNAME.equals(desc.getId()) && input.getPersistentAction(ThreadNameAction.class) == null;
             }
         }
 
         @Override
         public boolean equals(@Nullable Object object) {
-            return object != null && object instanceof IsParallelPredicate;
+            return object != null && object instanceof IsParallelStartPredicate;
         }
     }
 
     /** Originally a workaround to deal with needing the {@link StepDescriptor} to determine if a node is a parallel start
-     *  Now tidily solved by {@link IsParallelPredicate}*/
-    private static Predicate<FlowNode> parallelStartPredicate = new IsParallelPredicate();
+     *  Now tidily solved by {@link IsParallelStartPredicate}*/
+    private static Predicate<FlowNode> parallelStartPredicate = new IsParallelStartPredicate();
 
     // Invoke this passing a test against the ParallelStep conditions
     public static void setParallelStartPredicate(@Nonnull Predicate<FlowNode> pred) {
