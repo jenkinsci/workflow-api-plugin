@@ -82,6 +82,22 @@ public final class FlowScanningUtils {
         };
     };
 
+    public static final Comparator<FlowNode> ID_ORDER_COMPARATOR = new Comparator<FlowNode>() {
+        /** Implements null checking because the use of this method will not easily permit FindBugs verification on NonNull*/
+        public int compare(@CheckForNull FlowNode first, @CheckForNull FlowNode second) {
+            if (first == null || second == null) {
+                return 0;
+            }
+            try {
+                int id1 = Integer.parseInt(first.getId());
+                int id2 = Integer.parseInt(second.getId());
+                return Integer.compare(id1, id2);
+            } catch (NumberFormatException nfe) {
+                return first.getId().compareTo(second.getId());
+            }
+        };
+    };
+
     /**
      * Returns all {@link BlockStartNode}s enclosing the given FlowNode, starting from the inside out.
      * This is useful if we want to obtain information about its scope, such as the workspace, parallel branch, or label.
