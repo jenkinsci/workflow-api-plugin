@@ -186,9 +186,11 @@ public class ForkScannerTest {
         Assert.assertEquals(nodeCount,
                 new ForkScanner().allNodes(heads).size());
         test.assertMatchingParallelStartEnd();
-        test.assertMatchingParallelBranchStartEnd();
         test.assertAllNodesGotChunkEvents(new DepthFirstScanner().allNodes(heads));
         assertNoMissingParallelEvents(heads);
+        if (heads.size() > 0) {
+            test.assertMatchingParallelBranchStartEnd();
+        }
 
         // Test parallels + chunk start/end
         test.reset();
@@ -593,12 +595,27 @@ public class ForkScannerTest {
         Assert.assertEquals(false, new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("8")));
     }
 
+    @Test
+    public void testGetNodeType() throws Exception {
+        FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
+        Assert.assertEquals(ForkScanner.NodeType.NORMAL, ForkScanner.getNodeType(exec.getNode("2")));
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_START, ForkScanner.getNodeType(exec.getNode("4")));
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_START, ForkScanner.getNodeType(exec.getNode("6")));
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_BRANCH_END, ForkScanner.getNodeType(exec.getNode("9")));
+        Assert.assertEquals(ForkScanner.NodeType.PARALLEL_END, ForkScanner.getNodeType(exec.getNode("13")));
+
+        Assert.assertEquals(ForkScanner.NodeType.NORMAL, ForkScanner.getNodeType(exec.getNode("8")));
+    }
+
     /** For nodes, see {@link #SIMPLE_PARALLEL_RUN} */
     @Test
     public void testSimpleVisitor() throws Exception {
         FlowExecution exec = this.SIMPLE_PARALLEL_RUN.getExecution();
         ForkScanner f = new ForkScanner();
         f.setup(exec.getCurrentHeads());
+        Assert.assertArrayEquals(new HashSet(exec.getCurrentHeads()).toArray(), new HashSet(f.currentParallelHeads()).toArray());
+        List<FlowNode> expectedHeads = f.currentParallelHeads();
+
         sanityTestIterationAndVisiter(exec.getCurrentHeads());
 
         TestVisitor visitor = new TestVisitor();
@@ -745,7 +762,7 @@ public class ForkScannerTest {
         scan.setup(heads);
 
         // Check the sorting order
-        scan.sortParallelByTime();
+//        scan.sortParallelByTime();
         Assert.assertEquals(run.getExecution().getCurrentHeads().size()-1, scan.currentParallelStart.unvisited.size());
         Assert.assertEquals(scan.myCurrent.getDisplayName(), "semaphore");
         Assert.assertEquals(scan.myNext.getDisplayName(), "semaphore");

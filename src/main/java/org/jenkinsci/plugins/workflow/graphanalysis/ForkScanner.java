@@ -173,6 +173,38 @@ public class ForkScanner extends AbstractFlowScanner {
         return f != null && f instanceof BlockEndNode && (f.getParents().size()>1 || isParallelStart(((BlockEndNode) f).getStartNode()));
     }
 
+    /**
+     * Check the type of a given {@link FlowNode} for purposes of parallels, or return null if node is null.
+     */
+    @CheckForNull
+    public static NodeType getNodeType(@CheckForNull FlowNode f) {
+        if (f == null) {
+            return null;
+        }
+        if (f instanceof BlockStartNode) {
+            if (f.getPersistentAction(ThreadNameAction.class) != null) {
+                return NodeType.PARALLEL_BRANCH_START;
+            } else if (isParallelStart(f)) {
+                return NodeType.PARALLEL_START;
+            } else {
+                return NodeType.NORMAL;
+            }
+        } else if (f instanceof BlockEndNode) {
+            BlockStartNode start = ((BlockEndNode)f).getStartNode();
+            NodeType type = getNodeType(start);
+            switch (type) {
+                case PARALLEL_BRANCH_START:
+                    return NodeType.PARALLEL_BRANCH_END;
+                case PARALLEL_START:
+                    return NodeType.PARALLEL_END;
+                default:
+                    return NodeType.NORMAL;
+            }
+        } else {
+            return NodeType.NORMAL;
+        }
+    }
+
     /** If true, we are walking from the flow end node and have a complete view of the flow
      *  Needed because there are implications when not walking from a finished flow (blocks without a {@link BlockEndNode})*/
     public boolean isWalkingFromFinish() {
@@ -184,7 +216,7 @@ public class ForkScanner extends AbstractFlowScanner {
         BlockStartNode forkStart; // This is the node with child branches
         ArrayDeque<FlowNode> unvisited = new ArrayDeque<FlowNode>();  // Remaining branches of this that we have have not visited yet
 
-        ParallelBlockStart(BlockStartNode forkStart) {
+        ParallelBlockStart(@Nonnull BlockStartNode forkStart) {
             this.forkStart = forkStart;
         }
 
@@ -621,16 +653,31 @@ public class ForkScanner extends AbstractFlowScanner {
         if (this.currentParallelStart == null) {  // Not in parallel
             return;
         }
+        List<FlowNode> currParallelHeads = currentParallelHeads();
+        if (currParallelHeads.size() > 1) {
+            Collections.sort(currParallelHeads, FlowScanningUtils.TIME_ORDER_COMPARATOR);
+        }
+        setCurrentParallelHeads(currParallelHeads);
+    }
+
+    /** Find the current head nodes  */
+    List<FlowNode> currentParallelHeads() {
         ArrayList<FlowNode> ends = new ArrayList<FlowNode>();
-        ends.addAll(this.currentParallelStart.unvisited);
-        ends.add(this.myNext);
-        Collections.sort(ends, FlowScanningUtils.TIME_ORDER_COMPARATOR);
-        this.currentParallelStart.unvisited.clear();
-        this.currentParallelStart.unvisited.addAll(Lists.reverse(ends));
-        this.myCurrent = this.currentParallelStart.unvisited.pop();
-        this.myNext = this.currentParallelStart.unvisited.pop();
-        this.nextType = NodeType.PARALLEL_BRANCH_END;
-        this.currentType = NodeType.PARALLEL_BRANCH_END;
+        if (this.currentParallelStart != null) {
+            ends.addAll(this.currentParallelStart.unvisited);
+        }
+        if (hasNext()) {
+            ends.add(this.myNext);
+        }
+        return ends;
+    }
+
+    /** Resets the heads of the current parallel block to the list given */
+    void setCurrentParallelHeads(List<FlowNode> heads) {
+        if (currentParallelStart != null) {
+            currentParallelStart.unvisited.clear();
+            currentParallelStart.unvisited.addAll(heads);
+        }
     }
 
     /** Walk through flows */
@@ -683,6 +730,47 @@ public class ForkScanner extends AbstractFlowScanner {
                 default:
                     throw new IllegalStateException("Unhandled type for current node");
             }
+
+            /*
+            // We need to cover single-branch case by looking for branch & parallel start/end if it's a block
+            NodeType tempType = currentType;
+
+            if (currentType == NodeType.NORMAL) { // Normal node but we have to check if it's a single-branch parallel
+                NodeType myType = getNodeType(myCurrent);
+                if (myType == NodeType.NORMAL) {
+                    continue;
+                } else {
+                    tempType = myType;
+                }
+            }
+            switch (tempType) {  // "Fixed"
+                case NORMAL:
+                    break;
+                    // Below is covering cases where you're an unterminated end
+//                    if (currentParallelStart != null) {
+//                        visitor.parallelBranchEnd(((BlockEndNode)myCurrent).getStartNode().getParents().get(0), myCurrent, this);
+//                    }
+                    break;
+                case PARALLEL_END:
+                    visitor.parallelEnd(((BlockEndNode)myCurrent).getStartNode(), myCurrent, this);
+                    break;
+                case PARALLEL_START:
+                    visitor.parallelStart(myCurrent, prev, this);
+                    break;
+                case PARALLEL_BRANCH_END:
+                    visitor.parallelBranchEnd(((BlockEndNode)myCurrent).getStartNode().getParents().get(0), myCurrent, this);
+                    break;
+                case PARALLEL_BRANCH_START:
+                    // Needed because once we hit the start of the last branch, the next node is our currentParallelStart
+                    FlowNode parallelStart = (nextType == NodeType.PARALLEL_START) ? myNext : this.currentParallelStartNode;
+                    if (parallelStart == null) {
+                        parallelStart = myCurrent.getParents().get(0);
+                    }
+                    visitor.parallelBranchStart(parallelStart, myCurrent, this);
+                    break;
+                default:
+                    throw new IllegalStateException("Unhandled type for current node");
+            }*/
         }
     }
 
