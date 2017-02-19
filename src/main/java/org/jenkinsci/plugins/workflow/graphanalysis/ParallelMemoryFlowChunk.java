@@ -28,8 +28,8 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -52,6 +52,16 @@ public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements Parallel
 
     public void setBranch(@Nonnull String branchName, @Nonnull MemoryFlowChunk branchBlock) {
         branches.put(branchName, branchBlock);
+    }
+
+    /** Return the collection of all branches in an iterable fashion */
+    public Collection<MemoryFlowChunk> getBranchList() {
+        return branches.values();
+    }
+
+    /** Clear out all branches to avoid holding pointers */
+    public void clearBranches() {
+        branches.clear();
     }
 
     @Override
