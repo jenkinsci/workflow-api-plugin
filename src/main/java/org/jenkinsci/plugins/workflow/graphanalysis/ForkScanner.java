@@ -40,6 +40,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -102,14 +103,28 @@ public class ForkScanner extends AbstractFlowScanner {
     ChunkTreeNode currentChunkNode = null;
 
     /** Container class that provides DOM-like iteration methods.
-     *  This will be grossly inefficient vs. direct iteration but gets the job done.
+     *  This will be grossly inefficient vs. direct iteration because of heavy object use, but gets the job done.
+     *  Revisit: determine if better to make this an interface that is implemented by a {@link FlowChunk} descendant.
+     *
+     *  Note: in a parallel, the children are parallel branches, in a normal block they are sequential.
      */
     static class ChunkTreeNode {
         FlowChunk chunk;
         ChunkTreeNode parent;
         List<ChunkTreeNode> children = null;
+        boolean childrenParallel = false;
 
         /** Prev sibling if it has one, otherwise parent */
+
+        /** If true, child nodes are parallel branches, otherwise they are sequential */
+        public boolean isChildrenParallel() {
+            return childrenParallel;
+        }
+
+        public void setChildrenParallel(boolean isParallel) {
+            this.childrenParallel = isParallel;
+        }
+
         @CheckForNull
         public ChunkTreeNode getPrevChunk() {
             ChunkTreeNode sibling = getPrevSibling();
@@ -120,16 +135,31 @@ public class ForkScanner extends AbstractFlowScanner {
         public ChunkTreeNode getPrevSibling() {
             if (parent != null && parent.hasChildren()) {
                 List<ChunkTreeNode> sibs = parent.getChildren();
-                int idx = sibs.indexOf(this);
-                if (idx > 0) {
-                    return sibs.get(idx-1);
+                if (sibs != null) {
+                    int idx = sibs.indexOf(this);
+                    if (idx > 0) {
+                        return sibs.get(idx-1);
+                    }
                 }
-                return null;
             }
             return null;
         }
 
-        // TODO add getNextSibling and getNextChunk method
+        @CheckForNull
+        public ChunkTreeNode getNextSibling() {
+            if (parent != null && parent.hasChildren()) {
+                List<ChunkTreeNode> sibs = parent.getChildren();
+                if (sibs != null) {
+                    int idx = sibs.indexOf(this);
+                    if (idx < sibs.size()) {
+                        return sibs.get(idx++);
+                    }
+                }
+            }
+            return null;
+        }
+
+        // TODO add getNextChunk method
 
         @CheckForNull
         public ChunkTreeNode getParent() {
@@ -157,6 +187,34 @@ public class ForkScanner extends AbstractFlowScanner {
             for (ChunkTreeNode c : children) {
                 c.setParent(this);
             }
+        }
+
+        @CheckForNull
+        public ChunkTreeNode getFirstChild() {
+            return (children != null && !children.isEmpty()) ? children.get(0) : null;
+        }
+
+        @CheckForNull
+        public ChunkTreeNode getLastChild() {
+            return (children != null && !children.isEmpty()) ? children.get(children.size()-1) : null;
+        }
+
+        /** Find the enclosing node that must be a parent of this one.
+         *  While technically this is O(n) where n is depth, in practice depth is generally small.
+         *  If that assumption is violated, we can always use a HashMap of (first FlowNode, ChunkTreeNode).
+         */
+        public ChunkTreeNode findEnclosingNode(@Nonnull FlowNode startOfBlock) {
+            ChunkTreeNode candidate = this;
+            ChunkTreeNode found = null;
+            // Search until we hit the root for an enclosing block with that node as the first
+            while (found == null && candidate != null) {
+                if (candidate.getChunk() != null && startOfBlock.equals(candidate.getChunk().getFirstNode())) {
+                    found = candidate;
+                } else {
+                    candidate = candidate.getParent();
+                }
+            }
+            return found;
         }
 
         public List<ChunkTreeNode> getChildren() {
@@ -198,6 +256,7 @@ public class ForkScanner extends AbstractFlowScanner {
                 this.appendChild(new ChunkTreeNode(new MemoryFlowChunk(parallelStart, bsn, f, parallelEndNode)));
             }
             this.chunk = new MemoryFlowChunk(null, parallelStart, parallelEndNode, null);
+            this.childrenParallel = true;
         }
 
         ChunkTreeNode(FlowChunk chunk, ChunkTreeNode parent, List<ChunkTreeNode> children) {
@@ -253,6 +312,7 @@ public class ForkScanner extends AbstractFlowScanner {
                 return false;
             } else {
                 StepDescriptor desc = ((StepNode)input).getDescriptor();
+                // FIXME way to use reflection the first time to obtain a reference to getDescriptor if workflow-cps <= 2.26?
                 return desc != null && PARALLEL_DESCRIPTOR_CLASSNAME.equals(desc.getId()) && input.getPersistentAction(ThreadNameAction.class) == null;
             }
         }
@@ -436,6 +496,7 @@ public class ForkScanner extends AbstractFlowScanner {
             return null;
         }
 
+        ChunkTreeNode root = null;  // Will be declared when found
         HashMap<FlowNode, ChunkTreeNode> parallelStartMap = new HashMap<FlowNode, ChunkTreeNode>();
         HashMap<FlowNode, ChunkTreeNode> unmergedChunks = new HashMap<FlowNode, ChunkTreeNode>();
 
@@ -445,16 +506,22 @@ public class ForkScanner extends AbstractFlowScanner {
             unmergedChunks.put(f, new ChunkTreeNode(mfc, null, null));
         }
 
+        // 3 Cases:
+        // 1 - BlockEndNode for parallel -> create parallel chunk, and connect up as needed
+        // 2 - BlockStartNode with ThreadNameAction - this is the start of a parallel branch, create a parallel or connect to existing
+        // 3 - ParallelStartNode with no preceding end node
+        // 4 - default
+
 
         // For each of the unmergedNodes, walk back until we find a node with ThreadNameAction or a ParallelEndNode?
-        LinearBlockHoppingScanner scan = new LinearBlockHoppingScanner();  // We need the block end node
+        LinearScanner scan = new LinearScanner();  // We need the block end node
         while(unmergedChunks.size() > 1) {
             for (Map.Entry<FlowNode, ChunkTreeNode> unmergedBit : unmergedChunks.entrySet()) {
                 // FIXME I can't directly mutate the map like this!
                 FlowNode f = unmergedBit.getKey();
                 ChunkTreeNode node = unmergedBit.getValue();
 
-                // Look for branch starts from parallels that we haven't see an end node for
+                // Look for branch starts from parallels that we haven't seen an end node for
                 // TODO do same with branchTip = scan.findFirstMatch(f, IS_BRANCH_HEAD);
                 if (f instanceof BlockEndNode && IS_BRANCH_HEAD.apply(((BlockEndNode)f).getStartNode())) {
                     // We've hit a branch start, let's create a parallel containing it and put a pointer to catch additional pointersback
@@ -731,64 +798,120 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     /** Find next node using the current tree structure if needed */
-    // Messy WIP
-    /*protected FlowNode nextTree(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
+    protected FlowNode nextTree(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
         FlowNode output = null;
         List<FlowNode> parents = current.getParents();
-        TreeNavigator pos = this.currentPosition;
+        ChunkTreeNode currentTreeNode = this.currentChunkNode;
+        FlowChunk nextChunk = (currentTreeNode != null) ? currentTreeNode.getChunk() : null;
 
-        // Cases to handle:
+        if (parents.size() == 0) {  // End of the line, bub!
+            nextType = null;
+            return null;
+        }
 
-        NodeType type = getNodeType(current);
-        switch (type) {
-            case NORMAL:
-                break;
+        // Potential candidates for next value
+        // Potential candidates for next value
+        ChunkTreeNode plannedTreeNode = null;
+        NodeType plannedNextType = null;
+        FlowNode plannedNext = null;
+
+        // Special cases for how we generate the next branch depending on if inside parallels
+        switch (currentType) {
             case PARALLEL_BRANCH_START:
-                break;
-            case PARALLEL_BRANCH_END:
+                // Try to jump to previous branch (if not blacklisted), or the enclosing parent parallel block
+                plannedTreeNode = currentTreeNode.getPrevChunk();
+                if (plannedTreeNode != null) {
+                    if (plannedTreeNode == currentTreeNode.getParent()) { // Previous block is the parent, I.E. enclosing block
+                        plannedNextType = NodeType.PARALLEL_START;
+                        plannedNext = plannedTreeNode.getChunk().getFirstNode();
+                    } else {
+                        plannedNextType = NodeType.PARALLEL_BRANCH_END;
+                        plannedNext = plannedTreeNode.getChunk().getLastNode();
+                    }
+                }
                 break;
             case PARALLEL_START:
+                // We're jumping up a level
+                plannedTreeNode = currentTreeNode.getParent();
+                plannedNextType = NodeType.NORMAL;
                 break;
             case PARALLEL_END:
+                // Start with the last child branch
+                plannedNextType = NodeType.PARALLEL_BRANCH_END;
+                plannedTreeNode = currentTreeNode.getLastChild();
+                plannedNext = plannedTreeNode.getChunk().getLastNode();
                 break;
+            case PARALLEL_BRANCH_END:
+                // Check if I point to current branch start?  Maybe?  Probably not needed, but that lets us check if new parallel
+            case NORMAL:
+            default:
+                plannedNextType = NodeType.NORMAL; // We will need to do some inspections here, below.
+                plannedTreeNode = currentTreeNode;
         }
 
+        // We need to inspect this FlowNode more closely because we may be in an incomplete branch, or have an end/head/etc etc
+        if (plannedNextType == NodeType.NORMAL) {
+            plannedNext = parents.get(0);  // Must be 1 parent, because only parallel ends have > 1, and 0 is covered by precheck
+            plannedNextType = getNodeType(plannedNext);
+            switch (plannedNextType) {
+                case PARALLEL_END:
+                    BlockStartNode parallelStart = ((BlockEndNode)plannedNext).getStartNode();
+                    ChunkTreeNode parallelBlock = null;
+                    if (currentTreeNode == null || currentTreeNode.findEnclosingNode(parallelStart) == null) {
+                        // Found an untracked parallel block
+                        parallelBlock = new ChunkTreeNode((BlockEndNode)plannedNext);
+                    }
+                    ChunkTreeNode parallelChunk = new ChunkTreeNode((BlockEndNode)plannedNext);
+                    currentTreeNode.appendChild(parallelChunk); // Effectively splits current chunk?  May need to actually split it?
+                    plannedTreeNode = parallelChunk;
+                    break;
+                case PARALLEL_BRANCH_END:
+                    // Check if we already have a parallel set up for this branch, and if not, create one!
+                    BlockStartNode start = ((BlockEndNode)plannedNext).getStartNode();
+                    if (currentTreeNode == null || currentTreeNode.findEnclosingNode(start) == null) { // New branch-end for a parallel we haven't seen yet!
+                        FlowNode myParallelStart = start.getParents().get(0);
+                        ChunkTreeNode  branchNode = new ChunkTreeNode(new MemoryFlowChunk(null, start, plannedNext, null));
+                        MemoryFlowChunk parallelChunkTemp = new MemoryFlowChunk(null, myParallelStart, null, null);
+                        ChunkTreeNode parallelNode = new ChunkTreeNode(parallelChunkTemp, currentTreeNode, Arrays.asList(branchNode));
+                        if (currentTreeNode != null) {
+                            currentTreeNode.prependChild(parallelNode);
+                        }
 
-        if (pos.currentChunk != null && pos.currentChunk.getFirstNode().equals(current)) {
-            pos.prev(); // Branch before or branch above!
-            if (pos.currentChunk != null) {
-                // CurrentType
+                        plannedTreeNode = branchNode;
+                    }
+                    break;
+                case PARALLEL_BRANCH_START:
+                    if (currentTreeNode == null || !current.equals(currentTreeNode.getChunk().getFirstNode()) ) { // Check if we already have a parallel set up
+                        // Create ourselves a tidy parallel and insert this branch, so we have the structure in place
+                        ChunkTreeNode newParallel = new ChunkTreeNode(new MemoryFlowChunk(null, plannedNext.getParents().get(0), null, null));
+                        ChunkTreeNode newBranch = new ChunkTreeNode(new MemoryFlowChunk(null, plannedNext, null, null), newParallel, null);
+                        if (currentTreeNode != null) {
+                            currentTreeNode.appendChild(newParallel);
+                        }
+                    }
+                    break;
+                case PARALLEL_START:
+                    // No worries here, mate
+                    break;
+                default:
+                    break;
             }
-            // TODO find out where we are now
         }
 
-
-
-
-
-        // FIXME currentType & nextType
-
-        String branchName = getBranchStartLabel(current);
-        if (branchName != null) {
-            // Start of branch, look to see if we need to just up
+        if (blackList.contains(plannedNext)) {
+            // TODO figure out a straightforward way to track and route around blacklisted branches... including nested parallels
+            // YAGNI for now because blacklisting hasn't seen wide use and use with parallel branches may not be needed
+            // Note that the next legal branch may be:
+            //   1. A preceding sibling branch, whose endNode is not blacklisted (any of them)
+            //   2. The BlockStartNode of the enclosing parallel... IFF at least one of the siblings is not blacklisted
+            //      (Which would require us to track for each node when branches are blocked for iteration by blacklisting)
+            //   3. The same for *any* enclosing parallel, recursively until we hit the root, yuck.
+            return null;
         }
-
-        if (pos.getCurrentChunk() == null) {
-
-        }
-        if (current = pos.)
-        // Case 1: not a block end node or block start node. get previous, move on
-        // Case 2:
-
-        if (branchName == null) {
-            if (currentPosition == )
-            // Test if we're at the head of a parallel
-        } else {
-            currentPosition.prev();
-            ChunkTreeNode<ChunkTreeNode> chunk = currentPosition.getCurrentChunk();
-
-        }
-    }*/
+        nextType = plannedNextType;
+        currentChunkNode = plannedTreeNode;
+        return plannedNext;
+    }
 
 
     @Override
@@ -929,6 +1052,7 @@ public class ForkScanner extends AbstractFlowScanner {
         if (finder.isStartInsideChunk()) {
             needsEnd = true;
         }
+        // FIXME: fire a parallelEnd if nextType is a parallelBranchEnd, using the best end from the set of open parallel tips
         while(hasNext()) {
             prev = (myCurrent != myNext) ? myCurrent : null;
             FlowNode f = next();
