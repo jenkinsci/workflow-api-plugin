@@ -687,10 +687,6 @@ public class ForkScanner extends AbstractFlowScanner {
         // We need to look at the parallels structure, and for each parallel re-sort the nodes by their timing info...
         // IFF they are open when beginning (if complete, it is irrelevant)
 //        sortParallelByTime();
-        boolean needsEnd = false;
-        if (finder.isStartInsideChunk()) {
-            needsEnd = true;
-        }
         while(hasNext()) {
             prev = (myCurrent != myNext) ? myCurrent : null;
             FlowNode f = next();
@@ -700,10 +696,9 @@ public class ForkScanner extends AbstractFlowScanner {
                 visitor.chunkStart(myCurrent, myNext, this);
                 boundary = true;
             }
-            if (needsEnd || finder.isChunkEnd(myCurrent, prev)) {
+            if (finder.isChunkEnd(myCurrent, prev)) {
                 visitor.chunkEnd(myCurrent, prev, this);
                 boundary = true;
-                needsEnd = false;
             }
             if (!boundary) {
                 visitor.atomNode(myNext, f, prev, this);
@@ -730,47 +725,6 @@ public class ForkScanner extends AbstractFlowScanner {
                 default:
                     throw new IllegalStateException("Unhandled type for current node");
             }
-
-            /*
-            // We need to cover single-branch case by looking for branch & parallel start/end if it's a block
-            NodeType tempType = currentType;
-
-            if (currentType == NodeType.NORMAL) { // Normal node but we have to check if it's a single-branch parallel
-                NodeType myType = getNodeType(myCurrent);
-                if (myType == NodeType.NORMAL) {
-                    continue;
-                } else {
-                    tempType = myType;
-                }
-            }
-            switch (tempType) {  // "Fixed"
-                case NORMAL:
-                    break;
-                    // Below is covering cases where you're an unterminated end
-//                    if (currentParallelStart != null) {
-//                        visitor.parallelBranchEnd(((BlockEndNode)myCurrent).getStartNode().getParents().get(0), myCurrent, this);
-//                    }
-                    break;
-                case PARALLEL_END:
-                    visitor.parallelEnd(((BlockEndNode)myCurrent).getStartNode(), myCurrent, this);
-                    break;
-                case PARALLEL_START:
-                    visitor.parallelStart(myCurrent, prev, this);
-                    break;
-                case PARALLEL_BRANCH_END:
-                    visitor.parallelBranchEnd(((BlockEndNode)myCurrent).getStartNode().getParents().get(0), myCurrent, this);
-                    break;
-                case PARALLEL_BRANCH_START:
-                    // Needed because once we hit the start of the last branch, the next node is our currentParallelStart
-                    FlowNode parallelStart = (nextType == NodeType.PARALLEL_START) ? myNext : this.currentParallelStartNode;
-                    if (parallelStart == null) {
-                        parallelStart = myCurrent.getParents().get(0);
-                    }
-                    visitor.parallelBranchStart(parallelStart, myCurrent, this);
-                    break;
-                default:
-                    throw new IllegalStateException("Unhandled type for current node");
-            }*/
         }
     }
 
