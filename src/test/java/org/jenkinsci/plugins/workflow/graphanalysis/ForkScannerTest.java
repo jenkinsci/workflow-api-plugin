@@ -457,10 +457,10 @@ public class ForkScannerTest {
         ForkScanner scanner = new ForkScanner();
         scanner.setup(b.getExecution().getCurrentHeads());
         scanner.visitSimpleChunks(visitor, new ChunkFinderWithoutChunks());
-        Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_START));
-        Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_END));
-        Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_START));
-        Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_END));
+        Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_START).size());
+        Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).size());
+        Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_START).size());
+        Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_END).size());
     }
 
     /** Reference the flow graphs in {@link #SIMPLE_PARALLEL_RUN} and {@link #NESTED_PARALLEL_RUN} */

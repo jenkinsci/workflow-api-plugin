@@ -563,24 +563,24 @@ public class ForkScanner extends AbstractFlowScanner {
             // welp, we're done with this node, guess we consult the queue?
         } else if (parents.size() == 1) {
             FlowNode p = parents.get(0);
-            if (p == currentParallelStartNode) {
+            if (p == currentParallelStartNode || isParallelStart(p)) {
                 // Terminating a parallel scan
                 FlowNode temp = hitParallelStart();
                 if (temp != null) { // Start node for current parallel block now that it is done
                     nextType = NodeType.PARALLEL_START;
                     return temp;
                 }
-            } else if (!blackList.contains(p)) {
-                if (p instanceof BlockStartNode && p.getPersistentAction(ThreadNameAction.class) != null) {
-                    nextType = NodeType.PARALLEL_BRANCH_START;
-                } else if (ForkScanner.isParallelEnd(p)) {
-                    nextType = NodeType.PARALLEL_END;
-                } else {
-                    nextType = NodeType.NORMAL;
+            } else {
+                if (isParallelEnd(current)) {
+                    BlockEndNode end = ((BlockEndNode) current);
+                    FlowNode possibleOutput = hitParallelEnd(end, parents, blackList);  // possibleOutput can only be p
                 }
-                return p;
+                if (!blackList.contains(p)) {
+                    nextType = getNodeType(p);
+                    return p;
+                }
             }
-        } else if (current instanceof BlockEndNode && parents.size() > 1) {
+        } else if (isParallelEnd(current)) {
             // We must be a BlockEndNode that begins this
             BlockEndNode end = ((BlockEndNode) current);
             FlowNode possibleOutput = hitParallelEnd(end, parents, blackList); // What if output is block but other branches aren't?
@@ -709,7 +709,11 @@ public class ForkScanner extends AbstractFlowScanner {
                 case NORMAL:
                     break;
                 case PARALLEL_END:
-                    visitor.parallelEnd(this.currentParallelStartNode, myCurrent, this);
+                    if (this.currentParallelStartNode != null) {
+                        visitor.parallelEnd(this.currentParallelStartNode, myCurrent, this);
+                    } else if (myCurrent instanceof BlockEndNode){
+                        visitor.parallelEnd(((BlockEndNode) myCurrent).getStartNode(), myCurrent, this);
+                    }
                     break;
                 case PARALLEL_START:
                     visitor.parallelStart(myCurrent, prev, this);
