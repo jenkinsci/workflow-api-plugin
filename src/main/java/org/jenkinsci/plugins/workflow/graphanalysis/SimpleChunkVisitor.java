@@ -34,25 +34,42 @@ import javax.annotation.Nonnull;
  * This visitor's callbacks are invoked as we walk through a pipeline flow graph, and it splits it into chunks.
  * <p> A {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
  *
- * <p> Implementations get to decide how to use and handle chunks.
- * <p> <h3>At a minimum they should handle:</h3>
+ * <p>We walk through the {@link FlowNode}s in reverse order from end to start, so <em>end callbacks are invoked before
+ *  their corresponding start callbacks.</em>
+ *
+ * <p><em>Callback types</em>
+ * <p> There are two kinds of callbacks - chunk callbacks, and parallel structure callbacks
+ * <p><em>Chunk Callbacks:</em>
  * <ul>
- *     <li>Unbalanced numbers of chunk start/end calls (for incomplete flows)</li>
- *     <li>A chunk end with no beginning (runs to start of flow, or never began)</li>
- *     <li>A chunk start with no end (ex: a block that hasn't completed running)</li>
- *     <li>Other starts/ends before we hit the closing one (nesting)</li>
- *     <li>Atom nodes not within the current Chunk (visitor is responsible for handling state)</li>
+ *     <li>{@link #chunkStart(FlowNode, FlowNode, ForkScanner)} - detected the start of a chunk beginning with a node</li>
+ *     <li>{@link #chunkEnd(FlowNode, FlowNode, ForkScanner)} - detected the end of a chunk, terminating with a node </li>
+ *     <li>{@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} - most nodes, which aren't boundaries of chunks</li>
  * </ul>
  *
- * <em>Important implementation note: multiple callbacks can be invoked for a single node depending on its type.</em>
- * <p>For example, we may capture parallels as chunks.
+ * <p><p><em>Chunk callback rules:</em>
+ * <ol>
+ *     <li>For a single node, it may have EITHER OR BOTH chunkStart and chunkEnd events</li>
+ *     <li>Every node that doesn't get a startChunk/endChunk callback gets an atomNode callback.</li>
+ *     <li>For {@link ChunkFinder} implementations that match the {@link BlockStartNode} and {@link BlockEndNode} should never have both for a single</li>
+ *     <li>You cannot have multiple of any of the same specific type of callbacks for the same flownode</li>
+ *     <li>You cannot have a atomNode callback AND a start/end for the same flownode (application of the above).</li>
+ * </ol>
  *
- * <p><h3>Callbacks Reporting on chunk/parallel information:</h3>
+ * <p>Parallel Structure Callbacks: Zero, One, or Multiple may be invoked for any given FlowNode</p>
+ * <p>These are used to provide awareness of parallel/branching structures if they need special handling
  * <ul>
- *     <li>{@link #chunkStart(FlowNode, FlowNode, ForkScanner)} is called on the current node when we hit start of a boundary (inclusive) </li>
- *     <li>{@link #chunkEnd(FlowNode, FlowNode, ForkScanner)} is called when we hit end of a boundary (inclusive)</li>
- *     <li>{@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} called when a node is neither start nor end.</li>
- *     <li>All the parallel methods are used to report on parallel status - helpful when we need to deal with parallels internal to chunks.</li>
+ *     <li>{@link #parallelStart(FlowNode, FlowNode, ForkScanner)}</li>
+ *     <li>{@link #parallelEnd(FlowNode, FlowNode, ForkScanner)}</li>
+ *     <li>{@link #parallelBranchStart(FlowNode, FlowNode, ForkScanner)}</li>
+ *     <li>{@link #parallelBranchEnd(FlowNode, FlowNode, ForkScanner)}</li>
+ * </ul>
+ *
+ * <p>Implementations get to decide how to use and handle chunks, and should be stateful.
+ * <p><h3>At a minimum they should handle:</h3>
+ * <ul>
+ *     <li>Cases where there is no enclosing chunk (no start/end found, or outside a chunk)</li>
+ *     <li>Cases where there is no chunk end to match the start, because we haven't finished running a block</li>
+ *     <li>Nesting of chunks</li>
  * </ul>
  *
  * @author Sam Van Oort
