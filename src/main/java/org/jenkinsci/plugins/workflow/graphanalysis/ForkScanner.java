@@ -506,6 +506,8 @@ public class ForkScanner extends AbstractFlowScanner {
 
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+        // FIXME I need to do something with the tips, similar to what we do in nextTree if they're normal-type
+        // Otherwise NPEs
         if (heads.size() > 1) {
             this.currentChunkNode = buildParallelStructure(new LinkedHashSet<FlowNode>(heads));
             assert this.currentChunkNode != null;
@@ -613,6 +615,7 @@ public class ForkScanner extends AbstractFlowScanner {
                     BlockStartNode parallelStart = ((BlockEndNode)plannedNext).getStartNode();
                     ChunkTreeNode parallelBlock = null;
                     if (currentTreeNode == null || currentTreeNode.findEnclosingNode(parallelStart) == null) {
+                        // FIXME this is wrong.
                         // Found an untracked parallel block
                         parallelBlock = new ChunkTreeNode((BlockEndNode)plannedNext);
                     }
