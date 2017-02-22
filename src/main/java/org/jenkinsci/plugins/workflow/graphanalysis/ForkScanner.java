@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
@@ -113,6 +114,13 @@ public class ForkScanner extends AbstractFlowScanner {
 
     public ForkScanner() {
 
+    }
+
+    /** Sets up the flowgraph with sorted order */
+    public boolean setupSorted(Collection<FlowNode> heads) {
+        ArrayList<FlowNode> sorted = new ArrayList<>(heads);
+        Collections.sort(sorted, FlowScanningUtils.TIME_ORDER_COMPARATOR);
+        return this.setup(sorted);
     }
 
     public ForkScanner(@Nonnull Collection<FlowNode> heads) {
@@ -620,18 +628,21 @@ public class ForkScanner extends AbstractFlowScanner {
     public static void visitSimpleChunks(@Nonnull Collection<FlowNode> heads, @Nonnull Collection<FlowNode> blacklist, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         ForkScanner scanner = new ForkScanner();
         scanner.setup(heads, blacklist);
-        if (scanner.getParallelDepth() > 0) {
-//            visitor.parallelEnd(scanner.getCurrentParallelStartNode(), scanner.myCurrent, scanner);
-        }
         scanner.visitSimpleChunks(visitor, finder);
     }
 
     public static void visitSimpleChunks(@Nonnull Collection<FlowNode> heads, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         ForkScanner scanner = new ForkScanner();
         scanner.setup(heads);
-        if (scanner.getParallelDepth() > 0) {
-//            visitor.parallelEnd(scanner.getCurrentParallelStartNode(), scanner.myCurrent, scanner);
-        }
+        scanner.visitSimpleChunks(visitor, finder);
+    }
+
+    /** This is the API you want if you wish to have sorted chunks */
+    public static void visitSimpleChunksSorted(@Nonnull Collection<FlowNode> heads, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
+        ForkScanner scanner = new ForkScanner();
+        ArrayList<FlowNode> sorted = new ArrayList<FlowNode>(heads.size());
+        Collections.sort(sorted, FlowScanningUtils.TIME_ORDER_COMPARATOR);
+        scanner.setup(heads);
         scanner.visitSimpleChunks(visitor, finder);
     }
 
@@ -661,47 +672,27 @@ public class ForkScanner extends AbstractFlowScanner {
         }
     }
 
-    /** Trivial sorting of the current in-progress branches (See issue JENKINS-38536)... does not handle nesting correctly though */
-    void sortParallelByTime() {
-        // FIXME add nesting support by storing a full tree structure for branches and not the overly complex queue system
-        // FIXME this is horribly broken!!
-        if (this.currentParallelStart == null) {  // Not in parallel
-            return;
-        }
-        List<FlowNode> currParallelHeads = currentParallelHeads();
-        if (currParallelHeads.size() > 1) {
-            Collections.sort(currParallelHeads, FlowScanningUtils.TIME_ORDER_COMPARATOR);
-        }
-        setCurrentParallelHeads(currParallelHeads);
-    }
-
-    /** Find the current head nodes  */
+    /** Find the current head nodes but only for the current parallel */
     List<FlowNode> currentParallelHeads() {
         ArrayList<FlowNode> ends = new ArrayList<FlowNode>();
         if (this.currentParallelStart != null) {
             ends.addAll(this.currentParallelStart.unvisited);
         }
-        if (hasNext()) {
-            ends.add(this.myNext);
+        if (this.myCurrent != null) {
+            ends.add(this.myCurrent);
         }
         return ends;
-    }
-
-    /** Resets the heads of the current parallel block to the list given */
-    void setCurrentParallelHeads(List<FlowNode> heads) {
-        if (currentParallelStart != null) {
-            currentParallelStart.unvisited.clear();
-            currentParallelStart.unvisited.addAll(heads);
-        }
     }
 
     /** Walk through flows */
     public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         FlowNode prev = null;
-        // We can't just  fire the extra chunkEnd event
-        // We need to look at the parallels structure, and for each parallel re-sort the nodes by their timing info...
-        // IFF they are open when beginning (if complete, it is irrelevant)
-//        sortParallelByTime();
+
+        if (this.currentParallelStart != null) {
+            FlowNode last = findLastStartedNode(currentParallelHeads());
+            visitor.parallelEnd(this.currentParallelStartNode, last, this);
+        }
+
         while(hasNext()) {
             prev = (myCurrent != myNext) ? myCurrent : null;
             FlowNode f = next();

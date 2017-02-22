@@ -290,8 +290,10 @@ public class TestVisitor implements SimpleChunkVisitor {
         if (this.isFromCompleteRun != null && this.isFromCompleteRun) {
             for (Map.Entry<Integer, List<Integer>> startEntry : branchStartIds.entrySet()) {
                 List<Integer> ends = branchEndIds.get(startEntry.getKey());
-                // Branch start without branch end is legal due to incomplete flows
-                if (ends != null) {  // Can have starts without ends due to single-branch parallels with incomplete branches that are unterminated
+                // Branch start without branch end is legal due to incomplete flows, but not when complete!
+                if (this.isFromCompleteRun != null  && this.isFromCompleteRun) {
+                    Assert.assertNotNull(ends);
+                } else if (ends != null) {  // Can have starts without ends due to single-branch parallels with incomplete branches that are unterminated
                     Assert.assertEquals("Parallels must have matching numbers of start and end events, but don't -- for parallel starting with: " +
                             startEntry.getKey(), startEntry.getValue().size(), ends.size());
                 }
@@ -319,9 +321,11 @@ public class TestVisitor implements SimpleChunkVisitor {
                             openParallelStarts.peekFirst(), new Integer(ce.ids[0])
                     );
                     openParallelStarts.pop();
+                } else if (isFromCompleteRun != null && isFromCompleteRun) {
+                    // For a complete flow, every start must have an end, for an incomplete one we may have
+                    //  an incomplete block (still running)
+                    Assert.fail("Found a parallel start without a matching end, with CallEntry: "+ce);
                 }
-
-                // More parallel starts than ends is *legal* because we may have an in-progress parallel without an end created.
             }
         }
 
