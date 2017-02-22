@@ -147,11 +147,6 @@ public class ForkScanner extends AbstractFlowScanner {
         public boolean apply(@Nullable FlowNode input) {
             return (input instanceof BlockStartNode && PARALLEL_STEP.apply(input) && input.getPersistentAction(ThreadNameAction.class) == null);
         }
-
-        @Override
-        public boolean equals(@Nullable Object object) {
-            return object != null && object instanceof IsParallelStartPredicate;
-        }
     }
 
     /** Originally a workaround to deal with needing the {@link StepDescriptor} to determine if a node is a parallel start
@@ -192,6 +187,9 @@ public class ForkScanner extends AbstractFlowScanner {
         } else if (f instanceof BlockEndNode) {
             BlockStartNode start = ((BlockEndNode)f).getStartNode();
             NodeType type = getNodeType(start);
+            if (type == null) {
+                return null;
+            }
             switch (type) {
                 case PARALLEL_BRANCH_START:
                     return NodeType.PARALLEL_BRANCH_END;
@@ -678,11 +676,13 @@ public class ForkScanner extends AbstractFlowScanner {
 
     /** Walk through flows */
     public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
-        FlowNode prev = null;
+        FlowNode prev;
 
         if (this.currentParallelStart != null) {
             FlowNode last = findLastStartedNode(currentParallelHeads());
-            visitor.parallelEnd(this.currentParallelStartNode, last, this);
+            if (last != null) {
+                visitor.parallelEnd(this.currentParallelStartNode, last, this);
+            }
         }
 
         while(hasNext()) {

@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
+import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.Nonnull;
@@ -49,7 +50,8 @@ public final class NodeStepNamePredicate implements Predicate<FlowNode> {
     @Override
     public boolean apply(@Nullable FlowNode input) {
         if (input != null && input instanceof StepNode) {
-            return descriptorId.equals(((StepNode) input).getDescriptor().getId());
+            StepDescriptor sd = ((StepNode) input).getDescriptor();
+            return (sd != null) ? descriptorId.equals(sd.getId()) : false;
         }
         return false;
     }
