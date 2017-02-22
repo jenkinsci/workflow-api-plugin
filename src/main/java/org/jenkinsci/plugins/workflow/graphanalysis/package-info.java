@@ -14,7 +14,7 @@
  *     <li><em>Fastest way to find preceding sibling or enclosing nodes?</em> {@link org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner}</li>
  * </ol>
  *
- * <p> Methods to iterate through flow graph and break it into chunks (regions) of interest, with nesting possible & reporting of branches:
+ * <p> Methods to iterate through flow graph and break it into chunks (regions) of interest, with nesting possible and reporting of branches:
  * <p><em>Basic APIs</em>
  * <ol>
  *     <li>{@link org.jenkinsci.plugins.workflow.graphanalysis.ChunkFinder} - API to define conditions for starting/ending a chunk</li>
