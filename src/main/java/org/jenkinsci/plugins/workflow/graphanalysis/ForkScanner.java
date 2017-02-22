@@ -25,15 +25,12 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.CheckForNull;
@@ -143,17 +140,12 @@ public class ForkScanner extends AbstractFlowScanner {
     /** Works with workflow-cps 2.26 and up, otherwise you'll need to provide your own predicate
      *   However this is better than the previous (always false predicate).
      */
-    public static class IsParallelStartPredicate implements Predicate<FlowNode> {
-        static final String PARALLEL_DESCRIPTOR_CLASSNAME = "org.jenkinsci.plugins.workflow.cps.steps.ParallelStep";
+    static class IsParallelStartPredicate implements Predicate<FlowNode> {
+        static final NodeStepNamePredicate PARALLEL_STEP = new NodeStepNamePredicate("org.jenkinsci.plugins.workflow.cps.steps.ParallelStep");
 
         @Override
         public boolean apply(@Nullable FlowNode input) {
-            if (input == null || !(input instanceof StepNode && input instanceof BlockStartNode)) {
-                return false;
-            } else {
-                StepDescriptor desc = ((StepNode)input).getDescriptor();
-                return desc != null && PARALLEL_DESCRIPTOR_CLASSNAME.equals(desc.getId()) && input.getPersistentAction(ThreadNameAction.class) == null;
-            }
+            return (input instanceof BlockStartNode && PARALLEL_STEP.apply(input) && input.getPersistentAction(ThreadNameAction.class) == null);
         }
 
         @Override

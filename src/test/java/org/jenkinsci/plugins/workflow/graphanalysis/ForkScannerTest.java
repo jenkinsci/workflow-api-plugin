@@ -38,6 +38,7 @@ import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.steps.EchoStep;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -198,6 +199,7 @@ public class ForkScannerTest {
                     hasMatchingEnd = true;
                     break;
                 }
+                // Below can be used if we harden up the guarantees with incomplete parallels
 /*                Assert.assertTrue("Must have a parallel branch end for each branch we know of, but didn't, for nodeId: "+f.getId(),
                         branchEnds.contains(f.getId()));*/
             }
@@ -465,18 +467,21 @@ public class ForkScannerTest {
                 "     echo ('Testing')\n" +
                 "     parallel nestedBranch: {\n" +
                 "       echo 'nested Branch'\n" +
-                "       stage 'nestedBranchStage' \n" +
-                "         echo 'running nestedBranchStage'\n" +
-                "         parallel secondLevelNestedBranch1: {\n" +
-                "           echo 'secondLevelNestedBranch1'\n" + //
-                "         }\n" +
+                "       stage ('nestedBranchStage') { \n" +
+                "           echo 'running nestedBranchStage'\n" +
+                "           parallel secondLevelNestedBranch1: {\n" +
+                "               echo 'secondLevelNestedBranch1'\n" + //
+                "           }\n" +
+                "       }\n"+
                 "     }, failFast: false\n" +
                 "}";
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "SingleNestedParallelBranch");
         job.setDefinition(new CpsFlowDefinition(script));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
+        FlowNode echoNode = new DepthFirstScanner().findFirstMatch(b.getExecution(), new NodeStepTypePredicate(EchoStep.DescriptorImpl.byFunctionName("echo")));
+        Assert.assertNotNull(echoNode);
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
-        sanityTestIterationAndVisiter(Arrays.asList(b.getExecution().getNode("11")));
+        sanityTestIterationAndVisiter(Arrays.asList(echoNode));
 
         TestVisitor visitor = new TestVisitor();
         ForkScanner scanner = new ForkScanner();
