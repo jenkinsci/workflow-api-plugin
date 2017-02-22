@@ -41,7 +41,7 @@ import org.kohsuke.accmod.restrictions.DoNotUse;
  */
 @Extension
 public class FlowExecutionList implements Iterable<FlowExecution> {
-    private CopyOnWriteList<FlowExecutionOwner> runningTasks = new CopyOnWriteList<FlowExecutionOwner>();
+    private final CopyOnWriteList<FlowExecutionOwner> runningTasks = new CopyOnWriteList<>();
     private final SingleLaneExecutorService executor = new SingleLaneExecutorService(Timer.get());
     private XmlFile configFile;
 
@@ -97,6 +97,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         if (cf.exists()) {
             try {
                 runningTasks.replaceBy((List<FlowExecutionOwner>) cf.read());
+                LOGGER.log(FINE, "loaded: {0}", runningTasks);
             } catch (IOException x) {
                 LOGGER.log(WARNING, null, x);
             }
@@ -109,21 +110,26 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      * are no longer running.
      */
     public synchronized void register(final FlowExecutionOwner self) {
-        load();
-        if (!runningTasks.contains(self))
+        if (runningTasks.contains(self)) {
+            LOGGER.log(WARNING, "{0} was already in the list: {1}", new Object[] {self, runningTasks.getView()});
+        } else {
             runningTasks.add(self);
-        saveLater();
+            saveLater();
+        }
     }
 
     public synchronized void unregister(final FlowExecutionOwner self) {
-        load();
-        runningTasks.remove(self);
-        LOGGER.log(FINE, "unregistered {0} so is now {1}", new Object[] {self, runningTasks.getView()});
-        saveLater();
+        if (runningTasks.remove(self)) {
+            LOGGER.log(FINE, "unregistered {0}", new Object[] {self});
+            saveLater();
+        } else {
+            LOGGER.log(WARNING, "{0} was not in the list to begin with: {1}", new Object[] {self, runningTasks.getView()});
+        }
     }
 
     private synchronized void saveLater() {
-        final List<FlowExecutionOwner> copy = new ArrayList<FlowExecutionOwner>(runningTasks.getView());
+        final List<FlowExecutionOwner> copy = new ArrayList<>(runningTasks.getView());
+        LOGGER.log(FINE, "scheduling save of {0}", copy);
         try {
             executor.submit(new Runnable() {
                 @Override public void run() {
@@ -203,7 +209,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
         @Override
         public ListenableFuture<?> apply(final Function<StepExecution, Void> f) {
-            List<ListenableFuture<?>> all = new ArrayList<ListenableFuture<?>>();
+            List<ListenableFuture<?>> all = new ArrayList<>();
 
             for (FlowExecution e : list) {
                 ListenableFuture<List<StepExecution>> execs = e.getCurrentExecutions(false);

@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.Computer;
@@ -89,6 +90,7 @@ public class FilePathUtils {
      * @param path a path as returned by {@link FilePath#getRemote}
      * @return a corresponding file handle, if a node with that name is online, else null
      */
+    @SuppressFBWarnings(value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE", justification="TODO 1.653+ switch to Jenkins.getInstanceOrNull")
     public static @CheckForNull FilePath find(@Nonnull String node, @Nonnull String path) {
         Jenkins j = Jenkins.getInstance();
         if (j == null) {
