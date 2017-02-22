@@ -453,7 +453,14 @@ public class ForkScanner extends AbstractFlowScanner {
             currentParallelStartNode = currentParallelStart.forkStart;
             myCurrent = currentParallelStart.unvisited.pop();
             myNext = myCurrent;
-            nextType = NodeType.PARALLEL_BRANCH_END;
+
+            // We may have a start type, so we need to override the beginning type
+            NodeType tempType = getNodeType(myCurrent);
+            if (tempType == NodeType.NORMAL) {
+                nextType = NodeType.PARALLEL_BRANCH_END;
+            } else {
+                nextType = tempType;
+            }
             walkingFromFinish = false;
         } else {
             FlowNode f = heads.iterator().next();
@@ -539,7 +546,10 @@ public class ForkScanner extends AbstractFlowScanner {
                 }
             }
         } else {
-            throw new IllegalStateException("Hit a BlockStartNode with multiple children, and no record of the start!");
+            if (isWalkingFromFinish()) {  //Incomplete single-branch parallels can do this
+                throw new IllegalStateException("Hit a BlockStartNode with no record of the start!");
+            }
+            return myCurrent.getParents().get(0); // No branches to explore
         }
 
         // Handle cases where the BlockStartNode for the parallel block is blackListed
@@ -575,8 +585,8 @@ public class ForkScanner extends AbstractFlowScanner {
                     BlockEndNode end = ((BlockEndNode) current);
                     FlowNode possibleOutput = hitParallelEnd(end, parents, blackList);  // possibleOutput can only be p
                 }
+                nextType = getNodeType(p);
                 if (!blackList.contains(p)) {
-                    nextType = getNodeType(p);
                     return p;
                 }
             }
@@ -595,6 +605,11 @@ public class ForkScanner extends AbstractFlowScanner {
         if (currentParallelStart != null && currentParallelStart.unvisited.size() > 0) {
             output = currentParallelStart.unvisited.pop();
             nextType = NodeType.PARALLEL_BRANCH_END;
+            // Below is because your two branches *might* be just the branch start nodes, and should be treated as such
+            // Even if they're ends as well.
+            if (output instanceof BlockStartNode && output.getPersistentAction(ThreadNameAction.class) != null) {
+                nextType = NodeType.PARALLEL_BRANCH_START;
+            }
         }
         if (output == null) {
             nextType = null;

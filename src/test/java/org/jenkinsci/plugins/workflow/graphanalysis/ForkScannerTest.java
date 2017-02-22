@@ -180,6 +180,7 @@ public class ForkScannerTest {
 
         // Test just parallels
         scan.visitSimpleChunks(test, new ChunkFinderWithoutChunks());
+        test.isFromCompleteRun = scan.isWalkingFromFinish();
         test.assertNoIllegalNullsInEvents();
         test.assertNoDupes();
         int nodeCount = new DepthFirstScanner().allNodes(heads).size();
@@ -195,6 +196,7 @@ public class ForkScannerTest {
         // Test parallels + chunk start/end
         test.reset();
         scan.setup(heads);
+        test.isFromCompleteRun = scan.isWalkingFromFinish();
         scan.visitSimpleChunks(test, new LabelledChunkFinder());
         test.assertNoIllegalNullsInEvents();
         test.assertNoDupes();
@@ -444,7 +446,7 @@ public class ForkScannerTest {
                 "       stage 'nestedBranchStage' \n" +
                 "         echo 'running nestedBranchStage'\n" +
                 "         parallel secondLevelNestedBranch1: {\n" +
-                "           echo 'secondLevelNestedBranch1'\n" +
+                "           echo 'secondLevelNestedBranch1'\n" + //
                 "         }\n" +
                 "     }, failFast: false\n" +
                 "}";
@@ -452,6 +454,7 @@ public class ForkScannerTest {
         job.setDefinition(new CpsFlowDefinition(script));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        sanityTestIterationAndVisiter(Arrays.asList(b.getExecution().getNode("11")));
 
         TestVisitor visitor = new TestVisitor();
         ForkScanner scanner = new ForkScanner();
@@ -863,7 +866,6 @@ public class ForkScannerTest {
                 " 'pause':{ sleep 1; semaphore 'wait3'; }, \n" +
                 " 'final': { echo 'succeed-final';} "
         ));
-
         testParallelFindsLast(jobPauseFirst, "wait1");
         testParallelFindsLast(jobPauseSecond, "wait2");
         testParallelFindsLast(jobPauseMiddle, "wait3");

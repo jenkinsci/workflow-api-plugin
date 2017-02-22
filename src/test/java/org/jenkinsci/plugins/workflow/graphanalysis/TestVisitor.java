@@ -29,7 +29,13 @@ public class TestVisitor implements SimpleChunkVisitor {
         PARALLEL_BRANCH_END
     }
 
+    Boolean isFromCompleteRun = null;  // Unknown by default
+
     public static final EnumSet<CallType> CHUNK_EVENTS = EnumSet.of(CallType.ATOM_NODE, CallType.CHUNK_START, CallType.CHUNK_END);
+
+    public void setIsFromCompleteRun(boolean isCompleteRun) {
+        this.isFromCompleteRun = isCompleteRun;
+    }
 
 
     public static class CallEntry {
@@ -172,6 +178,7 @@ public class TestVisitor implements SimpleChunkVisitor {
 
     public void reset() {
         this.calls.clear();
+        this.isFromCompleteRun = null;
     }
 
     /** Get all call entries of given type */
@@ -280,12 +287,15 @@ public class TestVisitor implements SimpleChunkVisitor {
         }
 
         // First check every parallel with branch starts *also* has branch ends and the same number of them
-        for (Map.Entry<Integer, List<Integer>> startEntry : branchStartIds.entrySet()) {
-            List<Integer> ends = branchEndIds.get(startEntry.getKey());
-            // Branch start without branch end is legal due to incomplete flows
-//            Assert.assertNotNull("Parallels with a branch start event(s) but no branch end event(s), parallel start node id: "+startEntry.getKey(), ends);
-            Assert.assertEquals("Parallels must have matching numbers of start and end events, but don't -- for parallel starting with: "+
-                startEntry.getKey(), startEntry.getValue().size(), ends.size());
+        if (this.isFromCompleteRun != null && this.isFromCompleteRun) {
+            for (Map.Entry<Integer, List<Integer>> startEntry : branchStartIds.entrySet()) {
+                List<Integer> ends = branchEndIds.get(startEntry.getKey());
+                // Branch start without branch end is legal due to incomplete flows
+                if (ends != null) {  // Can have starts without ends due to single-branch parallels with incomplete branches that are unterminated
+                    Assert.assertEquals("Parallels must have matching numbers of start and end events, but don't -- for parallel starting with: " +
+                            startEntry.getKey(), startEntry.getValue().size(), ends.size());
+                }
+            }
         }
 
         // Verify the reverse is true: if we have a branch end, there are branch starts (count equality was checked above)
@@ -306,10 +316,11 @@ public class TestVisitor implements SimpleChunkVisitor {
             } else if (ce.type == CallType.PARALLEL_START) {
                 if (openParallelStarts.size() > 0) {
                     Assert.assertEquals("Parallel start and end events must point to the same parallel start node ID",
-                            openParallelStarts.peekLast(), new Integer(ce.ids[0])
+                            openParallelStarts.peekFirst(), new Integer(ce.ids[0])
                     );
                     openParallelStarts.pop();
                 }
+
                 // More parallel starts than ends is *legal* because we may have an in-progress parallel without an end created.
             }
         }
