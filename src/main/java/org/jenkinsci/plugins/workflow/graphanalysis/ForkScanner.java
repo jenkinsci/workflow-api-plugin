@@ -82,8 +82,12 @@ public class ForkScanner extends AbstractFlowScanner {
         return nextType;
     }
 
-    /** Used to recognize special nodes */
-    public enum NodeType {
+    /** Used to recognize special nodes
+     *  TODO Rethink this approach, since a single node may fit into more than one if it is part of an incomplete parallel.
+     *   Ex: you may have a {@link BlockStartNode} normally representing the beginning of a branch... which is also the END of a branch
+     *   because it represents the last node created in an in-progress parallel block.
+     */
+    enum NodeType {
         /** Not any of the parallel types */
         NORMAL,
         /**{@link BlockStartNode} starting a parallel block */
@@ -172,7 +176,7 @@ public class ForkScanner extends AbstractFlowScanner {
      * Check the type of a given {@link FlowNode} for purposes of parallels, or return null if node is null.
      */
     @CheckForNull
-    public static NodeType getNodeType(@CheckForNull FlowNode f) {
+    static NodeType getNodeType(@CheckForNull FlowNode f) {
         if (f == null) {
             return null;
         }
@@ -627,7 +631,8 @@ public class ForkScanner extends AbstractFlowScanner {
         scanner.visitSimpleChunks(visitor, finder);
     }
 
-    /** This is the API you want if you wish to have sorted chunks */
+    /** This is similar to {@link #visitSimpleChunks(Collection, SimpleChunkVisitor, ChunkFinder)} but in the case of currently-executing
+     *   parallels, it tries to visit the branches starting with the last one to see activity (new {@link FlowNode}s). */
     public static void visitSimpleChunksSorted(@Nonnull Collection<FlowNode> heads, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         ForkScanner scanner = new ForkScanner();
         ArrayList<FlowNode> sorted = new ArrayList<FlowNode>(heads.size());
@@ -636,9 +641,9 @@ public class ForkScanner extends AbstractFlowScanner {
         scanner.visitSimpleChunks(visitor, finder);
     }
 
-    /** Ensures we find the last *begun* node when there are multiple heads (parallel branches)
-     *  This means that the simpleBlockVisitor gets the *actual* last node, not just the end of the last declared branch
-     *  ()
+    /** Ensures we find the last *begun* node when there are multiple heads (parallel branches) to use invoking
+     *  {@link SimpleChunkVisitor#parallelEnd(FlowNode, FlowNode, ForkScanner)}, so we get the REAL end of the block -
+     *    not just the last declared branch. (See issue JENKINS-38536)
      */
     @CheckForNull
     private static FlowNode findLastStartedNode(@Nonnull List<FlowNode> candidates) {

@@ -53,7 +53,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -181,7 +180,7 @@ public class ForkScannerTest {
         scan.setup(heads);
 
         // Test just parallels
-        scan.visitSimpleChunks(test, new ChunkFinderWithoutChunks());
+        scan.visitSimpleChunks(test, new NoOpChunkFinder());
         test.isFromCompleteRun = scan.isWalkingFromFinish();
         if (heads.size() > 1) {
             // Verify we have at least one appropriate parallel end event, for the mandatory parallel
@@ -486,7 +485,7 @@ public class ForkScannerTest {
         TestVisitor visitor = new TestVisitor();
         ForkScanner scanner = new ForkScanner();
         scanner.setup(b.getExecution().getCurrentHeads());
-        scanner.visitSimpleChunks(visitor, new ChunkFinderWithoutChunks());
+        scanner.visitSimpleChunks(visitor, new NoOpChunkFinder());
         Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_START).size());
         Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).size());
         Assert.assertEquals(2, visitor.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_START).size());
@@ -826,7 +825,7 @@ public class ForkScannerTest {
                 "echo \"last done\"\n"
         ));
         ForkScanner scan = new ForkScanner();
-        ChunkFinder labelFinder = new ChunkFinderWithoutChunks();
+        ChunkFinder labelFinder = new NoOpChunkFinder();
         WorkflowRun run  = job.scheduleBuild2(0).getStartCondition().get();
         SemaphoreStep.waitForStart("wait1/1", run);
         SemaphoreStep.waitForStart("wait2/1", run);

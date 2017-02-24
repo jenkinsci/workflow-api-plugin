@@ -65,7 +65,9 @@ public final class FlowScanningUtils {
     /** Sorts flownodes putting the one begun last (oldest startTime) at the end, with null times last
      *  because likely they represent the newest nodes with a {@link TimingAction} not attached yet. */
     public static final Comparator<FlowNode> TIME_ORDER_COMPARATOR = new Comparator<FlowNode>() {
+
         /** Implements null checking because the use of this method will not easily permit FindBugs verification on NonNull*/
+        @Override
         public int compare(@CheckForNull FlowNode first, @CheckForNull FlowNode second) {
             if (first == null || second == null) {
                 return 0;  // Sorting by start time is 100% irrelevant
@@ -83,7 +85,8 @@ public final class FlowScanningUtils {
     };
 
     public static final Comparator<FlowNode> ID_ORDER_COMPARATOR = new Comparator<FlowNode>() {
-        /** Implements null checking because the use of this method will not easily permit FindBugs verification on NonNull*/
+        /** Implements null checking because it reduces the amount of null handling needed to use this */
+        @Override
         public int compare(@CheckForNull FlowNode first, @CheckForNull FlowNode second) {
             if (first == null || second == null) {
                 return 0;

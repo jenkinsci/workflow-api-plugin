@@ -13,7 +13,7 @@ import javax.annotation.Nonnull;
  */
 public class BlockChunkFinder implements ChunkFinder {
 
-    /** NOTE: you will need to handle cases where you have a start node where the end node has not been generated yet!
+    /** NOTE: you will need to handle cases where you have a {@link BlockStartNode} where the {@link BlockEndNode} has not been generated yet!
      *  This means you need to keep nodes around even after hitting the EndNode */
     @Override
     public boolean isStartInsideChunk() {

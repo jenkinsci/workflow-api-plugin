@@ -36,10 +36,6 @@ import javax.annotation.Nullable;
 public final class NodeStepTypePredicate implements Predicate<FlowNode> {
     StepDescriptor stepDescriptor;
 
-    public NodeStepTypePredicate(@Nonnull Step step) {
-        stepDescriptor = step.getDescriptor();
-    }
-
     public NodeStepTypePredicate(@Nonnull StepDescriptor descriptorType) {
         stepDescriptor = descriptorType;
     }

@@ -49,7 +49,7 @@ public final class NodeStepNamePredicate implements Predicate<FlowNode> {
 
     @Override
     public boolean apply(@Nullable FlowNode input) {
-        if (input != null && input instanceof StepNode) {
+        if (input instanceof StepNode) {
             StepDescriptor sd = ((StepNode) input).getDescriptor();
             return (sd != null) ? descriptorId.equals(sd.getId()) : false;
         }

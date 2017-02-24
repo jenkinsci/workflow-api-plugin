@@ -7,8 +7,9 @@ import javax.annotation.Nonnull;
 
 /**
  * For test use: a ChunkFinder that never returns chunks, to use in testing parallel handling only.
+ * All {@link FlowNode}s will this result in calling {@link SimpleChunkVisitor#atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)}
  */
-public class ChunkFinderWithoutChunks implements ChunkFinder {
+public class NoOpChunkFinder implements ChunkFinder {
     @Override
     public boolean isStartInsideChunk() {
         return false;
