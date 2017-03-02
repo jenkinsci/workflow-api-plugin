@@ -635,12 +635,14 @@ public class ForkScanner extends AbstractFlowScanner {
         scanner.visitSimpleChunks(visitor, finder);
     }
 
-    /** Ensures we find the last *begun* node when there are multiple heads (parallel branches) to use invoking
+    /**
+     * Allows you to find the last begun node when there are multiple heads (parallel branches) running.
+     * This is useful for computing timing/status of incomplete parallel blocks, and is also used in
      *  {@link SimpleChunkVisitor#parallelEnd(FlowNode, FlowNode, ForkScanner)}, so we get the REAL end of the block -
      *    not just the last declared branch. (See issue JENKINS-38536)
      */
     @CheckForNull
-    public static FlowNode findLastRunningNode(@Nonnull List<FlowNode> candidates) {
+    static FlowNode findLastRunningNode(@Nonnull List<FlowNode> candidates) {
         if (candidates.size() == 0) {
             return null;
         } else if (candidates.size() == 1) {

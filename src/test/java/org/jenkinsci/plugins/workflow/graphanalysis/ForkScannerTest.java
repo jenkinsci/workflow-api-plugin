@@ -824,16 +824,12 @@ public class ForkScannerTest {
         // Check the right number of branches are set up
         Assert.assertEquals(run.getExecution().getCurrentHeads().size()-1, scan.currentParallelStart.unvisited.size());
 
-        // Check visitor handling
+        // Check visitor handling for parallel end
         scan.visitSimpleChunks(visitor, labelFinder);
         TestVisitor.CallEntry parallelEnd = visitor.calls.get(0);
         Assert.assertEquals(TestVisitor.CallType.PARALLEL_END, parallelEnd.type);
-
-        // Check that the correct parallel end is assigned
-        TestVisitor.CallEntry parallelEntry = visitor.calls.get(0);
-        Assert.assertEquals(semaphoreNode.getId(), parallelEntry.getNodeId().toString());
-        FlowNode lastNode = run.getExecution().getNode(Integer.toString(visitor.calls.get(1).getNodeId()));
-        Assert.assertEquals("Wrong End Node: ("+lastNode.getId()+") "+lastNode.getDisplayName(), semaphoreNode.getId(), lastNode.getId());
+        Assert.assertEquals("Wrong End Node: ("+parallelEnd.getNodeId()+")", semaphoreNode.getId(), parallelEnd.getNodeId().toString());
+        Assert.assertEquals(semaphoreNode.getId(), parallelEnd.getNodeId().toString());
 
         SemaphoreStep.success(semaphoreName+"/1", null);
         r.waitForCompletion(run);
@@ -894,7 +890,7 @@ public class ForkScannerTest {
         }
 
         sanityTestIterationAndVisiter(heads);
-        Assert.assertEquals(9, atomEventCount);
+        Assert.assertEquals(10, atomEventCount);
         Assert.assertEquals(1, parallelStartCount);
         Assert.assertEquals(2, parallelBranchEndCount);
     }

@@ -50,7 +50,7 @@ import javax.annotation.Nonnull;
  * <ol>
  *     <li>For a single node, it may have EITHER OR BOTH chunkStart and chunkEnd events</li>
  *     <li>Every node that doesn't get a startChunk/endChunk callback gets an atomNode callback.</li>
- *     <li>For {@link ChunkFinder} implementations that match the {@link BlockStartNode} and {@link BlockEndNode} should never have both for a single</li>
+ *     <li>For {@link ChunkFinder} implementations that match the {@link BlockStartNode} and {@link BlockEndNode} should never have both for a single node.</li>
  *     <li>You cannot have multiple of any of the same specific type of callbacks for the same flownode</li>
  *     <li>You cannot have a atomNode callback AND a start/end for the same flownode (application of the above).</li>
  * </ol>
@@ -63,7 +63,7 @@ import javax.annotation.Nonnull;
  *     <li>{@link #parallelBranchStart(FlowNode, FlowNode, ForkScanner)}</li>
  *     <li>{@link #parallelBranchEnd(FlowNode, FlowNode, ForkScanner)}</li>
  * </ul>
- * <em>The cases where a node triggers multiple callbacks are where it one of several forked branches of an incomplete parallel
+ * <em>The cases where a node triggers multiple callbacks are where it is one of several forked branches of an incomplete parallel
  *   block.  In this case it can be a parallelBranchEnd, also potentially a parallelEnd, plus whatever role that node might normally
  *   have (such as the start of another parallel).</em>
  *
