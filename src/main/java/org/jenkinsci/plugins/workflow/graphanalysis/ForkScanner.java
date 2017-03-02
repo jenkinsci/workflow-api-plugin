@@ -483,7 +483,7 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     /**
-     * Return the node that begins the current parallel head
+     * Return the node that begins the current parallel head, if we are known to be in a parallel block
      * @return The FlowNode that marks current parallel start
      */
     @CheckForNull
@@ -683,8 +683,9 @@ public class ForkScanner extends AbstractFlowScanner {
             case NORMAL:
                 break;
             case PARALLEL_END:
-                if (scanner.getCurrentParallelStartNode() != null) {
-                    visitor.parallelEnd(scanner.getCurrentParallelStartNode(), current, scanner);
+                FlowNode n = scanner.getCurrentParallelStartNode();
+                if (n != null) {
+                    visitor.parallelEnd(n, current, scanner);
                 } else if (current instanceof BlockEndNode){
                     visitor.parallelEnd(((BlockEndNode) current).getStartNode(), current, scanner);
                 }
@@ -693,7 +694,13 @@ public class ForkScanner extends AbstractFlowScanner {
                 visitor.parallelStart(current, prev, scanner);
                 break;
             case PARALLEL_BRANCH_END:
-                visitor.parallelBranchEnd(scanner.getCurrentParallelStartNode(), current, scanner);
+                FlowNode f = scanner.getCurrentParallelStartNode();
+                if (f != null) {
+                    visitor.parallelBranchEnd(f, current, scanner);
+                } else if (current instanceof BlockEndNode) {
+                    // Branch end for single-branch parallel, fire zee events!
+                    visitor.parallelBranchEnd(((BlockEndNode)current).getStartNode().getParents().get(0), current, scanner);
+                } // Anything else can only be the work of a bug
                 break;
             case PARALLEL_BRANCH_START:
                 // Needed because once we hit the start of the last branch, the next node is our currentParallelStart
@@ -702,7 +709,12 @@ public class ForkScanner extends AbstractFlowScanner {
                     // Covers an obscure case where the heads are also BlockStartNodes for a branch
                     visitor.parallelBranchEnd(parallelStart, current, scanner);
                 }
-                visitor.parallelBranchStart(parallelStart, current, scanner);
+                if (parallelStart != null) {
+                    visitor.parallelBranchStart(parallelStart, current, scanner);
+                } else {
+                    // Assume we're the start of a single-branch parallel, which ALWAYS has a parent
+                    visitor.parallelBranchStart(current.getParents().get(0), current, scanner);
+                }
                 break;
             default:
                 throw new IllegalStateException("Unhandled type for current node");
@@ -711,7 +723,8 @@ public class ForkScanner extends AbstractFlowScanner {
 
     /** Abstracts out the simpleChunkVisitor callback-triggering logic.
      *  Note that a null value of "prev" is assumed to mean we're the last node. */
-    static void fireVisitChunkCallbacks(@CheckForNull FlowNode next, @CheckForNull FlowNode current, @CheckForNull FlowNode prev,
+    @SuppressFBWarnings(value="NP_LOAD_OF_KNOWN_NULL_VALUE", justification = "FindBugs doesn't like passing nulls to a method that can take null")
+    static void fireVisitChunkCallbacks(@CheckForNull FlowNode next, @Nonnull FlowNode current, @CheckForNull FlowNode prev,
                                         @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder, @Nonnull ForkScanner scanner) {
         boolean boundary = false;
         if (prev == null && finder.isStartInsideChunk()) { // Last node, need to fire end event to start inside chunk
