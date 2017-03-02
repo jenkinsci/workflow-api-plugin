@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
@@ -40,8 +41,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -103,6 +104,9 @@ public class ForkScanner extends AbstractFlowScanner {
     // Last element in stack is end of myCurrent parallel start, first is myCurrent start
     ArrayDeque<ParallelBlockStart> parallelBlockStartStack = new ArrayDeque<ParallelBlockStart>();
 
+    /** List of nodes identified as heads, for purposes of marking parallel branch ends */
+    HashSet<String> headIds = new HashSet<String>();
+
     /** FlowNode that will terminate the myCurrent parallel block */
     FlowNode currentParallelStartNode = null;
 
@@ -115,13 +119,6 @@ public class ForkScanner extends AbstractFlowScanner {
 
     public ForkScanner() {
 
-    }
-
-    /** Sets up the flowgraph with sorted order */
-    public boolean setupSorted(Collection<FlowNode> heads) {
-        ArrayList<FlowNode> sorted = new ArrayList<>(heads);
-        Collections.sort(sorted, FlowScanningUtils.TIME_ORDER_COMPARATOR);
-        return this.setup(sorted);
     }
 
     public ForkScanner(@Nonnull Collection<FlowNode> heads) {
@@ -139,6 +136,7 @@ public class ForkScanner extends AbstractFlowScanner {
         currentParallelStartNode = null;
         myCurrent = null;
         myNext = null;
+        this.headIds.clear();
     }
 
     /** Works with workflow-cps 2.26 and up, otherwise you'll need to provide your own predicate
@@ -449,6 +447,9 @@ public class ForkScanner extends AbstractFlowScanner {
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {
         if (heads.size() > 1) {
+            for (FlowNode f : heads) {
+                headIds.add(f.getId());
+            }
             parallelBlockStartStack = leastCommonAncestor(new LinkedHashSet<FlowNode>(heads));
             assert parallelBlockStartStack.size() > 0;
             currentParallelStart = parallelBlockStartStack.pop();
@@ -460,6 +461,7 @@ public class ForkScanner extends AbstractFlowScanner {
             NodeType tempType = getNodeType(myCurrent);
             if (tempType == NodeType.NORMAL) {
                 nextType = NodeType.PARALLEL_BRANCH_END;
+                currentType = NodeType.PARALLEL_BRANCH_END;
             } else {
                 nextType = tempType;
             }
@@ -566,6 +568,8 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     @Override
+    @SuppressFBWarnings(value = "DLS_DEAD_LOCAL_STORE",
+            justification = "Function call to modify state, special case where we don't need the returnVal")
     protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
         FlowNode output = null;
 
@@ -585,7 +589,7 @@ public class ForkScanner extends AbstractFlowScanner {
             } else {
                 if (isParallelEnd(current)) {
                     BlockEndNode end = ((BlockEndNode) current);
-                    FlowNode possibleOutput = hitParallelEnd(end, parents, blackList);  // possibleOutput can only be p
+                    FlowNode possibleOutput = hitParallelEnd(end, parents, blackList);  // possibleOutput can only be "p"
                 }
                 nextType = getNodeType(p);
                 if (!blackList.contains(p)) {
@@ -631,22 +635,12 @@ public class ForkScanner extends AbstractFlowScanner {
         scanner.visitSimpleChunks(visitor, finder);
     }
 
-    /** This is similar to {@link #visitSimpleChunks(Collection, SimpleChunkVisitor, ChunkFinder)} but in the case of currently-executing
-     *   parallels, it tries to visit the branches starting with the last one to see activity (new {@link FlowNode}s). */
-    public static void visitSimpleChunksSorted(@Nonnull Collection<FlowNode> heads, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
-        ForkScanner scanner = new ForkScanner();
-        ArrayList<FlowNode> sorted = new ArrayList<FlowNode>(heads.size());
-        Collections.sort(sorted, FlowScanningUtils.TIME_ORDER_COMPARATOR);
-        scanner.setup(heads);
-        scanner.visitSimpleChunks(visitor, finder);
-    }
-
     /** Ensures we find the last *begun* node when there are multiple heads (parallel branches) to use invoking
      *  {@link SimpleChunkVisitor#parallelEnd(FlowNode, FlowNode, ForkScanner)}, so we get the REAL end of the block -
      *    not just the last declared branch. (See issue JENKINS-38536)
      */
     @CheckForNull
-    private static FlowNode findLastStartedNode(@Nonnull List<FlowNode> candidates) {
+    public static FlowNode findLastRunningNode(@Nonnull List<FlowNode> candidates) {
         if (candidates.size() == 0) {
             return null;
         } else if (candidates.size() == 1) {
@@ -679,12 +673,72 @@ public class ForkScanner extends AbstractFlowScanner {
         return ends;
     }
 
+    /** Pulls out firing the callbacks for parallels */
+    static void fireVisitParallelCallbacks(@CheckForNull FlowNode next, @CheckForNull FlowNode current, @CheckForNull FlowNode prev,
+                                           @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder, @Nonnull ForkScanner scanner) {
+        // Trigger on parallels
+        switch (scanner.currentType) {
+            case NORMAL:
+                break;
+            case PARALLEL_END:
+                if (scanner.getCurrentParallelStartNode() != null) {
+                    visitor.parallelEnd(scanner.getCurrentParallelStartNode(), current, scanner);
+                } else if (current instanceof BlockEndNode){
+                    visitor.parallelEnd(((BlockEndNode) current).getStartNode(), current, scanner);
+                }
+                break;
+            case PARALLEL_START:
+                visitor.parallelStart(current, prev, scanner);
+                break;
+            case PARALLEL_BRANCH_END:
+                visitor.parallelBranchEnd(scanner.getCurrentParallelStartNode(), current, scanner);
+                break;
+            case PARALLEL_BRANCH_START:
+                // Needed because once we hit the start of the last branch, the next node is our currentParallelStart
+                FlowNode parallelStart = (scanner.nextType == NodeType.PARALLEL_START) ? next : scanner.getCurrentParallelStartNode();
+                if (scanner.headIds.contains(current.getId())) {
+                    // Covers an obscure case where the heads are also BlockStartNodes for a branch
+                    visitor.parallelBranchEnd(parallelStart, current, scanner);
+                }
+                visitor.parallelBranchStart(parallelStart, current, scanner);
+                break;
+            default:
+                throw new IllegalStateException("Unhandled type for current node");
+        }
+    }
+
+    /** Abstracts out the simpleChunkVisitor callback-triggering logic.
+     *  Note that a null value of "prev" is assumed to mean we're the last node. */
+    static void fireVisitChunkCallbacks(@CheckForNull FlowNode next, @CheckForNull FlowNode current, @CheckForNull FlowNode prev,
+                                        @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder, @Nonnull ForkScanner scanner) {
+        boolean boundary = false;
+        if (prev == null && finder.isStartInsideChunk()) { // Last node, need to fire end event to start inside chunk
+            visitor.chunkEnd(current, prev, scanner);
+            boundary = true;
+            if (finder.isChunkStart(current, prev)) {
+                visitor.chunkStart(current, next, scanner);
+            }
+        } else { // Not starting inside chunk, OR not at end
+            if (finder.isChunkStart(current, prev)) {
+                visitor.chunkStart(current, next, scanner);
+                boundary = true;
+            }
+            if (finder.isChunkEnd(current, prev)) { // Null for previous means we're the last node.
+                visitor.chunkEnd(current, prev, scanner);
+                boundary = true;
+            }
+        }
+        if (!boundary) {
+            visitor.atomNode(next, current, prev, scanner);
+        }
+    }
+
     /** Walk through flows */
     public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
         FlowNode prev;
 
         if (this.currentParallelStart != null) {
-            FlowNode last = findLastStartedNode(currentParallelHeads());
+            FlowNode last = findLastRunningNode(currentParallelHeads());
             if (last != null) {
                 visitor.parallelEnd(this.currentParallelStartNode, last, this);
             }
@@ -693,45 +747,8 @@ public class ForkScanner extends AbstractFlowScanner {
         while(hasNext()) {
             prev = (myCurrent != myNext) ? myCurrent : null;
             FlowNode f = next();
-
-            boolean boundary = false;
-            if (finder.isChunkStart(myCurrent, prev)) {
-                visitor.chunkStart(myCurrent, myNext, this);
-                boundary = true;
-            }
-            if (finder.isChunkEnd(myCurrent, prev)) {
-                visitor.chunkEnd(myCurrent, prev, this);
-                boundary = true;
-            }
-            if (!boundary) {
-                visitor.atomNode(myNext, f, prev, this);
-            }
-
-            // Trigger on parallels
-            switch (currentType) {
-                case NORMAL:
-                    break;
-                case PARALLEL_END:
-                    if (this.currentParallelStartNode != null) {
-                        visitor.parallelEnd(this.currentParallelStartNode, myCurrent, this);
-                    } else if (myCurrent instanceof BlockEndNode){
-                        visitor.parallelEnd(((BlockEndNode) myCurrent).getStartNode(), myCurrent, this);
-                    }
-                    break;
-                case PARALLEL_START:
-                    visitor.parallelStart(myCurrent, prev, this);
-                    break;
-                case PARALLEL_BRANCH_END:
-                    visitor.parallelBranchEnd(this.currentParallelStartNode, myCurrent, this);
-                    break;
-                case PARALLEL_BRANCH_START:
-                    // Needed because once we hit the start of the last branch, the next node is our currentParallelStart
-                    FlowNode parallelStart = (nextType == NodeType.PARALLEL_START) ? myNext : this.currentParallelStartNode;
-                    visitor.parallelBranchStart(parallelStart, myCurrent, this);
-                    break;
-                default:
-                    throw new IllegalStateException("Unhandled type for current node");
-            }
+            fireVisitChunkCallbacks(myNext, myCurrent, prev, visitor, finder, this);
+            fireVisitParallelCallbacks(myNext, myCurrent, prev, visitor, finder, this);
         }
     }
 

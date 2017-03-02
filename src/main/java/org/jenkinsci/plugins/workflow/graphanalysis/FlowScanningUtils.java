@@ -69,8 +69,12 @@ public final class FlowScanningUtils {
         /** Implements null checking because the use of this method will not easily permit FindBugs verification on NonNull*/
         @Override
         public int compare(@CheckForNull FlowNode first, @CheckForNull FlowNode second) {
-            if (first == null || second == null) {
-                return 0;  // Sorting by start time is 100% irrelevant
+            if (first == null && second == null) {
+                return 0;
+            } else if (first == null) {
+                return 1;
+            } else if (second == null) {
+                return -1;
             }
             TimingAction timingFirst = first.getPersistentAction(TimingAction.class);
             TimingAction timingSecond = second.getPersistentAction(TimingAction.class);
@@ -88,8 +92,12 @@ public final class FlowScanningUtils {
         /** Implements null checking because it reduces the amount of null handling needed to use this */
         @Override
         public int compare(@CheckForNull FlowNode first, @CheckForNull FlowNode second) {
-            if (first == null || second == null) {
+            if (first == null && second == null) {
                 return 0;
+            } else if (first == null) {
+                return 1;
+            } else if (second == null) {
+                return -1;
             }
             try {
                 int id1 = Integer.parseInt(first.getId());

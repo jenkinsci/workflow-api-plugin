@@ -36,6 +36,7 @@ import org.jenkinsci.plugins.workflow.cps.steps.ParallelStep;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.EchoStep;
@@ -173,36 +174,50 @@ public class ForkScannerTest {
         this.NESTED_PARALLEL_RUN = b;
     }
 
+    /**
+     * Verify that we have a parallel end event when starting in an incomplete parallel
+     * AND branch end events for each incomplete branch
+     * @param heads Heads of the incomplete parallel
+     * @param test TestVisitor that has already visited the flowgraph
+     */
+    private void assertIncompleteParallelsHaveEventsForEnd(List<FlowNode> heads, TestVisitor test) {
+        // Verify we have at least one appropriate parallel end event, for the mandatory parallel
+        List<String> parallelEnds = Lists.transform(
+                test.filteredCallsByType(TestVisitor.CallType.PARALLEL_END),
+                CALL_TO_NODE_ID
+        );
+        boolean hasMatchingEnd = false;
+        for (FlowNode f : heads) {
+            if (parallelEnds.contains(f.getId())) {
+                hasMatchingEnd = true;
+                break;
+            }
+        }
+        Assert.assertTrue("If there are multiple heads, we MUST be in a parallel and have an event for the end", hasMatchingEnd);
+
+        List<String> branchEnds = Lists.transform(
+                test.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_END),
+                CALL_TO_NODE_ID
+        );
+        // Verify each branch has a branch end event
+        for (FlowNode f : heads) {
+            // Below can be used if we harden up the guarantees with incomplete parallels
+            Assert.assertTrue("Must have a parallel branch end for each branch we know of, but didn't, for nodeId: "+f.getId(),
+                    branchEnds.contains(f.getId()));
+        }
+    }
+
     /** Runs a fairly extensive suite of sanity tests of iteration and visitor use */
     private void sanityTestIterationAndVisiter(List<FlowNode> heads) throws Exception {
         ForkScanner scan = new ForkScanner();
         TestVisitor test = new TestVisitor();
         scan.setup(heads);
 
-        // Test just parallels
+        // Test just parallels, not the chunk start/end detection
         scan.visitSimpleChunks(test, new NoOpChunkFinder());
         test.isFromCompleteRun = scan.isWalkingFromFinish();
         if (heads.size() > 1) {
-            // Verify we have at least one appropriate parallel end event, for the mandatory parallel
-            List<String> parallelEnds = Lists.transform(
-                    test.filteredCallsByType(TestVisitor.CallType.PARALLEL_END),
-                    CALL_TO_NODE_ID
-            );
-            List<String> branchEnds = Lists.transform(
-                    test.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_END),
-                    CALL_TO_NODE_ID
-            );
-            boolean hasMatchingEnd = false;
-            for (FlowNode f : heads) {
-                if (parallelEnds.contains(f.getId())) {
-                    hasMatchingEnd = true;
-                    break;
-                }
-                // Below can be used if we harden up the guarantees with incomplete parallels
-/*                Assert.assertTrue("Must have a parallel branch end for each branch we know of, but didn't, for nodeId: "+f.getId(),
-                        branchEnds.contains(f.getId()));*/
-            }
-            Assert.assertTrue("If there are multiple heads, we MUST be in a parallel and have an event for the end", hasMatchingEnd);
+            assertIncompleteParallelsHaveEventsForEnd(heads, test);
         }
         test.assertNoIllegalNullsInEvents();
         test.assertNoDupes();
@@ -223,6 +238,18 @@ public class ForkScannerTest {
         scan.visitSimpleChunks(test, new LabelledChunkFinder());
         test.assertNoIllegalNullsInEvents();
         test.assertNoDupes();
+        // LabelledChunkFinder is isStartInsideChunk, so first chunk callback must be ChunkEnd
+        int lastId = -1;
+        for (int i=0; i<test.calls.size(); i++) {
+            TestVisitor.CallEntry entry = test.calls.get(i);
+            if (lastId > 0) {
+                lastId = entry.getNodeId();
+            }
+            if (TestVisitor.CHUNK_EVENTS.contains(entry.type)) {
+                Assert.assertEquals(TestVisitor.CallType.CHUNK_END, entry.type);
+                break;
+            }
+        }
         Assert.assertEquals(nodeCount,
                 new ForkScanner().allNodes(heads).size());
         test.assertMatchingParallelStartEnd();
@@ -421,7 +448,7 @@ public class ForkScannerTest {
         }
     };
 
-    /** Verifies we're not doing anything wacky with  */
+    /** Verifies we're not doing anything wacky with parallels that loses appropriate parallel events. */
     private void assertNoMissingParallelEvents(List<FlowNode> heads) throws Exception {
         DepthFirstScanner allScan = new DepthFirstScanner();
         TestVisitor visit = new TestVisitor();
@@ -782,11 +809,19 @@ public class ForkScannerTest {
         WorkflowRun run  = job.scheduleBuild2(0).getStartCondition().get();
         SemaphoreStep.waitForStart(semaphoreName+"/1", run);
 
+        FlowNode semaphoreNode = null;
+        for (FlowNode f : run.getExecution().getCurrentHeads()) {
+            if (f instanceof StepNode && ((StepNode) f).getDescriptor().getId().contains("SemaphoreStep")) {
+                semaphoreNode = f;
+                break;
+            }
+        }
+
         TestVisitor visitor = new TestVisitor();
         List<FlowNode> heads = run.getExecution().getCurrentHeads();
-        scan.setupSorted(heads);
+        scan.setup(heads);
 
-        // Check the sorting order
+        // Check the right number of branches are set up
         Assert.assertEquals(run.getExecution().getCurrentHeads().size()-1, scan.currentParallelStart.unvisited.size());
 
         // Check visitor handling
@@ -794,12 +829,12 @@ public class ForkScannerTest {
         TestVisitor.CallEntry parallelEnd = visitor.calls.get(0);
         Assert.assertEquals(TestVisitor.CallType.PARALLEL_END, parallelEnd.type);
 
-        TestVisitor.CallEntry entry = visitor.calls.get(1);
-        //FIXME figure out why the chunk_end event doesn't fire, and hack in a way to work around needing to order events here.
-/*        Assert.assertEquals(TestVisitor.CallType.CHUNK_END, entry.type);
-        FlowNode lastNode = run.getExecution().getNode(Integer.toString(entry.ids[1]));
-        Assert.assertEquals("Wrong End Node: ("+lastNode.getId()+") "+lastNode.getDisplayName(), "semaphore", lastNode.getDisplayFunctionName());
-*/
+        // Check that the correct parallel end is assigned
+        TestVisitor.CallEntry parallelEntry = visitor.calls.get(0);
+        Assert.assertEquals(semaphoreNode.getId(), parallelEntry.getNodeId().toString());
+        FlowNode lastNode = run.getExecution().getNode(Integer.toString(visitor.calls.get(1).getNodeId()));
+        Assert.assertEquals("Wrong End Node: ("+lastNode.getId()+") "+lastNode.getDisplayName(), semaphoreNode.getId(), lastNode.getId());
+
         SemaphoreStep.success(semaphoreName+"/1", null);
         r.waitForCompletion(run);
         sanityTestIterationAndVisiter(heads);
@@ -859,7 +894,7 @@ public class ForkScannerTest {
         }
 
         sanityTestIterationAndVisiter(heads);
-        Assert.assertEquals(10, atomEventCount);
+        Assert.assertEquals(9, atomEventCount);
         Assert.assertEquals(1, parallelStartCount);
         Assert.assertEquals(2, parallelBranchEndCount);
     }
