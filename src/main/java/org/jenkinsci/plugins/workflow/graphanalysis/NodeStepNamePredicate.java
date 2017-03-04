@@ -24,13 +24,19 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
+import org.apache.commons.digester.annotations.handlers.MethodHandler;
+import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.invoke.MethodHandle;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 /** Predicate that matches {@link FlowNode}s (specifically {@link StepNode}s) with a specific {@link StepDescriptor} name.
  *  May be used in preference to {@link NodeStepTypePredicate} in cases whern dependencie structures prevent import
@@ -52,6 +58,17 @@ public final class NodeStepNamePredicate implements Predicate<FlowNode> {
         if (input instanceof StepNode) {
             StepDescriptor sd = ((StepNode) input).getDescriptor();
             return (sd != null) ? descriptorId.equals(sd.getId()) : false;
+        } else if (input != null && !(input instanceof FlowStartNode || input instanceof FlowEndNode)) {
+            try {
+                // Workaround for cases where someone is using the latest workflow-api which has StepNode
+                //  but manages to skip the post-2.26 versions of workflow-cps where it a parent of workflow-cps StepNode.
+                // Technically consumers *were* supposed to call ForkScanner#setParallelStartPredicate, but better to be foolproof.
+                Method getDescriptorMethod = input.getClass().getDeclaredMethod("getDescriptor", null);
+                StepDescriptor sd = (StepDescriptor)(getDescriptorMethod.invoke(input, null));
+                return  (sd != null && descriptorId.equals(sd.getId()));
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException | InvocationTargetException e) {
+                return false; // Not a step node
+            }
         }
         return false;
     }
