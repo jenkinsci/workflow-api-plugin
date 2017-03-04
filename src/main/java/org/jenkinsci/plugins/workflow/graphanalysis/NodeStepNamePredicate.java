@@ -53,8 +53,6 @@ public final class NodeStepNamePredicate implements Predicate<FlowNode> {
         return descriptorId;
     }
 
-    private static MethodHandle STEP_DESCRIPTOR_HANDLE;
-
     @Override
     public boolean apply(@Nullable FlowNode input) {
         if (input instanceof StepNode) {
