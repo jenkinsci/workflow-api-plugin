@@ -31,12 +31,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.nodes.StepEndNode;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode;
 import org.jenkinsci.plugins.workflow.cps.steps.ParallelStep;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.EchoStep;
@@ -465,23 +465,41 @@ public class ForkScannerTest {
             }
         }
 
-        // Look for parallel starts
+        // Look for parallel starts & ends all being matched
         matches = allScan.filteredNodes(heads, new Predicate<FlowNode>() {
             @Override
             public boolean apply(@Nullable FlowNode input) {
-                return input != null && input instanceof StepStartNode && ((StepStartNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
+                return input instanceof StepStartNode && ((StepStartNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
                         && input.getPersistentAction(ThreadNameAction.class) == null;
+            }
+        });
+        List<FlowNode> parallelEnds = allScan.filteredNodes(heads, new Predicate<FlowNode>() {
+            @Override
+            public boolean apply(@Nullable FlowNode input) {
+                return input instanceof StepEndNode && ((StepEndNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
+                        && ((StepEndNode) input).getStartNode().getPersistentAction(ThreadNameAction.class) == null;
             }
         });
         visit.reset();
         forkScan.setup(heads);
         forkScan.visitSimpleChunks(visit, new LabelledChunkFinder());
+
+        // Parallel starts checked
         callIds = new HashSet<String>(Lists.transform(visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_START), CALL_TO_NODE_ID));
         for (String id : Lists.transform(matches, NODE_TO_ID)) {
             if (!callIds.contains(id)) {
                 Assert.fail("Parallel start node without an appropriate parallelStart callback: "+id);
             }
         }
+
+        // Parallel ends checked
+        callIds = new HashSet<String>(Lists.transform(visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_END), CALL_TO_NODE_ID));
+        for (String id : Lists.transform(parallelEnds, NODE_TO_ID)) {
+            if (!callIds.contains(id)) {
+                Assert.fail("Parallel END node without an appropriate parallelEnd callback: "+id);
+            }
+        }
+
         // Parallel Ends should be handled by the checks that blocks are balanced.
     }
 
@@ -809,13 +827,7 @@ public class ForkScannerTest {
         WorkflowRun run  = job.scheduleBuild2(0).getStartCondition().get();
         SemaphoreStep.waitForStart(semaphoreName+"/1", run);
 
-        FlowNode semaphoreNode = null;
-        for (FlowNode f : run.getExecution().getCurrentHeads()) {
-            if (f instanceof StepNode && ((StepNode) f).getDescriptor().getId().contains("SemaphoreStep")) {
-                semaphoreNode = f;
-                break;
-            }
-        }
+        FlowNode semaphoreNode = Iterables.tryFind(run.getExecution().getCurrentHeads(), new NodeStepTypePredicate("semaphore")).orNull();
 
         TestVisitor visitor = new TestVisitor();
         List<FlowNode> heads = run.getExecution().getCurrentHeads();

@@ -139,9 +139,7 @@ public class ForkScanner extends AbstractFlowScanner {
         this.headIds.clear();
     }
 
-    /** Works with workflow-cps 2.26 and up, otherwise you'll need to provide your own predicate
-     *   However this is better than the previous (always false predicate).
-     */
+    /** Test if a {@link FlowNode} is the start of a parallel block (and not also not just a branch start) */
     static class IsParallelStartPredicate implements Predicate<FlowNode> {
         static final NodeStepNamePredicate PARALLEL_STEP = new NodeStepNamePredicate("org.jenkinsci.plugins.workflow.cps.steps.ParallelStep");
 
@@ -153,11 +151,13 @@ public class ForkScanner extends AbstractFlowScanner {
 
     /** Originally a workaround to deal with needing the {@link StepDescriptor} to determine if a node is a parallel start
      *  Now tidily solved by {@link IsParallelStartPredicate}*/
-    private static Predicate<FlowNode> parallelStartPredicate = new IsParallelStartPredicate();
+    private static final Predicate<FlowNode> parallelStartPredicate = new IsParallelStartPredicate();
 
-    // Invoke this passing a test against the ParallelStep conditions
+    /** Now a complete no-op -- originally this was a workaround for dependency issues with workflow-cps.
+     *  Specifically, requiring classes from workflow-cps to detect if something is a parallel step.
+     */
+    @Deprecated
     public static void setParallelStartPredicate(@Nonnull Predicate<FlowNode> pred) {
-        parallelStartPredicate = pred;
     }
 
     // Needed because the *next* node might be a parallel start if we start in middle and we don't know it
