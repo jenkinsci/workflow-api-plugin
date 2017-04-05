@@ -37,6 +37,8 @@ import java.util.Map;
  * Stores some or all of the information used to create and configure the {@link Step} executed by a {@link FlowNode}.
  * This allows you to inspect information supplied in the pipeline script and otherwise discarded at runtime.
  * Supplied parameter values can be hidden and replaced with a {@link NotStoredReason} for security or performance.
+ *
+ * FIXME needs to handle getting an uninstantiatedDeliverable or a fully configured step instance in the params map
  */
 public abstract class StepInfoAction implements PersistentAction {
 
