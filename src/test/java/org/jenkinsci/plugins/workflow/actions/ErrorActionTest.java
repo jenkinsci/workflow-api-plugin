@@ -110,4 +110,26 @@ public class ErrorActionTest {
             assertEquals(ProxyException.class, e.getError().getClass());
         }
     }
+
+    @Issue("JENKINS-39346")
+    @Test public void wrappedUnserializableException() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(
+            "catchError {\n" +
+            "  try {\n" +
+            "    try {\n" +
+            "      throw new NullPointerException('oops')\n" +
+            "    } catch (e) {\n" +
+            "      throw new org.codehaus.groovy.runtime.InvokerInvocationException(e)\n" + // TODO is there a way to convince Groovy to throw this on its own?
+            "    }\n" +
+            "  } catch (e) {\n" +
+            "    throw new IllegalArgumentException(e)\n" +
+            "  }\n" +
+            "}\n" +
+            "echo 'got to the end'", false));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
+        r.assertLogContains("got to the end", b);
+        r.assertLogContains("java.lang.NullPointerException: oops", b);
+    }
+
 }
