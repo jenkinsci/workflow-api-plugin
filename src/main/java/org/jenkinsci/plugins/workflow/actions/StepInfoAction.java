@@ -25,7 +25,10 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.StepNode;
+import org.jenkinsci.plugins.workflow.graph.StepParametersDescriptorGenerator;
 import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -87,7 +90,7 @@ public abstract class StepInfoAction implements PersistentAction {
 
     /**
      * Get just the fully stored, non-null parameters
-     * This means the parameters with all {@link NotStoredReason} values removed, as well as all null values
+     * This means the parameters with all {@link NotStoredReason} or null values removed
      * @param n FlowNode to get parameters for
      * @return Map of all completely stored parameters
      */
@@ -108,6 +111,28 @@ public abstract class StepInfoAction implements PersistentAction {
             }
         }
         return filteredParameters;
+    }
+
+    /** Return a tidy string description for the step parameters, or null if none is present or we can't make one */
+    @CheckForNull
+    public static String getParameterDescriptionString(@Nonnull FlowNode n) {
+        if (n instanceof StepNode) {
+            StepDescriptor descriptor = ((StepNode) n).getDescriptor();
+            Map<String, Object> filteredParams = getFilteredNodeParameters(n);
+            if (descriptor instanceof StepParametersDescriptorGenerator) {
+                // If the StepDescriptor provides its own way to create descriptions, use it
+                return ((StepParametersDescriptorGenerator)descriptor).getDescriptionString(filteredParams);
+            } else {
+                if (filteredParams.size() == 0 || filteredParams.size() > 1) {
+                    return null;  // Can't generate a description on our own
+                } else if (filteredParams.size() == 1) {
+                    Object val = filteredParams.values().iterator().next();
+                    return (val != null) ? val.toString() : null;
+                }
+                return null;
+            }
+        }
+        return null;
     }
 
     /**
