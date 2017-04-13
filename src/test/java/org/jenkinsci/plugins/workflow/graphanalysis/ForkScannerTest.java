@@ -662,6 +662,33 @@ public class ForkScannerTest {
     }
 
     @Test
+    @Issue("JENKINS-42895")
+    public void testMissingHeadErrorWithZeroBranchParallel() throws Exception {
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "MissingHeadBug");
+        job.setDefinition(new CpsFlowDefinition("" +
+                "stage('Stage A') {\n" +
+                "    echo \"A\"\n" +
+                "}\n" +
+                "// Works\n" +
+                "stage('Stage B') {\n" +
+                "    parallel a: {\n" +
+                "        echo \"B.A\"\n" +
+                "    }, b: {\n" +
+                "        echo \"B.B\"\n" +
+                "    }\n" +
+                "}\n" +
+                "// Breaks\n" +
+                "stage('Stage C') {\n" +
+                "    def steps = [:]\n" +
+                "    // Empty map\n" +
+                "    parallel steps\n" +
+                "}\n"));
+        WorkflowRun run = r.buildAndAssertSuccess(job);
+        FlowExecution exec = run.getExecution();
+        sanityTestIterationAndVisiter(exec.getCurrentHeads());
+    }
+
+    @Test
     public void testParallelPredicate() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
         Assert.assertEquals(true, new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("4")));
