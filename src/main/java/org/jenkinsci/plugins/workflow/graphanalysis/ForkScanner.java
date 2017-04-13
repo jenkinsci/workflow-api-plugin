@@ -550,9 +550,7 @@ public class ForkScanner extends AbstractFlowScanner {
                 }
             }
         } else {
-            if (isWalkingFromFinish()) {  //Incomplete single-branch parallels can do this
-                throw new IllegalStateException("Hit a BlockStartNode with no record of the start!");
-            }
+            // Incomplete single-branch parallel, or worse, a 0-branch parallel
             return myCurrent.getParents().get(0); // No branches to explore
         }
 
