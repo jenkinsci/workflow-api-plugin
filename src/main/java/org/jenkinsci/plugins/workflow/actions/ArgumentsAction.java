@@ -89,16 +89,11 @@ public abstract class ArgumentsAction implements PersistentAction {
     /**
      * Get just the fully stored, non-null arguments
      * This means the arguments with all {@link NotStoredReason} or null values removed
-     * @param n FlowNode to get arguments for
-     * @return Map of all completely stored argument
+     * @return Map of all completely stored arguments
      */
     @Nonnull
-    public static Map<String, Object> getFilteredArguments(@Nonnull FlowNode n) {
-        ArgumentsAction act = n.getPersistentAction(ArgumentsAction.class);
-        if (act == null) {
-            return Collections.emptyMap();
-        }
-        Map<String, Object> internalArgs = act.getArgumentsInternal();
+    public Map<String, Object> getFilteredArguments() {
+        Map<String, Object> internalArgs = this.getArgumentsInternal();
         if (internalArgs.size() == 0) {
             return Collections.emptyMap();
         }
@@ -109,6 +104,18 @@ public abstract class ArgumentsAction implements PersistentAction {
             }
         }
         return filteredArguments;
+    }
+
+    /**
+     * Get just the fully stored, non-null arguments
+     * This means the arguments with all {@link NotStoredReason} or null values removed
+     * @param n FlowNode to get arguments for
+     * @return Map of all completely stored arguments
+     */
+    @Nonnull
+    public static Map<String, Object> getFilteredArguments(@Nonnull FlowNode n) {
+        ArgumentsAction act = n.getPersistentAction(ArgumentsAction.class);
+        return act != null ? act.getFilteredArguments() : Collections.EMPTY_MAP;
     }
 
     /** Return a tidy string description for the step arguments, or null if none is present or we can't make one */
