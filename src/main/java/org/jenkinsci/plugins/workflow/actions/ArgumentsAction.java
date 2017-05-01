@@ -118,26 +118,38 @@ public abstract class ArgumentsAction implements PersistentAction {
         return act != null ? act.getFilteredArguments() : Collections.EMPTY_MAP;
     }
 
+    /** Return true if we can easy create a nice String for user display from the object */
+    static boolean isStringFormattable(@CheckForNull Object o) {
+        return (o != null && (o instanceof Comparable || o instanceof CharSequence)); // Covers our base types
+    }
+
     /** Return a tidy string description for the step arguments, or null if none is present or we can't make one */
     @CheckForNull
     public static String getArgumentDescriptionString(@Nonnull FlowNode n) {
         if (n instanceof StepNode) {
             StepDescriptor descriptor = ((StepNode) n).getDescriptor();
             Map<String, Object> filteredArgs = getFilteredArguments(n);
-            if (descriptor instanceof StepArgumentsFormatter) {
-                // If the StepDescriptor provides its own way to format descriptions, use it
-                return ((StepArgumentsFormatter)descriptor).getDescriptionString(filteredArgs);
-            } else {
-                if (filteredArgs.size() == 0 || filteredArgs.size() > 1) {
-                    return null;  // No description or can't generate a description on our own
-                } else if (filteredArgs.size() == 1) {
-                    Object val = filteredArgs.values().iterator().next();
-                    return (val != null) ? val.toString() : null;
-                }
-                return null;
-            }
+            return formatArgsToString(filteredArgs, descriptor);
         }
-        return null;
+        return null;  // non-StepNode nodes can't have step arguments
+    }
+
+    /** Return a tidy string description for the step arguments, or null if none is present or we can't make one */
+    static String formatArgsToString(@CheckForNull  Map<String, Object> filteredNamedArgs, @CheckForNull Object possibleFormatter) {
+        if (filteredNamedArgs == null || filteredNamedArgs.isEmpty()) {
+            return null;
+        }
+        if (possibleFormatter instanceof StepArgumentsFormatter) {
+            return ((StepArgumentsFormatter)possibleFormatter).getDescriptionString(filteredNamedArgs);
+        } else {
+            if (filteredNamedArgs.size() == 0 || filteredNamedArgs.size() > 1) {
+                return null;  // No description or can't generate a description on our own
+            } else if (filteredNamedArgs.size() == 1) {
+                Object val = filteredNamedArgs.values().iterator().next();
+                return (isStringFormattable(val)) ? val.toString() : null;
+            }
+            return null;
+        }
     }
 
     /**

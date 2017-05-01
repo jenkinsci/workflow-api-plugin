@@ -1,4 +1,5 @@
-package org.jenkinsci.plugins.workflow.graphanalysis;/*
+package org.jenkinsci.plugins.workflow.graphanalysis;
+/*
  * The MIT License
  *
  * Copyright (c) 2016, CloudBees, Inc.
