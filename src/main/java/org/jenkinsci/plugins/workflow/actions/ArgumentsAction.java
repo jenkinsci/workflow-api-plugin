@@ -79,6 +79,12 @@ public abstract class ArgumentsAction implements PersistentAction {
         return Collections.unmodifiableMap(getArgumentsInternal());
     }
 
+    @Nonnull
+    public static Map<String,Object> getArguments(@Nonnull FlowNode n) {
+        ArgumentsAction aa = n.getPersistentAction(ArgumentsAction.class);
+        return aa != null ? aa.getArguments() : Collections.EMPTY_MAP;
+    }
+
     /**
      * Get just the fully stored, non-null arguments
      * This means the arguments with all {@link NotStoredReason} or null values removed
