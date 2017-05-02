@@ -26,7 +26,6 @@ package org.jenkinsci.plugins.workflow.actions;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
-import org.jenkinsci.plugins.workflow.graph.StepArgumentsFormatter;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
@@ -80,12 +79,6 @@ public abstract class ArgumentsAction implements PersistentAction {
         return Collections.unmodifiableMap(getArgumentsInternal());
     }
 
-    @Nonnull
-    public static Map<String, Object> getArguments(@Nonnull  FlowNode n) {
-        ArgumentsAction act = n.getPersistentAction(ArgumentsAction.class);
-        return (act != null) ? act.getArguments() : (Map)(Collections.emptyMap());
-    }
-
     /**
      * Get just the fully stored, non-null arguments
      * This means the arguments with all {@link NotStoredReason} or null values removed
@@ -118,38 +111,19 @@ public abstract class ArgumentsAction implements PersistentAction {
         return act != null ? act.getFilteredArguments() : Collections.EMPTY_MAP;
     }
 
-    /** Return true if we can easy create a nice String for user display from the object */
-    static boolean isStringFormattable(@CheckForNull Object o) {
-        return (o != null && (o instanceof Comparable || o instanceof CharSequence)); // Covers our base types
-    }
-
-    /** Return a tidy string description for the step arguments, or null if none is present or we can't make one */
+    /** Return a tidy string description for the step arguments, or null if none is present or we can't make one
+     *  See {@link StepDescriptor#argumentsToString(Map)} for the rules
+     */
     @CheckForNull
-    public static String getArgumentDescriptionString(@Nonnull FlowNode n) {
+    public static String getStepArgumentsAsString(@Nonnull FlowNode n) {
         if (n instanceof StepNode) {
             StepDescriptor descriptor = ((StepNode) n).getDescriptor();
-            Map<String, Object> filteredArgs = getFilteredArguments(n);
-            return formatArgsToString(filteredArgs, descriptor);
+            if (descriptor != null) {  // Null if plugin providing descriptor was uninstalled
+                Map<String, Object> filteredArgs = getFilteredArguments(n);
+                return descriptor.argumentsToString(filteredArgs);
+            }
         }
         return null;  // non-StepNode nodes can't have step arguments
-    }
-
-    /** Return a tidy string description for the step arguments, or null if none is present or we can't make one */
-    static String formatArgsToString(@CheckForNull  Map<String, Object> filteredNamedArgs, @CheckForNull Object possibleFormatter) {
-        if (filteredNamedArgs == null || filteredNamedArgs.isEmpty()) {
-            return null;
-        }
-        if (possibleFormatter instanceof StepArgumentsFormatter) {
-            return ((StepArgumentsFormatter)possibleFormatter).getDescriptionString(filteredNamedArgs);
-        } else {
-            if (filteredNamedArgs.size() == 0 || filteredNamedArgs.size() > 1) {
-                return null;  // No description or can't generate a description on our own
-            } else if (filteredNamedArgs.size() == 1) {
-                Object val = filteredNamedArgs.values().iterator().next();
-                return (isStringFormattable(val)) ? val.toString() : null;
-            }
-            return null;
-        }
     }
 
     /**
