@@ -31,9 +31,12 @@ import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Stores some or all of the arguments used to create and configure the {@link Step} executed by a {@link FlowNode}.
@@ -42,43 +45,54 @@ import java.util.Map;
  */
 public abstract class ArgumentsAction implements PersistentAction {
 
-    /** Used as a placeholder for arguments not stored for various reasons */
+    /** Used as a placeholder marker for {@link Step} arguments not stored for various reasons. */
     public enum NotStoredReason {
-        /** Denotes an unsafe value that cannot be stored/displayed due to sensitive info */
+        /** Denotes an unsafe value that cannot be stored/displayed due to sensitive info. */
         MASKED_VALUE,
 
         /** Denotes an object that is too big to retain, such as strings exceeding {@link #MAX_STRING_LENGTH} */
         OVERSIZE_VALUE
     }
 
-    /** Largest string we'll persist in the Step, for performance reasons */
+    /** Largest string we'll persist in the Step, for performance reasons. */
     public static final int MAX_STRING_LENGTH = 1024;
 
     @Override
     public String getIconFileName() {
+        // TODO Add an icon and UI for inspecting a step's arguments
         return null;
     }
 
     @Override
     public String getDisplayName() {
-        return "Step Arguments";
+        // TODO Once we have a UI and Jelly view, switch to "Step Arguments"
+        return null;
     }
 
     @Override
     public String getUrlName() {
-        return "stepArguments";
+        // TODO Once we have a UI and view, switch to "stepArguments"
+        return null;
     }
 
     /**
-     * Get the map of arguments for the {@link Step}, with a {@link NotStoredReason} instead of the value
-     *  if part of the arguments are not retained.
-     * @return The arguments for the Step.
+     * Get the map of arguments used to instantiate the {@link Step}, with a {@link NotStoredReason} instead of the argument value
+     *  supplied in the executed pipeline step if that value is filtered for size or security.
+     * @return The arguments for the {@link Step} as with {@link StepDescriptor#defineArguments(Step)}
      */
     @Nonnull
     public Map<String,Object> getArguments() {
         return Collections.unmodifiableMap(getArgumentsInternal());
     }
 
+    /**
+     * Get the map of arguments supplied to instantiate the {@link Step} run in the {@link FlowNode} given
+     * or null if the arguments were not stored or the FlowNode was not a step.
+     *
+     * Internally
+     * @param n FlowNode to fetch Step arguments for (including placeholders for masked values).
+     * @return
+     */
     @Nonnull
     public static Map<String,Object> getArguments(@Nonnull FlowNode n) {
         ArgumentsAction aa = n.getPersistentAction(ArgumentsAction.class);
@@ -158,7 +172,17 @@ public abstract class ArgumentsAction implements PersistentAction {
      */
     @CheckForNull
     public Object getArgumentValueOrReason(@Nonnull String argumentName) {
-        return getArgumentsInternal().get(argumentName);
+        Object ob = getArgumentsInternal().get(argumentName);
+        if (ob instanceof Map) {
+            return Collections.unmodifiableMap((Map)ob);
+        } else if (ob instanceof Set) {
+            return Collections.unmodifiableSet((Set)ob);
+        } else if (ob instanceof List) {
+            return Collections.unmodifiableList((List)ob);
+        } else if (ob instanceof Collection) {
+            return Collections.unmodifiableCollection((Collection)ob);
+        }
+        return ob;
     }
 
     /**
