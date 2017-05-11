@@ -58,16 +58,23 @@ public abstract class ArgumentsAction implements PersistentAction {
         OVERSIZE_VALUE
     }
 
-    /** Largest String, Collection, or array size we'll retain -- provides a rough size limit. */
-    public static final int MAX_RETAINED_LENGTH = 1024;
+    /** Largest String, Collection, or array size we'll retain -- provides a rough size limit on any single field.
+     *  Set to 0 or -1 to remove length limits.
+     */
+    private static final int MAX_RETAINED_LENGTH = Integer.getInteger(ArgumentsAction.class.getName()+".maxRetainedLength", 1024);;
 
     /**
-     * Check if an object is oversized to be stored as a step argument, including recursive checks for maps, arrays, and collections.
+     * Provides a basic check if an object contains any excessively large single elements.
+     * This recursively checks for String length, Map size, and array/collection size.
+     * We're not trying to cap total size just identify problem elements.
      * @param o Object to check, with null allowed since we may see null inputs
-     * @param maxElements Max number of elements for a collection/map or characters in a string
-     * @return True if object (or one of the contained objects) fails maxElements
+     * @param maxElements Max number of elements for a collection/map or characters in a string, or <0 to ignore length rules.
+     * @return True if object (or one of the contained objects) exceeds maxElements size.
      */
     public static boolean isOverSized(@CheckForNull Object o, final int maxElements) {
+        if (maxElements <= 0 ) {
+            return false;
+        }
         if (o == null || Primitives.isWrapperType(o.getClass()) || o.getClass().isEnum()) {
             return false;
         }
