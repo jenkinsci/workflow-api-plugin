@@ -68,7 +68,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      * This recursively checks for String length, Map size, and array/collection size.
      * We're not trying to cap total size just identify problem elements.
      * @param o Object to check, with null allowed since we may see null inputs
-     * @param maxElements Max number of elements for a collection/map or characters in a string, or <0 to ignore length rules.
+     * @param maxElements Max number of elements for a collection/map or characters in a string, or &lt; 0 to ignore length rules.
      * @return True if object (or one of the contained objects) exceeds maxElements size.
      */
     public static boolean isOverSized(@CheckForNull Object o, final int maxElements) {
