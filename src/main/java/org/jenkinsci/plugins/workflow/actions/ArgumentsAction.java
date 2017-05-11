@@ -24,6 +24,8 @@
 
 package org.jenkinsci.plugins.workflow.actions;
 
+import com.google.common.primitives.Primitives;
+import org.apache.commons.collections.CollectionUtils;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.steps.Step;
@@ -52,12 +54,54 @@ public abstract class ArgumentsAction implements PersistentAction {
         /** Denotes an unsafe value that cannot be stored/displayed due to sensitive info. */
         MASKED_VALUE,
 
-        /** Denotes an object that is too big to retain, such as strings exceeding {@link #MAX_STRING_LENGTH} */
+        /** Denotes an object that is too big to retain, such as strings exceeding {@link #MAX_RETAINED_LENGTH} */
         OVERSIZE_VALUE
     }
 
-    /** Largest string we'll persist in the Step, for performance reasons. */
-    public static final int MAX_STRING_LENGTH = 1024;
+    /** Largest String, Collection, or array size we'll retain -- provides a rough size limit. */
+    public static final int MAX_RETAINED_LENGTH = 1024;
+
+    /**
+     * Check if an object is oversized to be stored as a step argument, including recursive checks for maps, arrays, and collections.
+     * @param o Object to check, with null allowed since we may see null inputs
+     * @param maxElements Max number of elements for a collection/map or characters in a string
+     * @return True if object (or one of the contained objects) fails maxElements
+     */
+    public static boolean isOverSized(@CheckForNull Object o, final int maxElements) {
+        if (o == null || Primitives.isWrapperType(o.getClass()) || o.getClass().isEnum()) {
+            return false;
+        }
+        if (o instanceof CharSequence) {
+            return ((CharSequence) o).length() > maxElements;
+        }
+        if ((o instanceof Map || o instanceof Collection || o.getClass().isArray())) {
+            if (CollectionUtils.size(o) > maxElements) {
+                return true;
+            }
+            if (o instanceof Collection) {
+                for (Object element : (Collection)o) {
+                    if (isOverSized(element, maxElements)) {
+                        return true;
+                    }
+                }
+            }
+            if (o instanceof Object[]){
+                for (Object element : (Object[])o) {
+                    if (isOverSized(element, maxElements)) {
+                        return true;
+                    }
+                }
+            }
+            if (o instanceof Map) {
+                for(Map.Entry<?,?> entry : ((Map<?,?>)o).entrySet()) {
+                    if (isOverSized((Object)(entry.getKey()), maxElements) || isOverSized((Object)(entry.getValue()), maxElements)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
     @Override
     public String getIconFileName() {
