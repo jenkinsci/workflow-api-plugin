@@ -42,6 +42,8 @@ import java.util.Set;
  * Stores some or all of the arguments used to create and configure the {@link Step} executed by a {@link FlowNode}.
  * This allows you to inspect information supplied in the pipeline script and otherwise discarded at runtime.
  * Supplied argument values can be hidden and replaced with a {@link NotStoredReason} for security or performance.
+ *
+ * Important note: these APIs do not provide recursive guarantees that returned datastructures are immutable.
  */
 public abstract class ArgumentsAction implements PersistentAction {
 
@@ -82,7 +84,12 @@ public abstract class ArgumentsAction implements PersistentAction {
      */
     @Nonnull
     public Map<String,Object> getArguments() {
-        return Collections.unmodifiableMap(getArgumentsInternal());
+        Map<String,Object> args = getArgumentsInternal();
+        if (args.isEmpty()) {
+            return Collections.<String,Object>emptyMap();
+        } else {
+            return Collections.unmodifiableMap(getArgumentsInternal());
+        }
     }
 
     /**
@@ -96,7 +103,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     @Nonnull
     public static Map<String,Object> getArguments(@Nonnull FlowNode n) {
         ArgumentsAction aa = n.getPersistentAction(ArgumentsAction.class);
-        return aa != null ? aa.getArguments() : Collections.EMPTY_MAP;
+        return aa != null ? aa.getArguments() : Collections.<String,Object>emptyMap();
     }
 
     /**
@@ -108,7 +115,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     public Map<String, Object> getFilteredArguments() {
         Map<String, Object> internalArgs = this.getArgumentsInternal();
         if (internalArgs.size() == 0) {
-            return Collections.emptyMap();
+            return Collections.<String,Object>emptyMap();
         }
         HashMap<String, Object> filteredArguments = new HashMap<String, Object>();
         for (Map.Entry<String, Object> entry : internalArgs.entrySet()) {
@@ -162,7 +169,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     @CheckForNull
     public Object getArgumentValue(@Nonnull String argumentName) {
         Object val = getArgumentValueOrReason(argumentName);
-        return (val == null || val instanceof NotStoredReason) ? null : val;
+        return (val instanceof NotStoredReason) ? null : val;
     }
 
     /**
@@ -186,8 +193,26 @@ public abstract class ArgumentsAction implements PersistentAction {
     }
 
     /**
+     * Check if any of the named arguments in the supplied list of arguments has a {@link NotStoredReason} placeholder.
+     * Useful for the default implementation of {@link #isUnmodifiedArguments()} or overrides.
+     * @param namedArgs Set of argument name and argument value pairs, as from {@link StepDescriptor#defineArguments(Step)}
+     * @return True if no argument has a {@link NotStoredReason} placeholder value, else false
+     */
+    static boolean checkArgumentsLackPlaceholders(@Nonnull Map<String,Object> namedArgs) {
+        for(Object ob : namedArgs.values()) {
+            if (ob instanceof NotStoredReason) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Test if {@link Step} arguments are persisted in an unaltered form.
      * @return True if full arguments are retained, false if some have been removed for security, size, or other reasons.
      */
-    public abstract boolean isFullArguments();
+    public boolean isUnmodifiedArguments() {
+        // Cacheable, but arguments lists will be quite short and this is unlikely to get invoked heavily.
+        return checkArgumentsLackPlaceholders(this.getArgumentsInternal());
+    }
 }
