@@ -61,7 +61,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     /** Largest String, Collection, or array size we'll retain -- provides a rough size limit on any single field.
      *  Set to 0 or -1 to remove length limits.
      */
-    static final int MAX_RETAINED_LENGTH = Integer.getInteger(ArgumentsAction.class.getName()+".maxRetainedLength", 1024);
+    protected static final int MAX_RETAINED_LENGTH = Integer.getInteger(ArgumentsAction.class.getName()+".maxRetainedLength", 1024);
 
     /**
      * Provides a basic check if an object contains any excessively large single elements.
@@ -115,7 +115,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      * @param o Object to check for being oversized or holding an oversized value.
      * @return True if object contains an oversized input, else false.
      */
-    static boolean isOversized(@CheckForNull Object o) {
+    protected static boolean isOversized(@CheckForNull Object o) {
         return isOverSized(o, MAX_RETAINED_LENGTH);
     }
 
