@@ -27,11 +27,4 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     public void onCompleted(FlowExecution execution) {
     }
 
-    /**
-     * All the registered {@link FlowExecutionListener}s.
-     */
-    public static ExtensionList<FlowExecutionListener> all() {
-        return ExtensionList.lookup(FlowExecutionListener.class);
-    }
-
 }
