@@ -24,13 +24,14 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
+import hudson.ExtensionPoint;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 /**
  * @author Kohsuke Kawaguchi
  * @author Jesse Glick
  */
-public interface GraphListener {
+public interface GraphListener extends ExtensionPoint {
     /**
      * {@link FlowExecution} should batch up changes to a group and call this once,
      * as opposed to call this for every new node added.
