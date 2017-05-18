@@ -64,9 +64,10 @@ public abstract class ArgumentsAction implements PersistentAction {
     protected static final int MAX_RETAINED_LENGTH = Integer.getInteger(ArgumentsAction.class.getName()+".maxRetainedLength", 1024);
 
     /**
-     * Provides a basic check if an object contains any excessively large single elements.
-     * This recursively checks for String length, Map size, and array/collection size.
-     * We're not trying to cap total size just identify problem elements.
+     * Provides a basic check if an object contains any excessively large collection/array/string elements with
+     * more than maxElements in them.
+     *
+     * This is a trivial nonrecursive check, because implementations may need to do recursive operations to sanitize out secrets as well.
      * @param o Object to check, with null allowed since we may see null inputs
      * @param maxElements Max number of elements for a collection/map or characters in a string, or &lt; 0 to ignore length rules.
      * @return True if object (or one of the contained objects) exceeds maxElements size.
@@ -84,27 +85,6 @@ public abstract class ArgumentsAction implements PersistentAction {
         if ((o instanceof Map || o instanceof Collection || o.getClass().isArray())) {
             if (CollectionUtils.size(o) > maxElements) {
                 return true;
-            }
-            if (o instanceof Collection) {
-                for (Object element : (Collection)o) {
-                    if (isOversized(element, maxElements)) {
-                        return true;
-                    }
-                }
-            }
-            if (o instanceof Object[]){
-                for (Object element : (Object[])o) {
-                    if (isOversized(element, maxElements)) {
-                        return true;
-                    }
-                }
-            }
-            if (o instanceof Map) {
-                for(Map.Entry<?,?> entry : ((Map<?,?>)o).entrySet()) {
-                    if (isOversized((Object)(entry.getKey()), maxElements) || isOversized((Object)(entry.getValue()), maxElements)) {
-                        return true;
-                    }
-                }
             }
         }
         return false;
