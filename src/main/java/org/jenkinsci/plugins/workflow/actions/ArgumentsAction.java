@@ -71,7 +71,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      * @param maxElements Max number of elements for a collection/map or characters in a string, or &lt; 0 to ignore length rules.
      * @return True if object (or one of the contained objects) exceeds maxElements size.
      */
-    public static boolean isOverSized(@CheckForNull Object o, final int maxElements) {
+    public static boolean isOversized(@CheckForNull Object o, final int maxElements) {
         if (maxElements <= 0 ) {
             return false;
         }
@@ -87,21 +87,21 @@ public abstract class ArgumentsAction implements PersistentAction {
             }
             if (o instanceof Collection) {
                 for (Object element : (Collection)o) {
-                    if (isOverSized(element, maxElements)) {
+                    if (isOversized(element, maxElements)) {
                         return true;
                     }
                 }
             }
             if (o instanceof Object[]){
                 for (Object element : (Object[])o) {
-                    if (isOverSized(element, maxElements)) {
+                    if (isOversized(element, maxElements)) {
                         return true;
                     }
                 }
             }
             if (o instanceof Map) {
                 for(Map.Entry<?,?> entry : ((Map<?,?>)o).entrySet()) {
-                    if (isOverSized((Object)(entry.getKey()), maxElements) || isOverSized((Object)(entry.getValue()), maxElements)) {
+                    if (isOversized((Object)(entry.getKey()), maxElements) || isOversized((Object)(entry.getValue()), maxElements)) {
                         return true;
                     }
                 }
@@ -111,12 +111,12 @@ public abstract class ArgumentsAction implements PersistentAction {
     }
 
     /**
-     * Check for single oversized fields much like {@link #isOverSized(Object, int)} but using {@link #MAX_RETAINED_LENGTH}.
+     * Check for single oversized fields much like {@link #isOversized(Object, int)} but using {@link #MAX_RETAINED_LENGTH}.
      * @param o Object to check for being oversized or holding an oversized value.
      * @return True if object contains an oversized input, else false.
      */
     protected static boolean isOversized(@CheckForNull Object o) {
-        return isOverSized(o, MAX_RETAINED_LENGTH);
+        return isOversized(o, MAX_RETAINED_LENGTH);
     }
 
     @Override
