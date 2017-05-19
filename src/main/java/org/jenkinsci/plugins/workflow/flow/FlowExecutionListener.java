@@ -2,6 +2,8 @@ package org.jenkinsci.plugins.workflow.flow;
 
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
+import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 /**
  * Listens for significant status updates for a {@link FlowExecution}, such as started running or completed.
@@ -12,16 +14,32 @@ import hudson.ExtensionPoint;
 public abstract class FlowExecutionListener implements ExtensionPoint {
 
     /**
-     * Called when a {@link FlowExecution} has started running or resumed.
+     * Called when a {@link FlowExecution} has started running.
      *
-     * @param execution The {@link FlowExecution} that has started running or resumed.
-     * @param resumed True the execution is resuming, false if it's starting for the first time.
+     * The {@link FlowExecution} will already have been added to the {@link FlowExecutionList} by this point.
+     *
+     * @param execution The {@link FlowExecution} that has started running.
      */
-    public void onRunning(FlowExecution execution, boolean resumed) {
+    public void onRunning(FlowExecution execution) {
+    }
+
+    /**
+     * Called when a {@link FlowExecution} has resumed.
+     *
+     * The {@link FlowExecution} will already have been added to the {@link FlowExecutionList} by this point.
+     *
+     * @param execution The {@link FlowExecution} that has resumed.
+     */
+    public void onResumed(FlowExecution execution) {
     }
 
     /**
      * Called when a {@link FlowExecution} has completed.
+     *
+     * The {@link FlowExecution} will already have been removed from the {@link FlowExecutionList} by this point,
+     * {@link GraphListener.Synchronous#onNewHead(FlowNode)} will have already been called for the {@link FlowEndNode},
+     * {@link FlowEndNode#getResult()} will return non-null, and if the Pipeline has failed,
+     * {@link FlowExecution#getCauseOfFailure()} will return non-null.
      *
      * @param execution The {@link FlowExecution} that has completed.
      */
@@ -29,11 +47,20 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     }
 
     /**
-     * Fires the {@link #onRunning(FlowExecution, boolean)} event.
+     * Fires the {@link #onRunning(FlowExecution)} event.
      */
-    public static void fireRunning(FlowExecution execution, boolean resumed) {
+    public static void fireRunning(FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
-            listener.onRunning(execution, resumed);
+            listener.onRunning(execution);
+        }
+    }
+
+    /**
+     * Fires the {@link #onResumed(FlowExecution)} event.
+     */
+    public static void fireResumed(FlowExecution execution) {
+        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
+            listener.onResumed(execution);
         }
     }
 
