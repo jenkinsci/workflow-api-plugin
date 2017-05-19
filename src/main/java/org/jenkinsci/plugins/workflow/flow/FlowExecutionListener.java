@@ -26,8 +26,6 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     /**
      * Called when a {@link FlowExecution} has resumed.
      *
-     * The {@link FlowExecution} will already have been added to the {@link FlowExecutionList} by this point.
-     *
      * @param execution The {@link FlowExecution} that has resumed.
      */
     public void onResumed(FlowExecution execution) {
@@ -38,8 +36,8 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      *
      * The {@link FlowExecution} will already have been removed from the {@link FlowExecutionList} by this point,
      * {@link GraphListener.Synchronous#onNewHead(FlowNode)} will have already been called for the {@link FlowEndNode},
-     * {@link FlowEndNode#getResult()} will return non-null, and if the Pipeline has failed,
-     * {@link FlowExecution#getCauseOfFailure()} will return non-null.
+     * {@link FlowExecution#getCurrentHeads()} will have one element, a {@link FlowEndNode}, and if the Pipeline has
+     * failed, {@link FlowExecution#getCauseOfFailure()} will return non-null.
      *
      * @param execution The {@link FlowExecution} that has completed.
      */
