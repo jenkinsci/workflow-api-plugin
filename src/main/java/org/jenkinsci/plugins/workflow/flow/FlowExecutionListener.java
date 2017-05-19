@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.workflow.flow;
 
+import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 
 /**
@@ -27,4 +28,21 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     public void onCompleted(FlowExecution execution) {
     }
 
+    /**
+     * Fires the {@link #onRunning(FlowExecution, boolean)} event.
+     */
+    public static void fireRunning(FlowExecution execution, boolean resumed) {
+        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
+            listener.onRunning(execution, resumed);
+        }
+    }
+
+    /**
+     * Fires the {@link #onCompleted(FlowExecution)} event.
+     */
+    public static void fireCompleted(FlowExecution execution) {
+        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
+            listener.onCompleted(execution);
+        }
+    }
 }
