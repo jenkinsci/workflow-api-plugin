@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.workflow.flow;
 
-import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 
 /**
@@ -15,8 +14,9 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      * Called when a {@link FlowExecution} has started running or resumed.
      *
      * @param execution The {@link FlowExecution} that has started running or resumed.
+     * @param resumed True the execution is resuming, false if it's starting for the first time.
      */
-    public void onRunning(FlowExecution execution) {
+    public void onRunning(FlowExecution execution, boolean resumed) {
     }
 
     /**
