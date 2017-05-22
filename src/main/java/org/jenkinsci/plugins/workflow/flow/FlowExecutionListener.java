@@ -49,7 +49,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     /**
      * Fires the {@link #onRunning(FlowExecution)} event.
      */
-    public static void fireRunning(FlowExecution execution) {
+    public static void fireRunning(@Nonnull FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onRunning(execution);
         }
@@ -58,7 +58,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     /**
      * Fires the {@link #onResumed(FlowExecution)} event.
      */
-    public static void fireResumed(FlowExecution execution) {
+    public static void fireResumed(@Nonnull FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onResumed(execution);
         }
@@ -67,7 +67,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     /**
      * Fires the {@link #onCompleted(FlowExecution)} event.
      */
-    public static void fireCompleted(FlowExecution execution) {
+    public static void fireCompleted(@Nonnull FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onCompleted(execution);
         }
