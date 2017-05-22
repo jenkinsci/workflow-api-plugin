@@ -5,6 +5,8 @@ import hudson.ExtensionPoint;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
+import javax.annotation.Nonnull;
+
 /**
  * Listens for significant status updates for a {@link FlowExecution}, such as started running or completed.
  *
@@ -20,7 +22,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      *
      * @param execution The {@link FlowExecution} that has started running.
      */
-    public void onRunning(FlowExecution execution) {
+    public void onRunning(@Nonnull FlowExecution execution) {
     }
 
     /**
@@ -28,7 +30,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      *
      * @param execution The {@link FlowExecution} that has resumed.
      */
-    public void onResumed(FlowExecution execution) {
+    public void onResumed(@Nonnull FlowExecution execution) {
     }
 
     /**
@@ -41,7 +43,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      *
      * @param execution The {@link FlowExecution} that has completed.
      */
-    public void onCompleted(FlowExecution execution) {
+    public void onCompleted(@Nonnull FlowExecution execution) {
     }
 
     /**
