@@ -24,13 +24,17 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
+import hudson.Extension;
+import hudson.ExtensionPoint;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 /**
- * @author Kohsuke Kawaguchi
- * @author Jesse Glick
+ * {@code GraphListener}s can be used in two different ways: either as an {@link Extension}, which will have its
+ * {@link #onNewHead(FlowNode)} fired for every {@link FlowExecution}, or by instantiation and being passed to
+ * {@link FlowExecution#addListener(GraphListener)}, in which case only events for that specific {@link FlowExecution}
+ * will be fired.
  */
-public interface GraphListener {
+public interface GraphListener extends ExtensionPoint {
     /**
      * {@link FlowExecution} should batch up changes to a group and call this once,
      * as opposed to call this for every new node added.
