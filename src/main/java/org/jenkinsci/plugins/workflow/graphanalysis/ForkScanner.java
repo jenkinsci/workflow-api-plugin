@@ -646,18 +646,24 @@ public class ForkScanner extends AbstractFlowScanner {
         } else if (candidates.size() == 1) {
             return candidates.get(0);
         } else {
-            FlowNode returnOut = candidates.get(0);
+            FlowNode lastFound = candidates.get(0);
             long startTime = Long.MIN_VALUE;
             for(FlowNode f : candidates) {
                 TimingAction ta = f.getAction(TimingAction.class);
-                // Null timing with multiple heads is probably a node where the GraphListener hasn't fired to add TimingAction yet
+                // Null timing with multiple heads is probably the newest node where the GraphListener hasn't fired to add TimingAction yet
                 long myStart = (ta == null) ? System.currentTimeMillis() : ta.getStartTime();
-                if (myStart > startTime) {
-                    returnOut = f;
+                if (f instanceof BlockEndNode != lastFound instanceof BlockEndNode) {
+                    // A BlockEndNode isn't currently running, this represents the case where some branches are done
+                    if (!(f instanceof BlockEndNode)) {
+                        lastFound = f;
+                        startTime = myStart;
+                    }
+                } else if (myStart > startTime) {
+                    lastFound = f;
                     startTime = myStart;
                 }
             }
-            return returnOut;
+            return lastFound;
         }
     }
 

@@ -934,6 +934,33 @@ public class ForkScannerTest {
         Assert.assertEquals(2, parallelBranchEndCount);
     }
 
+    /** Covers finding the right parallel end node in cases where we have one long-running step on an incomplete branch */
+    @Issue("JENKINS-38536")
+    @Test
+    public void testPartlyCompletedParallels() throws Exception {
+        String jobScript = ""+
+                "stage 'first'\n" +
+                "parallel 'long' : { sleep 60; }, \n" +
+                "         'short': { sleep 2; }";
+
+        // This must be amateur science fiction because the exposition for the setting goes on FOREVER
+        ForkScanner scan = new ForkScanner();
+        TestVisitor tv = new TestVisitor();
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "parallelTimes");
+        job.setDefinition(new CpsFlowDefinition(jobScript));
+        WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
+        Thread.sleep(4000);  // Such a dirty hack, but this isn't reproducible with normal SemaphoreStep use
+        FlowExecution exec = run.getExecution();
+        List<FlowNode> heads = exec.getCurrentHeads();
+        scan.setup(heads);
+        scan.visitSimpleChunks(tv, new NoOpChunkFinder());
+        FlowNode endNode = exec.getNode(tv.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).get(0).getNodeId().toString());
+        Assert.assertEquals("sleep", endNode.getDisplayFunctionName());
+        sanityTestIterationAndVisiter(heads);
+        run.doKill(); // Avoid waiting for long branch completion
+    }
+
+    /** Covers finding the right parallel end node in cases we have not written a TimingAction or are using SemaphoreStep */
     @Issue("JENKINS-38536")
     @Test
     public void testParallelCorrectEndNodeForVisitor() throws Exception {
