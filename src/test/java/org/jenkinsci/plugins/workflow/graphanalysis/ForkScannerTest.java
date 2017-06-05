@@ -934,6 +934,36 @@ public class ForkScannerTest {
         Assert.assertEquals(2, parallelBranchEndCount);
     }
 
+    /** Covers finding the right parallel end node in cases where we have one long-running step on an incomplete branch.
+     *  Previously we'd assume the BlockEndNode of the completed branch was the last-running branch because it had the
+     *   most recent node addition, but the longer-running non-end node needs to take precedence.
+     */
+    @Issue("JENKINS-38536")
+    @Test
+    public void testPartlyCompletedParallels() throws Exception {
+        String jobScript = ""+
+                "stage 'first'\n" +
+                "parallel 'long' : { sleep 60; }, \n" +  // Needs to be in-progress
+                "         'short': { sleep 2; }";  // Needs to have completed, and SemaphoreStep alone doesn't cut it
+
+        // This must be amateur science fiction because the exposition for the setting goes on FOREVER
+        ForkScanner scan = new ForkScanner();
+        TestVisitor tv = new TestVisitor();
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "parallelTimes");
+        job.setDefinition(new CpsFlowDefinition(jobScript));
+        WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
+        Thread.sleep(4000);  // Allows enough time for the shorter branch to finish and write its BlockEndNode
+        FlowExecution exec = run.getExecution();
+        List<FlowNode> heads = exec.getCurrentHeads();
+        scan.setup(heads);
+        scan.visitSimpleChunks(tv, new NoOpChunkFinder());
+        FlowNode endNode = exec.getNode(tv.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).get(0).getNodeId().toString());
+        Assert.assertEquals("sleep", endNode.getDisplayFunctionName());
+        sanityTestIterationAndVisiter(heads);
+        run.doKill(); // Avoid waiting for long branch completion
+    }
+
+    /** Covers finding the right parallel end node in cases we have not written a TimingAction or are using SemaphoreStep */
     @Issue("JENKINS-38536")
     @Test
     public void testParallelCorrectEndNodeForVisitor() throws Exception {
