@@ -40,14 +40,14 @@ public class ExecutorTaskInfoAction extends InvisibleAction implements FlowNodeA
         this.parent = parent;
     }
 
-    void setLaunched() {
+    public void setLaunched() {
         // Because we're not blocked any more at this point!
         this.whyBlocked = null;
         this.whenStartedOrCanceled = System.currentTimeMillis();
         this.launched = true;
     }
 
-    void setWhyBlocked(@Nonnull String whyBlocked) {
+    public void setWhyBlocked(@Nonnull String whyBlocked) {
         this.whyBlocked = whyBlocked;
     }
 
@@ -60,7 +60,7 @@ public class ExecutorTaskInfoAction extends InvisibleAction implements FlowNodeA
         return whenStartedOrCanceled;
     }
 
-    void cancelTask() {
+    public void cancelTask() {
         this.whyBlocked = null;
         this.whenStartedOrCanceled = System.currentTimeMillis();
     }
