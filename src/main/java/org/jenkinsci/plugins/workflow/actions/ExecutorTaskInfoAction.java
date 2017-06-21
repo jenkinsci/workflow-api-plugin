@@ -17,6 +17,8 @@ public class ExecutorTaskInfoAction extends InvisibleAction implements Persisten
     // Initialized at -1 for "not started yet".
     private long whenStartedOrCancelled = -1L;
 
+    public ExecutorTaskInfoAction() {
+    }
 
     public ExecutorTaskInfoAction(@Nonnull String whyBlocked) {
         this.whyBlocked = whyBlocked;
