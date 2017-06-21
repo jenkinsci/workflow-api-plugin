@@ -9,38 +9,23 @@ import javax.annotation.Nonnull;
 /**
  * Records information for a {@code node} block.
  */
-public class ExecutorTaskInfoAction extends InvisibleAction implements FlowNodeAction, PersistentAction {
+public class ExecutorTaskInfoAction extends InvisibleAction implements PersistentAction {
     private static final long serialVersionUID = 1;
 
     private String whyBlocked;
     private boolean launched;
     // Initialized at -1 for "not started yet".
-    private long whenStartedOrCanceled = -1L;
+    private long whenStartedOrCancelled = -1L;
 
-    private transient FlowNode parent;
 
-    public ExecutorTaskInfoAction(FlowNode parent) {
-        this.parent = parent;
-    }
-
-    public ExecutorTaskInfoAction(@Nonnull String whyBlocked, FlowNode parent) {
-        this(parent);
+    public ExecutorTaskInfoAction(@Nonnull String whyBlocked) {
         this.whyBlocked = whyBlocked;
-    }
-
-    public FlowNode getParent() {
-        return parent;
-    }
-
-    @Override
-    public void onLoad(FlowNode parent) {
-        this.parent = parent;
     }
 
     public void setLaunched() {
         // Because we're not blocked any more at this point!
         this.whyBlocked = null;
-        this.whenStartedOrCanceled = System.currentTimeMillis();
+        this.whenStartedOrCancelled = System.currentTimeMillis();
         this.launched = true;
     }
 
@@ -53,25 +38,25 @@ public class ExecutorTaskInfoAction extends InvisibleAction implements FlowNodeA
         return whyBlocked;
     }
 
-    public long getWhenStartedOrCanceled() {
-        return whenStartedOrCanceled;
+    public long getWhenStartedOrCancelled() {
+        return whenStartedOrCancelled;
     }
 
     public void cancelTask() {
         this.whyBlocked = null;
-        this.whenStartedOrCanceled = System.currentTimeMillis();
+        this.whenStartedOrCancelled = System.currentTimeMillis();
     }
 
     public boolean isQueued() {
-        return whyBlocked != null && whenStartedOrCanceled == -1;
+        return whyBlocked != null && whenStartedOrCancelled == -1;
     }
 
     public boolean isLaunched() {
         return launched;
     }
 
-    public boolean isCanceled() {
-        return !launched && whyBlocked == null && whenStartedOrCanceled > -1;
+    public boolean isCancelled() {
+        return !launched && whyBlocked == null && whenStartedOrCancelled > -1;
     }
 
     public static boolean isNodeQueued(@Nonnull FlowNode node) {
@@ -92,10 +77,10 @@ public class ExecutorTaskInfoAction extends InvisibleAction implements FlowNodeA
         }
     }
 
-    public static boolean isNodeCanceled(@Nonnull FlowNode node) {
+    public static boolean isNodeCancelled(@Nonnull FlowNode node) {
         ExecutorTaskInfoAction action = node.getAction(ExecutorTaskInfoAction.class);
         if (action != null) {
-            return action.isCanceled();
+            return action.isCancelled();
         } else {
             return false;
         }
