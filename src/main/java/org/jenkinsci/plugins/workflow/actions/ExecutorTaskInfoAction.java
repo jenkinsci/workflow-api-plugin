@@ -73,4 +73,31 @@ public class ExecutorTaskInfoAction extends InvisibleAction implements FlowNodeA
     public boolean isCanceled() {
         return !launched && whyBlocked == null && whenStartedOrCanceled > -1;
     }
+
+    public static boolean isNodeQueued(@Nonnull FlowNode node) {
+        ExecutorTaskInfoAction action = node.getAction(ExecutorTaskInfoAction.class);
+        if (action != null) {
+            return action.isQueued();
+        } else {
+            return false;
+        }
+    }
+
+    public static boolean isNodeLaunched(@Nonnull FlowNode node) {
+        ExecutorTaskInfoAction action = node.getAction(ExecutorTaskInfoAction.class);
+        if (action != null) {
+            return action.isLaunched();
+        } else {
+            return false;
+        }
+    }
+
+    public static boolean isNodeCanceled(@Nonnull FlowNode node) {
+        ExecutorTaskInfoAction action = node.getAction(ExecutorTaskInfoAction.class);
+        if (action != null) {
+            return action.isCanceled();
+        } else {
+            return false;
+        }
+    }
 }
