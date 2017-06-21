@@ -8,9 +8,6 @@ import javax.annotation.Nonnull;
 
 /**
  * Records information for a {@code node} block.
- *
- * TODO: Decide whether this is general enough that it should move to workflow-support alongside
- * {@link org.jenkinsci.plugins.workflow.support.actions.WorkspaceActionImpl}.
  */
 public class ExecutorTaskInfoAction extends InvisibleAction implements FlowNodeAction, PersistentAction {
     private static final long serialVersionUID = 1;
