@@ -134,11 +134,9 @@ public abstract class ArgumentsAction implements PersistentAction {
 
     /**
      * Get the map of arguments supplied to instantiate the {@link Step} run in the {@link FlowNode} given
-     * or null if the arguments were not stored or the FlowNode was not a step.
+     * or empty if the arguments were not stored or the FlowNode was not a step.
      *
-     * Internally
      * @param n FlowNode to fetch Step arguments for (including placeholders for masked values).
-     * @return
      */
     @Nonnull
     public static Map<String,Object> getArguments(@Nonnull FlowNode n) {
