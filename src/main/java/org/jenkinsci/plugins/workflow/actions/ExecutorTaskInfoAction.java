@@ -63,28 +63,26 @@ public class ExecutorTaskInfoAction extends InvisibleAction implements Persisten
 
     public static boolean isNodeQueued(@Nonnull FlowNode node) {
         ExecutorTaskInfoAction action = node.getAction(ExecutorTaskInfoAction.class);
-        if (action != null) {
-            return action.isQueued();
-        } else {
-            return false;
-        }
+        return action != null && action.isQueued();
     }
 
     public static boolean isNodeLaunched(@Nonnull FlowNode node) {
         ExecutorTaskInfoAction action = node.getAction(ExecutorTaskInfoAction.class);
-        if (action != null) {
-            return action.isLaunched();
-        } else {
-            return false;
-        }
+        return action != null && action.isLaunched();
     }
 
     public static boolean isNodeCancelled(@Nonnull FlowNode node) {
         ExecutorTaskInfoAction action = node.getAction(ExecutorTaskInfoAction.class);
-        if (action != null) {
-            return action.isCancelled();
+        return action != null && action.isCancelled();
+    }
+
+    @CheckForNull
+    public static String getWhyBlockedForNode(@Nonnull FlowNode node) {
+        ExecutorTaskInfoAction action = node.getAction(ExecutorTaskInfoAction.class);
+        if (action != null && action.isQueued()) {
+            return action.getWhyBlocked();
         } else {
-            return false;
+            return null;
         }
     }
 }
