@@ -25,20 +25,25 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import com.google.common.primitives.Primitives;
-import org.apache.commons.collections.CollectionUtils;
-import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.graph.StepNode;
-import org.jenkinsci.plugins.workflow.steps.Step;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import hudson.PluginManager;
+import hudson.model.Describable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import org.apache.commons.collections.CollectionUtils;
+import org.jenkinsci.plugins.structs.describable.DescribableModel;
+import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.StepNode;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 /**
  * Stores some or all of the arguments used to create and configure the {@link Step} executed by a {@link FlowNode}.
@@ -48,6 +53,8 @@ import java.util.Set;
  * Important note: these APIs do not provide recursive guarantees that returned datastructures are immutable.
  */
 public abstract class ArgumentsAction implements PersistentAction {
+
+    private static final Logger LOGGER = Logger.getLogger(ArgumentsAction.class.getName());
 
     /** Used as a placeholder marker for {@link Step} arguments not stored for various reasons. */
     public enum NotStoredReason {
@@ -128,17 +135,15 @@ public abstract class ArgumentsAction implements PersistentAction {
         if (args.isEmpty()) {
             return Collections.<String,Object>emptyMap();
         } else {
-            return Collections.unmodifiableMap(getArgumentsInternal());
+            return Collections.unmodifiableMap(args);
         }
     }
 
     /**
      * Get the map of arguments supplied to instantiate the {@link Step} run in the {@link FlowNode} given
-     * or null if the arguments were not stored or the FlowNode was not a step.
+     * or empty if the arguments were not stored or the FlowNode was not a step.
      *
-     * Internally
      * @param n FlowNode to fetch Step arguments for (including placeholders for masked values).
-     * @return
      */
     @Nonnull
     public static Map<String,Object> getArguments(@Nonnull FlowNode n) {
@@ -160,6 +165,7 @@ public abstract class ArgumentsAction implements PersistentAction {
         HashMap<String, Object> filteredArguments = new HashMap<String, Object>();
         for (Map.Entry<String, Object> entry : internalArgs.entrySet()) {
             if (entry.getValue() != null && !(entry.getValue() instanceof NotStoredReason)) {
+                // TODO this is incorrect: value could be a Map/List with some nested entries that are NotStoredReason
                 filteredArguments.put(entry.getKey(), entry.getValue());
             }
         }
@@ -243,6 +249,7 @@ public abstract class ArgumentsAction implements PersistentAction {
             if (ob instanceof NotStoredReason) {
                 return false;
             }
+            // TODO this would need to also check nested Map/List arguments
         }
         return true;
     }
@@ -255,4 +262,47 @@ public abstract class ArgumentsAction implements PersistentAction {
         // Cacheable, but arguments lists will be quite short and this is unlikely to get invoked heavily.
         return checkArgumentsLackPlaceholders(this.getArgumentsInternal());
     }
+
+    /**
+     * Like {@link #getArguments(FlowNode)} but attempting to resolve actual classes.
+     * If you need to reconstruct actual classes of nested objects (for example to pass to {@link PluginManager#whichPlugin}),
+     * it is not trivial to get this information from the form in which they were supplied to {@link DescribableModel#instantiate}.
+     * For example, nested objects (where present and not a {@link NotStoredReason}) might have been
+     * <ul>
+     * <li>an {@link UninstantiatedDescribable}, if given by a symbol
+     * <li>a {@link Map}, if given by {@link DescribableModel#CLAZZ}
+     * <li>a {@link Describable}, if constructed directly (rare)
+     * </ul>
+     * This method will instead attempt to return a normalized tree using {@link UninstantiatedDescribable} in all those cases.
+     * You could use {@link UninstantiatedDescribable#getModel} (where available) and {@link DescribableModel#getType} to access live classes.
+     * Where information is missing, this will just return the best it can.
+     */
+    @Nonnull
+    public static Map<String, ?> getResolvedArguments(@Nonnull FlowNode n) {
+        ArgumentsAction aa = n.getPersistentAction(ArgumentsAction.class);
+        if (aa == null) {
+            return Collections.emptyMap();
+        }
+        Map<String, Object> args = aa.getArgumentsInternal();
+        if (n instanceof StepNode) {
+            StepDescriptor d = ((StepNode) n).getDescriptor();
+            if (d != null) {
+                try {
+                    return resolve(new DescribableModel<>(d.clazz), args).getArguments();
+                } catch (Exception x) { // all sorts of things could go wrong here
+                    LOGGER.log(Level.FINE, "coult not resolve " + args + " for " + d.clazz.getName(), x);
+                    // TODO this does not handle NotStoredReason’s well
+                    // more robust to recursively traverse the tree and use e.g. DescribableModel.resolveClass to populate details
+                    // (without actually attempting to instantiate any of the classes)
+                }
+            }
+        }
+        return args;
+    }
+    // helper method to capture generic type
+    private static <S extends Step> UninstantiatedDescribable resolve(DescribableModel<S> model, Map<String, Object> arguments) throws Exception {
+        return model.uninstantiate2(model.instantiate(arguments));
+    }
+
+
 }
