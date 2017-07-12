@@ -63,22 +63,22 @@ public abstract class TaskInfoAction extends InvisibleAction implements Persiste
      */
     @Nonnull
     public static QueueState getNodeState(@Nonnull FlowNode node) {
-        TaskInfoAction action = node.getAction(TaskInfoAction.class);
-        if (action != null) {
-            if (action.isQueued()) {
-                return QueueState.QUEUED;
-            } else {
-                WorkspaceAction workspaceAction = node.getAction(WorkspaceAction.class);
-                if (workspaceAction != null) {
-                    return QueueState.LAUNCHED;
+        WorkspaceAction workspaceAction = node.getAction(WorkspaceAction.class);
+        if (workspaceAction != null) {
+            return QueueState.LAUNCHED;
+        } else {
+            TaskInfoAction action = node.getAction(TaskInfoAction.class);
+            if (action != null) {
+                if (action.isQueued()) {
+                    return QueueState.QUEUED;
                 } else {
                     // Getting here means we queued a task, but it's not in the queue any more and we
                     // never actually launched an executable, so implicitly it's cancelled.
                     return QueueState.CANCELLED;
                 }
+            } else {
+                return QueueState.UNKNOWN;
             }
-        } else {
-            return QueueState.UNKNOWN;
         }
     }
 
