@@ -19,17 +19,7 @@ public abstract class TaskInfoAction extends InvisibleAction implements Persiste
         LAUNCHED,
         UNKNOWN
     }
-
-    /**
-     * Used to identify the {@link org.jenkinsci.plugins.workflow.steps.StepContext} in the task, so that
-     * its status can be identified.
-     */
-    protected int taskContextHashcode;
-
-    public TaskInfoAction(int taskContextHashcode) {
-        this.taskContextHashcode = taskContextHashcode;
-    }
-
+    
     /**
      * Gets the {@link Queue.Item} for this task, if it exists.
      *
@@ -63,11 +53,11 @@ public abstract class TaskInfoAction extends InvisibleAction implements Persiste
      */
     @Nonnull
     public static QueueState getNodeState(@Nonnull FlowNode node) {
-        WorkspaceAction workspaceAction = node.getAction(WorkspaceAction.class);
+        WorkspaceAction workspaceAction = node.getPersistentAction(WorkspaceAction.class);
         if (workspaceAction != null) {
             return QueueState.LAUNCHED;
         } else {
-            TaskInfoAction action = node.getAction(TaskInfoAction.class);
+            TaskInfoAction action = node.getPersistentAction(TaskInfoAction.class);
             if (action != null) {
                 if (action.isQueued()) {
                     return QueueState.QUEUED;
@@ -84,7 +74,7 @@ public abstract class TaskInfoAction extends InvisibleAction implements Persiste
 
     @CheckForNull
     public static String getWhyBlockedForNode(@Nonnull FlowNode node) {
-        TaskInfoAction action = node.getAction(TaskInfoAction.class);
+        TaskInfoAction action = node.getPersistentAction(TaskInfoAction.class);
         if (action != null) {
             return action.getWhyBlocked();
         } else {
