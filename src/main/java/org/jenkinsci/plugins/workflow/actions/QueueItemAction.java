@@ -14,12 +14,31 @@ public abstract class QueueItemAction extends InvisibleAction implements Persist
     private static final long serialVersionUID = 1;
 
     /**
-     * Possible queue stats for the item associated with this {@link FlowNode}.
+     * Possible queue states for the item associated with this {@link FlowNode}.
      */
     public enum QueueState {
+        /**
+         * The {@link Queue.Item} is currently in the queue.
+         */
         QUEUED,
+
+        /**
+         * The {@link Queue.Item} has left the queue but no {@link WorkspaceAction} is present on the
+         * {@link FlowNode}.
+         */
         CANCELLED,
+
+        /**
+         * The {@link Queue.Item} has actually launched, meaning it has left the queue and there is a
+         * {@link WorkspaceAction} present on the {@link FlowNode}.
+         */
         LAUNCHED,
+
+        /**
+         * The {@link FlowNode} has neither a {@link QueueItemAction} nor a {@link WorkspaceAction}, so its
+         * queue status cannot be determined. This may be the case if the {@link FlowNode} is not actually
+         * for a node block.
+         */
         UNKNOWN
     }
     
