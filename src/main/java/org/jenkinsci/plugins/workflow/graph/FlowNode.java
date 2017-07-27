@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.graph;
 
 import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
@@ -35,8 +36,12 @@ import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import static java.util.logging.Level.*;
@@ -47,6 +52,7 @@ import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -111,10 +117,49 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * It will also be false for something that has finished but is pending child node creation,
      * such as a completed fork branch which is waiting for the join node to be created.
      * <p>This can only go from true to false and is a shortcut for {@link FlowExecution#isCurrentHead}.
+     * @see #isActive
      */
     @Exported
     public final boolean isRunning() {
         return getExecution().isCurrentHead(this);
+    }
+
+    private static final Map<FlowExecution, Set<BlockStartNode>> unclosedBlocks = new WeakHashMap<>();
+    @Restricted(DoNotUse.class)
+    @Extension public static class BlockListener implements GraphListener.Synchronous {
+        @Override public void onNewHead(FlowNode node) {
+            if (node instanceof BlockStartNode || node instanceof BlockEndNode) {
+                FlowExecution exec = node.getExecution();
+                synchronized (unclosedBlocks) {
+                    Set<BlockStartNode> blocks = unclosedBlocks.get(exec);
+                    if (blocks == null) {
+                        unclosedBlocks.put(exec, blocks = new HashSet<>());
+                    }
+                    if (node instanceof BlockStartNode) {
+                        blocks.add((BlockStartNode) node);
+                    } else {
+                        blocks.remove(((BlockEndNode) node).getStartNode());
+                    }
+                }
+            }
+        }
+    }
+    /**
+     * Checks whether a node is still part of the active part of the graph.
+     * Unlike {@link #isRunning}, this behaves intuitively for a {@link BlockStartNode}:
+     * it will be considered active until the {@link BlockEndNode} is added.
+     */
+    public final boolean isActive() {
+        if (this instanceof FlowEndNode) { // cf. JENKINS-26139
+            return false;
+        } else if (this instanceof BlockStartNode) { // cf. JENKINS-38223
+            synchronized (unclosedBlocks) {
+                Set<BlockStartNode> blocks = unclosedBlocks.get(exec);
+                return blocks != null && blocks.contains((BlockStartNode) this);
+            }
+        } else {
+            return isRunning();
+        }
     }
 
     /**
