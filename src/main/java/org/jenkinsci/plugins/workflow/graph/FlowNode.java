@@ -50,7 +50,6 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
@@ -275,7 +274,6 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * @return First nontransient action or null if not found.
      */
     @CheckForNull
-    @Restricted(NoExternalUse.class)  // Limit use to workflow-api packages until we have a case where we need the performance badly.
     public final <T extends Action> T getPersistentAction(@Nonnull Class<T> type) {
         loadActions();
         for (Action a : actions) {
