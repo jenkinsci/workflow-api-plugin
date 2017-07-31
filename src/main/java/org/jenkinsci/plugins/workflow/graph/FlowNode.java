@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
@@ -44,7 +45,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
-import static java.util.logging.Level.*;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -53,6 +53,9 @@ import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
+import org.jenkinsci.plugins.workflow.graphanalysis.AbstractFlowScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -66,12 +69,11 @@ import org.kohsuke.stapler.export.ExportedBean;
 @ExportedBean
 public abstract class FlowNode extends Actionable implements Saveable {
     private transient List<FlowNode> parents;
-    private List<String> parentIds;
+    private final List<String> parentIds;
 
     private String id;
 
-    // this is a copy-on-write array so synchronization isn't needed between reader & writer.
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings("IS2_INCONSISTENT_SYNC")
+    @SuppressFBWarnings(value="IS2_INCONSISTENT_SYNC", justification="this is a copy-on-write array so synchronization isn't needed between reader & writer")
     private transient CopyOnWriteArrayList<Action> actions = new CopyOnWriteArrayList<Action>();
 
     private transient final FlowExecution exec;
@@ -91,7 +93,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     private List<String> ids() {
-        List<String> ids = new ArrayList<String>(parents.size());
+        List<String> ids = new ArrayList<>(parents.size());
         for (FlowNode n : parents) {
             ids.add(n.id);
         }
@@ -155,7 +157,18 @@ public abstract class FlowNode extends Actionable implements Saveable {
         } else if (this instanceof BlockStartNode) { // cf. JENKINS-38223
             synchronized (unclosedBlocks) {
                 Set<BlockStartNode> blocks = unclosedBlocks.get(exec);
-                return blocks != null && blocks.contains((BlockStartNode) this);
+                if (blocks != null) {
+                    return blocks.contains((BlockStartNode) this);
+                } else {
+                    // Need workflow-cps 2.33+ to use the optimization.
+                    LOGGER.log(Level.FINE, "falling back to old isActive implementation for {0}", this);
+                    if (isRunning()) {
+                        return true;
+                    }
+                    List<FlowNode> headNodes = exec.getCurrentHeads();
+                    AbstractFlowScanner scanner = (headNodes.size() > 1) ? new DepthFirstScanner() : new LinearBlockHoppingScanner();
+                    return scanner.findFirstMatch(headNodes, Predicates.equalTo(this)) != null;
+                }
             }
         } else {
             return isRunning();
@@ -187,7 +200,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Nonnull
     private List<FlowNode> loadParents(List<String> parentIds) {
-        List<FlowNode> _parents = new ArrayList<FlowNode>(parentIds.size());
+        List<FlowNode> _parents = new ArrayList<>(parentIds.size());
         for (String parentId : parentIds) {
             try {
                 _parents.add(exec.getNode(parentId));
@@ -202,7 +215,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Exported(name="parents")
     @Nonnull
     public List<String> getParentIds() {
-        List<String> ids = new ArrayList<String>(2);
+        List<String> ids = new ArrayList<>(2);
         for (FlowNode parent : getParents()) {
             ids.add(parent.getId());
         }
@@ -224,11 +237,13 @@ public abstract class FlowNode extends Actionable implements Saveable {
     /**
      * Reference from the parent {@link SearchItem} is through {@link FlowExecution#getNode(String)}
      */
+    @Override
     public final String getSearchUrl() {
         return getId();
     }
 
     @Exported
+    @Override
     public String getDisplayName() {
         LabelAction a = getPersistentAction(LabelAction.class);
         if (a!=null)    return a.getDisplayName();
@@ -308,7 +323,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * This method provides such an opportunity for subtypes.
      */
     protected synchronized void setActions(List<Action> actions) {
-            this.actions = new CopyOnWriteArrayList<Action>(actions);
+            this.actions = new CopyOnWriteArrayList<>(actions);
     }
 
     /**
@@ -359,14 +374,15 @@ public abstract class FlowNode extends Actionable implements Saveable {
             return;
         }
         try {
-            actions = new CopyOnWriteArrayList<Action>(exec.loadActions(this));
+            actions = new CopyOnWriteArrayList<>(exec.loadActions(this));
         } catch (IOException e) {
-            LOGGER.log(WARNING, "Failed to load actions for FlowNode id=" + id, e);
-            actions = new CopyOnWriteArrayList<Action>();
+            LOGGER.log(Level.WARNING, "Failed to load actions for FlowNode id=" + id, e);
+            actions = new CopyOnWriteArrayList<>();
         }
     }
 
     @Exported
+    @SuppressWarnings("deprecation") // of override
     @Override
     @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "CopyOnWrite ArrayList, and field load & modification is synchronized")
     public List<Action> getActions() {
@@ -421,6 +437,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * Explicitly save all the actions in this {@link FlowNode}.
      * Useful when an existing {@link Action} gets updated.
      */
+    @Override
     public void save() throws IOException {
         exec.saveActions(this, actions);
     }
@@ -430,7 +447,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         try {
             save();
         } catch (IOException e) {
-            LOGGER.log(WARNING, "failed to save actions for FlowNode id=" + this.id, e);
+            LOGGER.log(Level.WARNING, "failed to save actions for FlowNode id=" + this.id, e);
         }
     }
 
