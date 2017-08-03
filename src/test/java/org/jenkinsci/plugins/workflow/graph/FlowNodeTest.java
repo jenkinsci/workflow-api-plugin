@@ -59,8 +59,10 @@ public class FlowNodeTest {
                     "  semaphore 'post-inner'\n" +
                     "}\n" +
                     "semaphore 'post-outer'\n" +
-                    "stage('other') {\n" +
-                    "  semaphore 'other'\n" +
+                    "parallel a: {\n" +
+                    "  semaphore 'branch-a'\n" +
+                    "}, b: {\n" +
+                    "  semaphore 'branch-b'\n" +
                     "}\n" +
                     "semaphore 'last'", true));
                 WorkflowRun b = p.scheduleBuild2(0).waitForStart();
@@ -84,14 +86,17 @@ public class FlowNodeTest {
                 SemaphoreStep.waitForStart("post-outer/1", b);
                 assertActiveSteps(b, "Start of Pipeline", "semaphore: post-outer");
                 SemaphoreStep.success("post-outer/1", null);
-                SemaphoreStep.waitForStart("other/1", b);
+                SemaphoreStep.waitForStart("branch-a/1", b);
+                SemaphoreStep.waitForStart("branch-b/1", b);
             }
         });
         rr.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
                 WorkflowRun b = rr.j.jenkins.getItemByFullName("p", WorkflowJob.class).getLastBuild();
-                assertActiveSteps(b, "Start of Pipeline", "stage: other", "{ (other)", "semaphore: other");
-                SemaphoreStep.success("other/1", null);
+                // weird order caused by FlowGraphWalker DFS
+                assertActiveSteps(b, "{ (Branch: a)", "semaphore: branch-a", "Start of Pipeline", "parallel", "{ (Branch: b)", "semaphore: branch-b");
+                SemaphoreStep.success("branch-a/1", null);
+                SemaphoreStep.success("branch-b/1", null);
                 SemaphoreStep.waitForStart("last/1", b);
                 assertActiveSteps(b, "Start of Pipeline", "semaphore: last");
                 SemaphoreStep.success("last/1", null);

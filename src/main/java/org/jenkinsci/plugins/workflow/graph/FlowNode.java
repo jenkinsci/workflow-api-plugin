@@ -47,8 +47,6 @@ import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
-import org.jenkinsci.plugins.workflow.graphanalysis.AbstractFlowScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
@@ -128,15 +126,19 @@ public abstract class FlowNode extends Actionable implements Saveable {
     public final boolean isActive() {
         if (this instanceof FlowEndNode) { // cf. JENKINS-26139
             return false;
-        } else if (exec.isCurrentHead(this)) {
-            return true;
-        } else if (this instanceof BlockStartNode) {
-            List<FlowNode> headNodes = exec.getCurrentHeads();
-            AbstractFlowScanner scanner = (headNodes.size() > 1) ? new DepthFirstScanner() : new LinearBlockHoppingScanner();
-            return scanner.findFirstMatch(headNodes, Predicates.equalTo(this)) != null;
-        } else { // atom or block end node
-            return false;
         }
+        List<FlowNode> currentHeads = exec.getCurrentHeads();
+        if (currentHeads.contains(this)) {
+            return true;
+        }
+        if (this instanceof BlockStartNode) {
+            for (FlowNode headNode : currentHeads) {
+                if (new LinearBlockHoppingScanner().findFirstMatch(headNode, Predicates.equalTo(this)) != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
