@@ -68,6 +68,11 @@ public class FlowNodeTest {
                 assertActiveSteps(b, "Start of Pipeline", "semaphore: pre-outer");
                 SemaphoreStep.success("pre-outer/1", null);
                 SemaphoreStep.waitForStart("pre-inner/1", b);
+            }
+        });
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowRun b = rr.j.jenkins.getItemByFullName("p", WorkflowJob.class).getLastBuild();
                 assertActiveSteps(b, "Start of Pipeline", "stage: outer", "{ (outer)", "semaphore: pre-inner");
                 SemaphoreStep.success("pre-inner/1", null);
                 SemaphoreStep.waitForStart("inner/1", b);
@@ -80,6 +85,11 @@ public class FlowNodeTest {
                 assertActiveSteps(b, "Start of Pipeline", "semaphore: post-outer");
                 SemaphoreStep.success("post-outer/1", null);
                 SemaphoreStep.waitForStart("other/1", b);
+            }
+        });
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowRun b = rr.j.jenkins.getItemByFullName("p", WorkflowJob.class).getLastBuild();
                 assertActiveSteps(b, "Start of Pipeline", "stage: other", "{ (other)", "semaphore: other");
                 SemaphoreStep.success("other/1", null);
                 SemaphoreStep.waitForStart("last/1", b);
@@ -87,21 +97,20 @@ public class FlowNodeTest {
                 SemaphoreStep.success("last/1", null);
                 rr.j.waitForCompletion(b);
                 assertActiveSteps(b);
-                // TODO add some restarts in here
-            }
-            void assertActiveSteps(WorkflowRun b, String... expected) {
-                List<String> actual = new ArrayList<>();
-                for (FlowNode n : new FlowGraphWalker(b.getExecution())) {
-                    if (n.isActive()) {
-                        String args = ArgumentsAction.getStepArgumentsAsString(n);
-                        String name = n.getDisplayFunctionName();
-                        actual.add(args != null ? name + ": " + args : name);
-                    }
-                }
-                Collections.reverse(actual); // more readable
-                assertEquals(Arrays.asList(expected), actual);
             }
         });
+    }
+    private static void assertActiveSteps(WorkflowRun b, String... expected) {
+        List<String> actual = new ArrayList<>();
+        for (FlowNode n : new FlowGraphWalker(b.getExecution())) {
+            if (n.isActive()) {
+                String args = ArgumentsAction.getStepArgumentsAsString(n);
+                String name = n.getDisplayFunctionName();
+                actual.add(args != null ? name + ": " + args : name);
+            }
+        }
+        Collections.reverse(actual); // more readable
+        assertEquals(Arrays.asList(expected), actual);
     }
 
 }

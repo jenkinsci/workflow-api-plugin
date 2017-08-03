@@ -27,7 +27,6 @@ package org.jenkinsci.plugins.workflow.graph;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
@@ -37,12 +36,8 @@ import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -52,7 +47,6 @@ import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
-import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graphanalysis.AbstractFlowScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
@@ -125,26 +119,6 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return getExecution().isCurrentHead(this);
     }
 
-    private static final Map<FlowExecution, Set<BlockStartNode>> unclosedBlocks = new WeakHashMap<>();
-    @Restricted(DoNotUse.class)
-    @Extension public static class BlockListener implements GraphListener.Synchronous {
-        @Override public void onNewHead(FlowNode node) {
-            if (node instanceof BlockStartNode || node instanceof BlockEndNode) {
-                FlowExecution exec = node.getExecution();
-                synchronized (unclosedBlocks) {
-                    Set<BlockStartNode> blocks = unclosedBlocks.get(exec);
-                    if (blocks == null) {
-                        unclosedBlocks.put(exec, blocks = new HashSet<>());
-                    }
-                    if (node instanceof BlockStartNode) {
-                        blocks.add((BlockStartNode) node);
-                    } else {
-                        blocks.remove(((BlockEndNode) node).getStartNode());
-                    }
-                }
-            }
-        }
-    }
     /**
      * Checks whether a node is still part of the active part of the graph.
      * Unlike {@link #isRunning}, this behaves intuitively for a {@link BlockStartNode}:
@@ -154,27 +128,14 @@ public abstract class FlowNode extends Actionable implements Saveable {
     public final boolean isActive() {
         if (this instanceof FlowEndNode) { // cf. JENKINS-26139
             return false;
-        } else if (this instanceof FlowStartNode) {
-            // TODO currently workflow-cps fails to notify GraphListener on this
-            return !exec.isComplete();
-        } else if (this instanceof BlockStartNode) { // cf. JENKINS-38223
-            synchronized (unclosedBlocks) {
-                Set<BlockStartNode> blocks = unclosedBlocks.get(exec);
-                if (blocks != null) {
-                    return blocks.contains((BlockStartNode) this);
-                } else {
-                    // Need workflow-cps 2.33+ to use the optimization.
-                    LOGGER.log(Level.FINE, "falling back to old isActive implementation for {0}", this);
-                    if (getExecution().isCurrentHead(this)) {
-                        return true;
-                    }
-                    List<FlowNode> headNodes = exec.getCurrentHeads();
-                    AbstractFlowScanner scanner = (headNodes.size() > 1) ? new DepthFirstScanner() : new LinearBlockHoppingScanner();
-                    return scanner.findFirstMatch(headNodes, Predicates.equalTo(this)) != null;
-                }
-            }
-        } else {
-            return getExecution().isCurrentHead(this);
+        } else if (exec.isCurrentHead(this)) {
+            return true;
+        } else if (this instanceof BlockStartNode) {
+            List<FlowNode> headNodes = exec.getCurrentHeads();
+            AbstractFlowScanner scanner = (headNodes.size() > 1) ? new DepthFirstScanner() : new LinearBlockHoppingScanner();
+            return scanner.findFirstMatch(headNodes, Predicates.equalTo(this)) != null;
+        } else { // atom or block end node
+            return false;
         }
     }
 
