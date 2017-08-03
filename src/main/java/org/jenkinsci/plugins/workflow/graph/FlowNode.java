@@ -154,6 +154,9 @@ public abstract class FlowNode extends Actionable implements Saveable {
     public final boolean isActive() {
         if (this instanceof FlowEndNode) { // cf. JENKINS-26139
             return false;
+        } else if (this instanceof FlowStartNode) {
+            // TODO currently workflow-cps fails to notify GraphListener on this
+            return !exec.isComplete();
         } else if (this instanceof BlockStartNode) { // cf. JENKINS-38223
             synchronized (unclosedBlocks) {
                 Set<BlockStartNode> blocks = unclosedBlocks.get(exec);
