@@ -117,10 +117,10 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * <p>It will be false for a node which still has active children, like a step with a running body.
      * It will also be false for something that has finished but is pending child node creation,
      * such as a completed fork branch which is waiting for the join node to be created.
-     * <p>This can only go from true to false and is a shortcut for {@link FlowExecution#isCurrentHead}.
-     * @see #isActive
+     * <p>This can only go from true to false.
+     * @deprecated Usually {@link #isActive} is what you want. If you really wanted the original behavior, use {@link FlowExecution#isCurrentHead}.
      */
-    @Exported
+    @Deprecated
     public final boolean isRunning() {
         return getExecution().isCurrentHead(this);
     }
@@ -150,6 +150,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * Unlike {@link #isRunning}, this behaves intuitively for a {@link BlockStartNode}:
      * it will be considered active until the {@link BlockEndNode} is added.
      */
+    @Exported(name="running")
     public final boolean isActive() {
         if (this instanceof FlowEndNode) { // cf. JENKINS-26139
             return false;
@@ -161,7 +162,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
                 } else {
                     // Need workflow-cps 2.33+ to use the optimization.
                     LOGGER.log(Level.FINE, "falling back to old isActive implementation for {0}", this);
-                    if (isRunning()) {
+                    if (getExecution().isCurrentHead(this)) {
                         return true;
                     }
                     List<FlowNode> headNodes = exec.getCurrentHeads();
@@ -170,7 +171,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
                 }
             }
         } else {
-            return isRunning();
+            return getExecution().isCurrentHead(this);
         }
     }
 
@@ -272,8 +273,9 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Exported
     public BallColor getIconColor() {
         BallColor c = getError()!=null ? BallColor.RED : BallColor.BLUE;
-        // TODO this should probably also be _anime in case this is a step node with a body and the body is still running (try FlowGraphTable for example)
-        if (isRunning())        c = c.anime();
+        if (isActive()) {
+            c = c.anime();
+        }
         return c;
     }
 
