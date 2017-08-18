@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 import org.jenkinsci.plugins.workflow.actions.ArgumentsAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -38,11 +39,13 @@ import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 
 public class FlowNodeTest {
 
     @Rule public RestartableJenkinsRule rr = new RestartableJenkinsRule();
+    @Rule public LoggerRule logging = new LoggerRule().record(FlowNode.class, Level.FINER);
 
     @Issue("JENKINS-38223")
     @Test public void isActive() {
