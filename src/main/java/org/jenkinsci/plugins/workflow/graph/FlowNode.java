@@ -222,7 +222,9 @@ public abstract class FlowNode extends Actionable implements Saveable {
                 if (n instanceof BlockEndNode) {
                     startNodesAreClosed.put(((BlockEndNode) n).getStartNode().getId(), true);
                 } else if (n instanceof BlockStartNode) {
-                    startNodesAreClosed.putIfAbsent(n.getId(), false);
+                    if (!startNodesAreClosed.containsKey(n.getId())) {
+                        startNodesAreClosed.put(n.getId(), false);
+                    }
                 }
             }
         }
