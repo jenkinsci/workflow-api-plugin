@@ -203,7 +203,8 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Extension public static final class FlowL extends FlowExecutionListener {
         final Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow = new HashMap<>();
         static Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow() {
-            return ExtensionList.lookup(FlowExecutionListener.class).get(FlowL.class).startNodesAreClosedByFlow;
+            FlowL flowL = ExtensionList.lookup(FlowExecutionListener.class).get(FlowL.class);
+            return flowL != null ? flowL.startNodesAreClosedByFlow : /* ? */ new HashMap<FlowExecutionOwner, Map<String, Boolean>>();
         }
         @Override public void onRunning(FlowExecution execution) {
             LOGGER.finer("FlowExecutionListener working");
