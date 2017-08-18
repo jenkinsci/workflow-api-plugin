@@ -54,6 +54,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionListener;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
+import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
@@ -145,7 +146,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
                     LOGGER.log(Level.FINER, "quick closed={0}", closed);
                     return !closed;
                 } else {
-                    LOGGER.log(Level.FINER, "no record of {0} in {1}, either GraphListener not working or block started prior to Jenkins restart", new Object[] {this, exec});
+                    LOGGER.log(Level.FINER, "no record of {0} in {1}, presumably GraphListener not working", new Object[] {this, exec});
                 }
             } else {
                 LOGGER.log(Level.FINER, "no record of {0}, presumably FlowExecutionListener not working", exec);
@@ -161,7 +162,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
             return false;
         }
         if (this instanceof BlockStartNode) {
-            // Fallback (old workflow-job, old workflow-cps, block started prior to Jenkins restart):
+            // Fallback (old workflow-job, old workflow-cps):
             LOGGER.log(Level.FINER, "slow currentHeads={0}", currentHeads);
             for (FlowNode headNode : currentHeads) {
                 if (new LinearBlockHoppingScanner().findFirstMatch(headNode, Predicates.equalTo(this)) != null) {
@@ -212,9 +213,18 @@ public abstract class FlowNode extends Actionable implements Saveable {
             startNodesAreClosedByFlow.put(execution.getOwner(), new HashMap<String, Boolean>());
         }
         @Override public void onResumed(FlowExecution execution) {
-            // Will not mention blocks started in previous session, but at least can cache newly started blocks.
             assert !startNodesAreClosedByFlow.containsKey(execution.getOwner());
-            startNodesAreClosedByFlow.put(execution.getOwner(), new HashMap<String, Boolean>());
+            Map<String, Boolean> startNodesAreClosed = new HashMap<String, Boolean>();
+            startNodesAreClosedByFlow.put(execution.getOwner(), startNodesAreClosed);
+            DepthFirstScanner dfs = new DepthFirstScanner();
+            dfs.setup(execution.getCurrentHeads());
+            for (FlowNode n : dfs) {
+                if (n instanceof BlockEndNode) {
+                    startNodesAreClosed.put(((BlockEndNode) n).getStartNode().getId(), true);
+                } else if (n instanceof BlockStartNode) {
+                    startNodesAreClosed.putIfAbsent(n.getId(), false);
+                }
+            }
         }
         @Override public void onCompleted(FlowExecution execution) {
             assert startNodesAreClosedByFlow.containsKey(execution.getOwner());
