@@ -149,7 +149,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
                     LOGGER.log(Level.FINER, "no record of {0} in {1}, presumably GraphListener not working", new Object[] {this, exec});
                 }
             } else {
-                LOGGER.log(Level.FINER, "no record of {0}, presumably FlowExecutionListener not working", exec);
+                LOGGER.log(Level.FINER, "no record of {0}, either FlowExecutionListener not working or it is already complete", exec);
             }
         }
         List<FlowNode> currentHeads = exec.getCurrentHeads();
