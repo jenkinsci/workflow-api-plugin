@@ -151,7 +151,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
             } else {
                 LOGGER.log(Level.FINER, "no record of {0}, either FlowExecutionListener not working or it is already complete", exec);
             }
-        }
+        } // atom or end node, or fall through to slow mode for start node
         List<FlowNode> currentHeads = exec.getCurrentHeads();
         if (currentHeads.contains(this)) {
             LOGGER.log(Level.FINER, "{0} is a current head", this);
@@ -192,12 +192,14 @@ public abstract class FlowNode extends Actionable implements Saveable {
                 if (startNodesAreClosed != null) {
                     if (node instanceof BlockStartNode) {
                         assert !startNodesAreClosed.containsKey(node.getId());
+                        // Starting a block; record that it is open.
                         startNodesAreClosed.put(node.getId(), false);
                     } else {
+                        // Closed a block; find the matching start node and record that it is now closed.
                         startNodesAreClosed.put(((BlockEndNode) node).getStartNode().getId(), true);
                     }
-                }
-            }
+                } // else we must have an old workflow-job
+            } // do not need to pay attention to atom nodes: either they are current heads, thus active, or they are not, thus inactive
         }
     }
     @Restricted(DoNotUse.class)
@@ -205,7 +207,10 @@ public abstract class FlowNode extends Actionable implements Saveable {
         final Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow = new HashMap<>();
         static Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow() {
             FlowL flowL = ExtensionList.lookup(FlowExecutionListener.class).get(FlowL.class);
-            return flowL != null ? flowL.startNodesAreClosedByFlow : /* ? */ new HashMap<FlowExecutionOwner, Map<String, Boolean>>();
+            if (flowL == null) { // should not happen unless Jenkins is busted
+                throw new IllegalStateException("missing FlowNode.FlowL extension");
+            }
+            return flowL.startNodesAreClosedByFlow;
         }
         @Override public void onRunning(FlowExecution execution) {
             LOGGER.finer("FlowExecutionListener working");
@@ -216,13 +221,15 @@ public abstract class FlowNode extends Actionable implements Saveable {
             assert !startNodesAreClosedByFlow.containsKey(execution.getOwner());
             Map<String, Boolean> startNodesAreClosed = new HashMap<String, Boolean>();
             startNodesAreClosedByFlow.put(execution.getOwner(), startNodesAreClosed);
+            // To handle start nodes encountered in a prior Jenkins session, try to recreate the cache to date:
             DepthFirstScanner dfs = new DepthFirstScanner();
             dfs.setup(execution.getCurrentHeads());
-            for (FlowNode n : dfs) {
+            for (FlowNode n : dfs) { // end nodes first, later the start nodes
                 if (n instanceof BlockEndNode) {
                     startNodesAreClosed.put(((BlockEndNode) n).getStartNode().getId(), true);
                 } else if (n instanceof BlockStartNode) {
                     if (!startNodesAreClosed.containsKey(n.getId())) {
+                        // If we have not encountered the BlockEndNode, it remains open.
                         startNodesAreClosed.put(n.getId(), false);
                     }
                 }
@@ -230,6 +237,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         }
         @Override public void onCompleted(FlowExecution execution) {
             assert startNodesAreClosedByFlow.containsKey(execution.getOwner());
+            // After a build finishes, we do not need the cache any more, since we do the equivalent of FlowExecution.isComplete relatively quickly:
             startNodesAreClosedByFlow.remove(execution.getOwner());
         }
     }
