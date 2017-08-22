@@ -24,8 +24,11 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
@@ -35,11 +38,12 @@ import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
-import static java.util.logging.Level.*;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -47,6 +51,11 @@ import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionListener;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
+import org.jenkinsci.plugins.workflow.flow.GraphListener;
+import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -59,12 +68,11 @@ import org.kohsuke.stapler.export.ExportedBean;
 @ExportedBean
 public abstract class FlowNode extends Actionable implements Saveable {
     private transient List<FlowNode> parents;
-    private List<String> parentIds;
+    private final List<String> parentIds;
 
     private String id;
 
-    // this is a copy-on-write array so synchronization isn't needed between reader & writer.
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings("IS2_INCONSISTENT_SYNC")
+    @SuppressFBWarnings(value="IS2_INCONSISTENT_SYNC", justification="this is a copy-on-write array so synchronization isn't needed between reader & writer")
     private transient CopyOnWriteArrayList<Action> actions = new CopyOnWriteArrayList<Action>();
 
     private transient final FlowExecution exec;
@@ -84,7 +92,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     private List<String> ids() {
-        List<String> ids = new ArrayList<String>(parents.size());
+        List<String> ids = new ArrayList<>(parents.size());
         for (FlowNode n : parents) {
             ids.add(n.id);
         }
@@ -109,11 +117,129 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * <p>It will be false for a node which still has active children, like a step with a running body.
      * It will also be false for something that has finished but is pending child node creation,
      * such as a completed fork branch which is waiting for the join node to be created.
-     * <p>This can only go from true to false and is a shortcut for {@link FlowExecution#isCurrentHead}.
+     * <p>This can only go from true to false.
+     * @deprecated Usually {@link #isActive} is what you want. If you really wanted the original behavior, use {@link FlowExecution#isCurrentHead}.
      */
-    @Exported
+    @Deprecated
     public final boolean isRunning() {
         return getExecution().isCurrentHead(this);
+    }
+
+    /**
+     * Checks whether a node is still part of the active part of the graph.
+     * Unlike {@link #isRunning}, this behaves intuitively for a {@link BlockStartNode}:
+     * it will be considered active until the {@link BlockEndNode} is added.
+     */
+    @Exported(name="running")
+    public final boolean isActive() {
+        if (this instanceof FlowEndNode) { // cf. JENKINS-26139
+            LOGGER.finer("shortcut: FlowEndNode is never active");
+            return false;
+        }
+        if (this instanceof BlockStartNode) {
+            Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow = FlowL.startNodesAreClosedByFlow();
+            LOGGER.log(Level.FINER, "for {0}, startNodesAreClosedByFlow={1}", new Object[] {this, startNodesAreClosedByFlow});
+            Map<String, Boolean> startNodesAreClosed = startNodesAreClosedByFlow.get(exec.getOwner());
+            if (startNodesAreClosed != null) {
+                Boolean closed = startNodesAreClosed.get(id);
+                if (closed != null) { // quick version
+                    LOGGER.log(Level.FINER, "quick closed={0}", closed);
+                    return !closed;
+                } else {
+                    LOGGER.log(Level.FINER, "no record of {0} in {1}, presumably GraphListener not working", new Object[] {this, exec});
+                }
+            } else {
+                LOGGER.log(Level.FINER, "no record of {0}, either FlowExecutionListener not working or it is already complete", exec);
+            }
+        } // atom or end node, or fall through to slow mode for start node
+        List<FlowNode> currentHeads = exec.getCurrentHeads();
+        if (currentHeads.contains(this)) {
+            LOGGER.log(Level.FINER, "{0} is a current head", this);
+            return true;
+        }
+        if (currentHeads.size() == 1 && currentHeads.get(0) instanceof FlowEndNode) { // i.e., exec.isComplete()
+            LOGGER.log(Level.FINER, "{0} is complete", exec);
+            return false;
+        }
+        if (this instanceof BlockStartNode) {
+            // Fallback (old workflow-job, old workflow-cps):
+            LOGGER.log(Level.FINER, "slow currentHeads={0}", currentHeads);
+            for (FlowNode headNode : currentHeads) {
+                if (new LinearBlockHoppingScanner().findFirstMatch(headNode, Predicates.equalTo(this)) != null) {
+                    LOGGER.finer("slow match");
+                    return true;
+                }
+            }
+            LOGGER.finer("slow no match");
+            return false;
+        }
+        LOGGER.log(Level.FINER, "{0} is not a current head nor a start node", this);
+        return false;
+    }
+    /**
+     * Cache of known block start node statuses.
+     * Keys are running executions ~ builds.
+     * Values are maps from {@link BlockStartNode#getId} to whether the corresponding {@link BlockEndNode} has been encountered.
+     * For old {@code workflow-job}, the top-level entries will be missing;
+     * for old {@code workflow-cps}, the second-level entries will be missing.
+     */
+    @Restricted(DoNotUse.class)
+    @Extension public static final class GraphL implements GraphListener.Synchronous {
+        @Override public void onNewHead(FlowNode node) {
+            LOGGER.finer("GraphListener working");
+            if (node instanceof BlockStartNode || node instanceof BlockEndNode) {
+                Map<String, Boolean> startNodesAreClosed = FlowL.startNodesAreClosedByFlow().get(node.getExecution().getOwner());
+                if (startNodesAreClosed != null) {
+                    if (node instanceof BlockStartNode) {
+                        assert !startNodesAreClosed.containsKey(node.getId());
+                        // Starting a block; record that it is open.
+                        startNodesAreClosed.put(node.getId(), false);
+                    } else {
+                        // Closed a block; find the matching start node and record that it is now closed.
+                        startNodesAreClosed.put(((BlockEndNode) node).getStartNode().getId(), true);
+                    }
+                } // else we must have an old workflow-job
+            } // do not need to pay attention to atom nodes: either they are current heads, thus active, or they are not, thus inactive
+        }
+    }
+    @Restricted(DoNotUse.class)
+    @Extension public static final class FlowL extends FlowExecutionListener {
+        final Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow = new HashMap<>();
+        static Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow() {
+            FlowL flowL = ExtensionList.lookup(FlowExecutionListener.class).get(FlowL.class);
+            if (flowL == null) { // should not happen unless Jenkins is busted
+                throw new IllegalStateException("missing FlowNode.FlowL extension");
+            }
+            return flowL.startNodesAreClosedByFlow;
+        }
+        @Override public void onRunning(FlowExecution execution) {
+            LOGGER.finer("FlowExecutionListener working");
+            assert !startNodesAreClosedByFlow.containsKey(execution.getOwner());
+            startNodesAreClosedByFlow.put(execution.getOwner(), new HashMap<String, Boolean>());
+        }
+        @Override public void onResumed(FlowExecution execution) {
+            assert !startNodesAreClosedByFlow.containsKey(execution.getOwner());
+            Map<String, Boolean> startNodesAreClosed = new HashMap<String, Boolean>();
+            startNodesAreClosedByFlow.put(execution.getOwner(), startNodesAreClosed);
+            // To handle start nodes encountered in a prior Jenkins session, try to recreate the cache to date:
+            DepthFirstScanner dfs = new DepthFirstScanner();
+            dfs.setup(execution.getCurrentHeads());
+            for (FlowNode n : dfs) { // end nodes first, later the start nodes
+                if (n instanceof BlockEndNode) {
+                    startNodesAreClosed.put(((BlockEndNode) n).getStartNode().getId(), true);
+                } else if (n instanceof BlockStartNode) {
+                    if (!startNodesAreClosed.containsKey(n.getId())) {
+                        // If we have not encountered the BlockEndNode, it remains open.
+                        startNodesAreClosed.put(n.getId(), false);
+                    }
+                }
+            }
+        }
+        @Override public void onCompleted(FlowExecution execution) {
+            assert startNodesAreClosedByFlow.containsKey(execution.getOwner());
+            // After a build finishes, we do not need the cache any more, since we do the equivalent of FlowExecution.isComplete relatively quickly:
+            startNodesAreClosedByFlow.remove(execution.getOwner());
+        }
     }
 
     /**
@@ -141,7 +267,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Nonnull
     private List<FlowNode> loadParents(List<String> parentIds) {
-        List<FlowNode> _parents = new ArrayList<FlowNode>(parentIds.size());
+        List<FlowNode> _parents = new ArrayList<>(parentIds.size());
         for (String parentId : parentIds) {
             try {
                 _parents.add(exec.getNode(parentId));
@@ -156,7 +282,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Exported(name="parents")
     @Nonnull
     public List<String> getParentIds() {
-        List<String> ids = new ArrayList<String>(2);
+        List<String> ids = new ArrayList<>(2);
         for (FlowNode parent : getParents()) {
             ids.add(parent.getId());
         }
@@ -178,11 +304,13 @@ public abstract class FlowNode extends Actionable implements Saveable {
     /**
      * Reference from the parent {@link SearchItem} is through {@link FlowExecution#getNode(String)}
      */
+    @Override
     public final String getSearchUrl() {
         return getId();
     }
 
     @Exported
+    @Override
     public String getDisplayName() {
         LabelAction a = getPersistentAction(LabelAction.class);
         if (a!=null)    return a.getDisplayName();
@@ -212,8 +340,9 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Exported
     public BallColor getIconColor() {
         BallColor c = getError()!=null ? BallColor.RED : BallColor.BLUE;
-        // TODO this should probably also be _anime in case this is a step node with a body and the body is still running (try FlowGraphTable for example)
-        if (isRunning())        c = c.anime();
+        if (isActive()) {
+            c = c.anime();
+        }
         return c;
     }
 
@@ -262,7 +391,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * This method provides such an opportunity for subtypes.
      */
     protected synchronized void setActions(List<Action> actions) {
-            this.actions = new CopyOnWriteArrayList<Action>(actions);
+            this.actions = new CopyOnWriteArrayList<>(actions);
     }
 
     /**
@@ -312,14 +441,15 @@ public abstract class FlowNode extends Actionable implements Saveable {
             return;
         }
         try {
-            actions = new CopyOnWriteArrayList<Action>(exec.loadActions(this));
+            actions = new CopyOnWriteArrayList<>(exec.loadActions(this));
         } catch (IOException e) {
-            LOGGER.log(WARNING, "Failed to load actions for FlowNode id=" + id, e);
-            actions = new CopyOnWriteArrayList<Action>();
+            LOGGER.log(Level.WARNING, "Failed to load actions for FlowNode id=" + id, e);
+            actions = new CopyOnWriteArrayList<>();
         }
     }
 
     @Exported
+    @SuppressWarnings("deprecation") // of override
     @Override
     @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "CopyOnWrite ArrayList, and field load & modification is synchronized")
     public List<Action> getActions() {
@@ -374,6 +504,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * Explicitly save all the actions in this {@link FlowNode}.
      * Useful when an existing {@link Action} gets updated.
      */
+    @Override
     public void save() throws IOException {
         exec.saveActions(this, actions);
     }
@@ -383,7 +514,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         try {
             save();
         } catch (IOException e) {
-            LOGGER.log(WARNING, "failed to save actions for FlowNode id=" + this.id, e);
+            LOGGER.log(Level.WARNING, "failed to save actions for FlowNode id=" + this.id, e);
         }
     }
 
