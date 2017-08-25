@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +48,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
@@ -69,6 +71,9 @@ import org.kohsuke.stapler.export.ExportedBean;
 public abstract class FlowNode extends Actionable implements Saveable {
     private transient List<FlowNode> parents;
     private final List<String> parentIds;
+    private transient List<FlowNode> enclosingBlocks;
+    private final List<String> allEnclosingIds = new ArrayList<>();
+    protected String enclosingId;
 
     private String id;
 
@@ -82,6 +87,8 @@ public abstract class FlowNode extends Actionable implements Saveable {
         this.exec = exec;
         this.parents = ImmutableList.copyOf(parents);
         parentIds = ids();
+        // Note that enclosingId is set in the constructors of AtomNode, BlockEndNode, and BlockStartNode, since we need
+        // BlockEndNode in particular to have its start node beforehand.
     }
 
     protected FlowNode(FlowExecution exec, String id, FlowNode... parents) {
@@ -89,6 +96,8 @@ public abstract class FlowNode extends Actionable implements Saveable {
         this.exec = exec;
         this.parents = ImmutableList.copyOf(parents);
         parentIds = ids();
+        // Note that enclosingId is set in the constructors of AtomNode, BlockEndNode, and BlockStartNode, since we need
+        // BlockEndNode in particular to have its start node beforehand.
     }
 
     private List<String> ids() {
@@ -104,12 +113,47 @@ public abstract class FlowNode extends Actionable implements Saveable {
         if (this.id != null) {
             this.id = this.id.intern();
         }
+        if (this.enclosingId != null) {
+            this.enclosingId = this.enclosingId.intern();
+        }
         if (parentIds != null) {
             for (int i=0; i<parentIds.size(); i++) {
                 parentIds.set(i, parentIds.get(i).intern());
             }
         }
         return this;
+    }
+
+    /**
+     * Finds the first enclosing block this node is within, excluding itself.
+     */
+    @CheckForNull
+    protected String findEnclosingId() {
+        if (this instanceof FlowStartNode || this instanceof FlowEndNode || parents.isEmpty()) {
+            return null;
+        }
+        if (this instanceof BlockEndNode) {
+            BlockStartNode startNode = ((BlockEndNode)this).getStartNode();
+            if (startNode instanceof FlowStartNode) {
+                return null;
+            } else {
+                allEnclosingIds.addAll(startNode.getAllEnclosingIds());
+                return startNode.getEnclosingId();
+            }
+        } else {
+            FlowNode parent = parents.get(0);
+            if (parent instanceof FlowStartNode) {
+                return null;
+            }
+            if (parent instanceof BlockStartNode) {
+                allEnclosingIds.add(parent.getId());
+                allEnclosingIds.addAll(parent.getAllEnclosingIds());
+                return parent.getId();
+            } else {
+                allEnclosingIds.addAll(parent.getAllEnclosingIds());
+                return parent.getEnclosingId();
+            }
+        }
     }
 
     /**
@@ -276,6 +320,47 @@ public abstract class FlowNode extends Actionable implements Saveable {
             }
         }
         return _parents;
+    }
+
+    /**
+     * Get the first enclosing block ID for this node. Can be null.
+     * @return
+     */
+    @CheckForNull
+    public String getEnclosingId() {
+        return enclosingId;
+    }
+
+    /**
+     * Get the list of enclosing blocks, starting from innermost, for this node. May be empty. Loads the flow nodes into
+     * the transient {@code enclosingBlocks} field if needed.
+     */
+    @Nonnull
+    public List<FlowNode> getEnclosingBlocks() {
+        if (enclosingBlocks == null) {
+            enclosingBlocks = new ArrayList<>();
+            if (!allEnclosingIds.isEmpty()) {
+                try {
+                    for (String enclId : allEnclosingIds) {
+                        FlowNode enclosingNode = exec.getNode(enclId);
+                        if (enclosingNode != null) {
+                            enclosingBlocks.add(enclosingNode);
+                        }
+                    }
+                } catch (IOException e) {
+                    LOGGER.log(Level.WARNING, "failed to load enclosing blocks of " + id, e);
+                }
+            }
+        }
+        return enclosingBlocks;
+    }
+
+    /**
+     * Returns a read-only view of the IDs for enclosing blocks of this flow node, innermost first. May be empty.
+     */
+    @Nonnull
+    public List<String> getAllEnclosingIds() {
+        return Collections.unmodifiableList(allEnclosingIds);
     }
 
     @Restricted(DoNotUse.class)
