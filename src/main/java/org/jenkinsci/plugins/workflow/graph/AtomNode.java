@@ -36,5 +36,6 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 public abstract class AtomNode extends FlowNode {
     protected AtomNode(FlowExecution exec, String id, FlowNode... parents) {
         super(exec, id, parents);
+        this.enclosingId = findEnclosingId();
     }
 }
