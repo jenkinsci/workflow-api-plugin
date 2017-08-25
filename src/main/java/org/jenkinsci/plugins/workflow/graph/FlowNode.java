@@ -67,6 +67,9 @@ import org.kohsuke.stapler.export.ExportedBean;
  */
 @ExportedBean
 public abstract class FlowNode extends Actionable implements Saveable {
+    /** Controls whether or not we're forced to persist all {@link Action} changes immediately */
+    protected transient boolean persistent = true;
+
     private transient List<FlowNode> parents;
     private final List<String> parentIds;
 
@@ -101,6 +104,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     protected Object readResolve() throws ObjectStreamException {
         // Ensure we deduplicate strings upon deserialization
+        this.persistent = true;
         if (this.id != null) {
             this.id = this.id.intern();
         }
@@ -176,6 +180,19 @@ public abstract class FlowNode extends Actionable implements Saveable {
         LOGGER.log(Level.FINER, "{0} is not a current head nor a start node", this);
         return false;
     }
+
+    /** Return whether or not we're guaranteeing all changes are automatically saved to disk immediately.
+     *  If false, some may be only in memory. */
+    public boolean isPersistent() {
+        return this.persistent;
+    }
+
+    /** Allows persistence to be turned on to retain all Action writes, once we're done with all updates that defer persistence.
+     */
+    public void enablePersistence() {
+        this.persistent = true;
+    }
+
     /**
      * Cache of known block start node statuses.
      * Keys are running executions ~ builds.
@@ -446,6 +463,12 @@ public abstract class FlowNode extends Actionable implements Saveable {
             LOGGER.log(Level.WARNING, "Failed to load actions for FlowNode id=" + id, e);
             actions = new CopyOnWriteArrayList<>();
         }
+    }
+
+    /** Add an action without forcing persistence of the FlowNode and its actions */
+    public void addActionWithoutPersist(PersistentAction action) {
+        loadActions();
+        this.actions.add(action);
     }
 
     @Exported

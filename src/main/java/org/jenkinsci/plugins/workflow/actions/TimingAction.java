@@ -31,7 +31,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
  *
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-public class TimingAction implements Action {
+public class TimingAction implements PersistentAction {
 
     // TODO perhaps add a FlowNodeViewColumn rendering <i:formatDate value="…" type="both" dateStyle="medium" timeStyle="medium"/>
 
