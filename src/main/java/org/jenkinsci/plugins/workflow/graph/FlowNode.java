@@ -466,7 +466,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     /** Add an action without forcing persistence of the FlowNode and its actions */
-    public void addActionWithoutPersist(PersistentAction action) {
+    public void addActionWithoutPersist(Action action) {
         loadActions();
         this.actions.add(action);
     }
@@ -533,7 +533,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     // Persist, handling possible IOException
-    private void persistSafe() {
+    public void persistSafe() {
         try {
             save();
         } catch (IOException e) {
