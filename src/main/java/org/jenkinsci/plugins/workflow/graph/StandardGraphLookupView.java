@@ -1,12 +1,16 @@
 package org.jenkinsci.plugins.workflow.graph;
 
+import com.sun.tools.javac.comp.Flow;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.Filterator;
+import org.jenkinsci.plugins.workflow.graphanalysis.FlowNodeVisitor;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.LinearScanner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
@@ -90,6 +94,13 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
         return null;
     }
 
+
+    /** Do a brute-force scan for the enclosing blocks **/
+    BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull FlowNode node) {
+        Filterator<FlowNode> enclosing = FlowScanningUtils.fetchEnclosingBlocks(node);
+        return (enclosing.hasNext()) ? (BlockStartNode) enclosing.next() : null;
+    }
+
     @CheckForNull
     @Override
     public BlockEndNode getEndNode(@Nonnull final BlockStartNode startNode) {
@@ -114,10 +125,11 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
         scan.setup(ends, Collections.singleton((FlowNode)bsn));
 
         ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
+        if (end != null && scan.hasNext()) { // Skip the BlockEndNode, since it's inside
+            scan.next();
+        }
         for (FlowNode f : scan) {
-            if (!ends.contains(f)) {
-                nodes.add(f);
-            }
+            nodes.add(f);
         }
         Collections.reverse(nodes);
         return nodes;
@@ -130,8 +142,20 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
             return null;
         }
 
-        Filterator<FlowNode> enclosing = FlowScanningUtils.fetchEnclosingBlocks(node);
-        return (enclosing.hasNext()) ? (BlockStartNode) enclosing.next() : null;
+        String id = nearestEnclosingBlock.get(node.getId());
+        if (id != null) {
+            try {
+                return (BlockStartNode) (node.getExecution().getNode(id));
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
+        }
+
+        FlowNode enclosing = bruteForceScanForEnclosingBlock(node);
+        if (enclosing != null) {
+            nearestEnclosingBlock.put(node.getId(), enclosing.getId());
+        }
+        return null;
     }
 
     @Nonnull
