@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.workflow.graph;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
@@ -21,6 +22,7 @@ import java.util.List;
  * Designed to work entirely on the basis of the {@link FlowNode#id} rather than the {@link FlowNode}s themselves.
  */
 @Restricted(NoExternalUse.class)
+@SuppressFBWarnings(value = "ES_COMPARING_STRINGS_WITH_EQ", justification = "Can can use instance identity when comparing to a final constant")
 public final class StandardGraphLookupView implements GraphLookupView, GraphListener, GraphListener.Synchronous {
 
     static final String INCOMPLETE = "";
@@ -46,9 +48,9 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     @Override
     public boolean isActive(@Nonnull FlowNode node) {
         if (node instanceof FlowEndNode) { // cf. JENKINS-26139
-            return false;
+            return node.getExecution().isComplete();
         } else if (node instanceof BlockStartNode){  // BlockStartNode
-            return this.getEndNode((BlockStartNode)node) != null;
+            return this.getEndNode((BlockStartNode)node) == null;
         } else {
             return node.getExecution().isCurrentHead(node);
         }

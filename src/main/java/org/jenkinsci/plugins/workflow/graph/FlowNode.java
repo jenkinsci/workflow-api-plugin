@@ -25,6 +25,9 @@
 package org.jenkinsci.plugins.workflow.graph;
 
 import com.google.common.base.Predicates;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
@@ -44,6 +47,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
@@ -177,114 +182,26 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Exported(name="running")
     public final boolean isActive() {
         if (this instanceof FlowEndNode) { // cf. JENKINS-26139
-            LOGGER.finer("shortcut: FlowEndNode is never active");
             return false;
-        }
-        if (this instanceof BlockStartNode) {
-            Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow = FlowL.startNodesAreClosedByFlow();
-            LOGGER.log(Level.FINER, "for {0}, startNodesAreClosedByFlow={1}", new Object[] {this, startNodesAreClosedByFlow});
-            Map<String, Boolean> startNodesAreClosed = startNodesAreClosedByFlow.get(exec.getOwner());
-            if (startNodesAreClosed != null) {
-                Boolean closed = startNodesAreClosed.get(id);
-                if (closed != null) { // quick version
-                    LOGGER.log(Level.FINER, "quick closed={0}", closed);
-                    return !closed;
-                } else {
-                    LOGGER.log(Level.FINER, "no record of {0} in {1}, presumably GraphListener not working", new Object[] {this, exec});
-                }
-            } else {
-                LOGGER.log(Level.FINER, "no record of {0}, either FlowExecutionListener not working or it is already complete", exec);
+        } if (this instanceof BlockEndNode || this instanceof AtomNode) {
+            return this.exec.isCurrentHead(this);
+        } else {
+            try {
+                return this.graphLookupCache.get(this.getExecution()).isActive(this);
+            } catch (ExecutionException exec) {
+                throw new RuntimeException(exec); // oh god the failure
             }
-        } // atom or end node, or fall through to slow mode for start node
-        List<FlowNode> currentHeads = exec.getCurrentHeads();
-        if (currentHeads.contains(this)) {
-            LOGGER.log(Level.FINER, "{0} is a current head", this);
-            return true;
-        }
-        if (currentHeads.size() == 1 && currentHeads.get(0) instanceof FlowEndNode) { // i.e., exec.isComplete()
-            LOGGER.log(Level.FINER, "{0} is complete", exec);
-            return false;
-        }
-        if (this instanceof BlockStartNode) {
-            // Fallback (old workflow-job, old workflow-cps):
-            LOGGER.log(Level.FINER, "slow currentHeads={0}", currentHeads);
-            for (FlowNode headNode : currentHeads) {
-                if (new LinearBlockHoppingScanner().findFirstMatch(headNode, Predicates.equalTo(this)) != null) {
-                    LOGGER.finer("slow match");
-                    return true;
-                }
-            }
-            LOGGER.finer("slow no match");
-            return false;
-        }
-        LOGGER.log(Level.FINER, "{0} is not a current head nor a start node", this);
-        return false;
-    }
-    /**
-     * Cache of known block start node statuses.
-     * Keys are running executions ~ builds.
-     * Values are maps from {@link BlockStartNode#getId} to whether the corresponding {@link BlockEndNode} has been encountered.
-     * For old {@code workflow-job}, the top-level entries will be missing;
-     * for old {@code workflow-cps}, the second-level entries will be missing.
-     */
-    @Restricted(DoNotUse.class)
-    @Extension public static final class GraphL implements GraphListener.Synchronous {
-        @Override public void onNewHead(FlowNode node) {
-            LOGGER.finer("GraphListener working");
-            if (node instanceof BlockStartNode || node instanceof BlockEndNode) {
-                Map<String, Boolean> startNodesAreClosed = FlowL.startNodesAreClosedByFlow().get(node.getExecution().getOwner());
-                if (startNodesAreClosed != null) {
-                    if (node instanceof BlockStartNode) {
-                        assert !startNodesAreClosed.containsKey(node.getId());
-                        // Starting a block; record that it is open.
-                        startNodesAreClosed.put(node.getId(), false);
-                    } else {
-                        // Closed a block; find the matching start node and record that it is now closed.
-                        startNodesAreClosed.put(((BlockEndNode) node).getStartNode().getId(), true);
-                    }
-                } // else we must have an old workflow-job
-            } // do not need to pay attention to atom nodes: either they are current heads, thus active, or they are not, thus inactive
         }
     }
-    @Restricted(DoNotUse.class)
-    @Extension public static final class FlowL extends FlowExecutionListener {
-        final Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow = new HashMap<>();
-        static Map<FlowExecutionOwner, Map<String, Boolean>> startNodesAreClosedByFlow() {
-            FlowL flowL = ExtensionList.lookup(FlowExecutionListener.class).get(FlowL.class);
-            if (flowL == null) { // should not happen unless Jenkins is busted
-                throw new IllegalStateException("missing FlowNode.FlowL extension");
-            }
-            return flowL.startNodesAreClosedByFlow;
-        }
-        @Override public void onRunning(FlowExecution execution) {
-            LOGGER.finer("FlowExecutionListener working");
-            assert !startNodesAreClosedByFlow.containsKey(execution.getOwner());
-            startNodesAreClosedByFlow.put(execution.getOwner(), new HashMap<String, Boolean>());
-        }
-        @Override public void onResumed(FlowExecution execution) {
-            assert !startNodesAreClosedByFlow.containsKey(execution.getOwner());
-            Map<String, Boolean> startNodesAreClosed = new HashMap<String, Boolean>();
-            startNodesAreClosedByFlow.put(execution.getOwner(), startNodesAreClosed);
-            // To handle start nodes encountered in a prior Jenkins session, try to recreate the cache to date:
-            DepthFirstScanner dfs = new DepthFirstScanner();
-            dfs.setup(execution.getCurrentHeads());
-            for (FlowNode n : dfs) { // end nodes first, later the start nodes
-                if (n instanceof BlockEndNode) {
-                    startNodesAreClosed.put(((BlockEndNode) n).getStartNode().getId(), true);
-                } else if (n instanceof BlockStartNode) {
-                    if (!startNodesAreClosed.containsKey(n.getId())) {
-                        // If we have not encountered the BlockEndNode, it remains open.
-                        startNodesAreClosed.put(n.getId(), false);
-                    }
+
+    /** Graph views keyed by reference type, lazy loaded but retained for some time after last access */
+    static Cache<FlowExecution, GraphLookupView> graphLookupCache = CacheBuilder.<String, GraphLookupView>newBuilder().expireAfterAccess(5, TimeUnit.MINUTES)
+            .build(new CacheLoader<FlowExecution, GraphLookupView>() {
+                @Override
+                public GraphLookupView load(FlowExecution execution) throws Exception {
+                    return new StandardGraphLookupView(execution);
                 }
-            }
-        }
-        @Override public void onCompleted(FlowExecution execution) {
-            assert startNodesAreClosedByFlow.containsKey(execution.getOwner());
-            // After a build finishes, we do not need the cache any more, since we do the equivalent of FlowExecution.isComplete relatively quickly:
-            startNodesAreClosedByFlow.remove(execution.getOwner());
-        }
-    }
+    });
 
     /**
      * If this node has terminated with an error, return an object that indicates that.
