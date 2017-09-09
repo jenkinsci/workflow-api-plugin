@@ -6,6 +6,7 @@ import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.Filterator;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
+import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
@@ -13,6 +14,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,13 +23,16 @@ import java.util.List;
  * Provides overall insight into the structure of a flow graph... but with limited visibility so we can change implementation.
  * Designed to work entirely on the basis of the {@link FlowNode#id} rather than the {@link FlowNode}s themselves.
  */
-@Restricted(NoExternalUse.class)
 @SuppressFBWarnings(value = "ES_COMPARING_STRINGS_WITH_EQ", justification = "Can can use instance identity when comparing to a final constant")
-public final class StandardGraphLookupView implements GraphLookupView, GraphListener, GraphListener.Synchronous {
+final class StandardGraphLookupView implements GraphLookupView, GraphListener, GraphListener.Synchronous {
 
     static final String INCOMPLETE = "";
 
+    /** Map the blockStartNode to its endNode, to accellerate a range of operations */
     HashMap<String, String> blockStartToEnd = new HashMap<String, String>();
+
+    /** Map a node to its nearest enclosing block */
+    HashMap<String, String> nearestEnclosingBlock = new HashMap<String, String>();
 
     /** Update with a new node added to the flowgraph */
     public void onNewHead(@Nonnull FlowNode newHead) {
@@ -99,7 +104,23 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         } else {
             return bruteForceScanForEnd(startNode);
         }
+    }
 
+    /** Get all enclosed nodes in a block, roughly in order with some quirks for parallel branches */
+    public List<FlowNode> getEnclosedNodes(BlockStartNode bsn) {
+        ForkScanner scan = new ForkScanner();
+        BlockEndNode end = getEndNode(bsn);
+        Collection<FlowNode> ends = (end != null) ? (Collection<FlowNode>) Collections.singleton((FlowNode)end) : bsn.getExecution().getCurrentHeads();
+        scan.setup(ends, Collections.singleton((FlowNode)bsn));
+
+        ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
+        for (FlowNode f : scan) {
+            if (!ends.contains(f)) {
+                nodes.add(f);
+            }
+        }
+        Collections.reverse(nodes);
+        return nodes;
     }
 
     @CheckForNull
