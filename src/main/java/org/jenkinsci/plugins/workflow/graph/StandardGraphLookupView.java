@@ -1,34 +1,41 @@
 package org.jenkinsci.plugins.workflow.graph;
 
-import com.google.common.base.Predicate;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.Filterator;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Provides overall insight into the structure of a flow graph... but with limited visibility so we can change implementation.
  * Designed to work entirely on the basis of the {@link FlowNode#id} rather than the {@link FlowNode}s themselves.
  */
-final class StandardGraphLookupView implements GraphLookupView, GraphListener, GraphListener.Synchronous {
+@Restricted(NoExternalUse.class)
+public final class StandardGraphLookupView implements GraphLookupView, GraphListener, GraphListener.Synchronous {
+
+    static final String INCOMPLETE = "";
+
+    HashMap<String, String> blockStartToEnd = new HashMap<String, String>();
 
     /** Update with a new node added to the flowgraph */
-    public void onNewHead(FlowNode newHead) {
+    public void onNewHead(@Nonnull FlowNode newHead) {
+        if (newHead instanceof BlockEndNode) {
+            blockStartToEnd.put(((BlockEndNode)newHead).getStartNode().getId(), newHead.getId());
+        } else if (newHead instanceof BlockStartNode) {
+            blockStartToEnd.put(newHead.getId(), INCOMPLETE);
+        } else { // AtomNode
 
+        }
     }
 
     /** Create a lookup view for an execution */
@@ -47,21 +54,50 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
         }
     }
 
+    // Do a brute-force scan for the block end matching the start, caching info along the way for future use
+    BlockEndNode bruteForceScanForEnd(@Nonnull BlockStartNode start) {
+        DepthFirstScanner scan = new DepthFirstScanner();
+        scan.setup(start.getExecution().getCurrentHeads());
+        for (FlowNode f : scan) {
+            if (f instanceof BlockEndNode) {
+                BlockEndNode end = (BlockEndNode)f;
+                BlockStartNode maybeStart = end.getStartNode();
+                // Cache start in case we need to scan again in the future
+                blockStartToEnd.put(maybeStart.getId(), end.getId());
+                if (start.equals(maybeStart)) {
+                    return end;
+                }
+            } else if (f instanceof BlockStartNode) {
+                BlockStartNode maybeThis = (BlockStartNode) f;
+
+                // We're walking from the end to the start and see the start without finding the end first, block is incomplete
+                String previousEnd = blockStartToEnd.get(maybeThis.getId());
+                if (previousEnd == null) {
+                    blockStartToEnd.put(maybeThis.getId(), INCOMPLETE);
+                }
+                if (start.equals(maybeThis)) {  // Early exit, the end can't be encountered before the start
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
     @CheckForNull
     @Override
     public BlockEndNode getEndNode(@Nonnull final BlockStartNode startNode) {
-        if (startNode instanceof FlowStartNode) {
-            return null;
+
+        String id = blockStartToEnd.get(startNode.getId());
+        if (id != null) {
+            try {
+                return id == INCOMPLETE ? null : (BlockEndNode)(startNode.getExecution().getNode(id));
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
+        } else {
+            return bruteForceScanForEnd(startNode);
         }
-        FlowNode node = new DepthFirstScanner().findFirstMatch(startNode.getExecution(),
-                new Predicate<FlowNode>() {
-                    @Override
-                    public boolean apply(@Nullable FlowNode node) {
-                        return node instanceof BlockEndNode && startNode.equals (((BlockEndNode)node).getStartNode());
-                    }
-                }
-        );
-        return node instanceof BlockEndNode ? (BlockEndNode)node : null;
+
     }
 
     @CheckForNull
