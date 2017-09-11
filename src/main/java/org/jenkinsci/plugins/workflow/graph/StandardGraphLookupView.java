@@ -96,9 +96,40 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
 
 
     /** Do a brute-force scan for the enclosing blocks **/
-    BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull FlowNode node) {
-        Filterator<FlowNode> enclosing = FlowScanningUtils.fetchEnclosingBlocks(node);
-        return (enclosing.hasNext()) ? (BlockStartNode) enclosing.next() : null;
+    BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull final FlowNode node) {
+        FlowNode next = node;
+
+        while (next != null) {  // Hunt back for enclosing blocks, a potentially expensive operation
+            List<FlowNode> parents = node.getParents();
+            if (parents.size() == 0) {
+                return null;
+            }
+            FlowNode parent = parents.get(0);
+            if (parent instanceof BlockStartNode) {
+                return (BlockStartNode) parent;
+            }
+
+            // Try for a cache hit
+            String enclosingIdFromCache = nearestEnclosingBlock.get(parent.getId());
+            if (enclosingIdFromCache != null) {
+                try {
+                    return (BlockStartNode) (node.getExecution().getNode(enclosingIdFromCache));
+                } catch (IOException ioe) {
+                    throw new RuntimeException(ioe);
+                }
+            }
+
+            if (parent instanceof BlockEndNode) {
+                // hop over block
+                BlockStartNode start = ((BlockEndNode) parent).getStartNode();
+                blockStartToEnd.put(start.getId(), parent.getId());
+                next = start;
+            } else {
+                next = parent;
+            }
+        }
+
+        return null;
     }
 
     @CheckForNull
@@ -166,8 +197,10 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
         }
         ArrayList<BlockStartNode> starts = new ArrayList<BlockStartNode>(2);
         BlockStartNode currentlyEnclosing = findEnclosingBlockStart(node);
+        // TODO see if we should switch to just doing a bulk scan with indexing
         while (currentlyEnclosing != null) {
             starts.add(currentlyEnclosing);
+            // TODO don't constantly regenerate our scanners, reuse them if we can
             currentlyEnclosing = findEnclosingBlockStart(currentlyEnclosing);
         }
         return starts;
