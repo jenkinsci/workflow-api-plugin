@@ -42,10 +42,34 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
     public void onNewHead(@Nonnull FlowNode newHead) {
         if (newHead instanceof BlockEndNode) {
             blockStartToEnd.put(((BlockEndNode)newHead).getStartNode().getId(), newHead.getId());
-        } else if (newHead instanceof BlockStartNode) {
-            blockStartToEnd.put(newHead.getId(), INCOMPLETE);
-        } else { // AtomNode
+            String overallEnclosing = nearestEnclosingBlock.get(((BlockEndNode) newHead).getStartNode().getId());
+            if (overallEnclosing != null) {
+                nearestEnclosingBlock.put(newHead.getId(), overallEnclosing);
+            }
+        } else {
+            if (newHead instanceof BlockStartNode) {
+                blockStartToEnd.put(newHead.getId(), INCOMPLETE);
+            }
 
+            // Now we try to generate enclosing block info for caching, by looking at parents
+            // But we don't try to hard -- usually the cache is populated and we defer recursive walks of the graph
+            List<FlowNode> parents = newHead.getParents();
+            if (parents.size() > 0) {
+                FlowNode parent = parents.get(0);  // Multiple parents only for end of a parallel, and then both are BlockEndNodes
+
+                if (parent instanceof BlockStartNode) {
+                    nearestEnclosingBlock.put(newHead.getId(), parent.getId());
+                } else {
+                    // Try to reuse info from cache for this node:
+                    //   If the parent ended a block, we use info from the start of the block since that is at the same block nesting level as our new head
+                    //   Otherwise the parent is a normal atom node, and the head is enclosed by the same block
+                    String lookupId = (parent instanceof BlockEndNode) ? ((BlockEndNode) parent).getStartNode().getId() : parent.getId();
+                    String enclosingId = nearestEnclosingBlock.get(lookupId);
+                    if (enclosingId != null) {
+                        nearestEnclosingBlock.put(newHead.getId(), enclosingId);
+                    }
+                }
+            }
         }
     }
 
