@@ -28,6 +28,7 @@ import com.google.common.base.Predicates;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
@@ -76,9 +77,6 @@ import org.kohsuke.stapler.export.ExportedBean;
 public abstract class FlowNode extends Actionable implements Saveable {
     private transient List<FlowNode> parents;
     private final List<String> parentIds;
-    private transient List<FlowNode> enclosingBlocks;
-    private final List<String> allEnclosingIds = new ArrayList<>();
-    protected String enclosingId;
 
     private String id;
 
@@ -118,47 +116,12 @@ public abstract class FlowNode extends Actionable implements Saveable {
         if (this.id != null) {
             this.id = this.id.intern();
         }
-        if (this.enclosingId != null) {
-            this.enclosingId = this.enclosingId.intern();
-        }
         if (parentIds != null) {
             for (int i=0; i<parentIds.size(); i++) {
                 parentIds.set(i, parentIds.get(i).intern());
             }
         }
         return this;
-    }
-
-    /**
-     * Finds the first enclosing block this node is within, excluding itself.
-     */
-    @CheckForNull
-    protected String findEnclosingId() {
-        if (this instanceof FlowStartNode || this instanceof FlowEndNode || parents.isEmpty()) {
-            return null;
-        }
-        if (this instanceof BlockEndNode) {
-            BlockStartNode startNode = ((BlockEndNode)this).getStartNode();
-            if (startNode instanceof FlowStartNode) {
-                return null;
-            } else {
-                allEnclosingIds.addAll(startNode.getAllEnclosingIds());
-                return startNode.getEnclosingId();
-            }
-        } else {
-            FlowNode parent = parents.get(0);
-            if (parent instanceof FlowStartNode) {
-                return null;
-            }
-            if (parent instanceof BlockStartNode) {
-                allEnclosingIds.add(parent.getId());
-                allEnclosingIds.addAll(parent.getAllEnclosingIds());
-                return parent.getId();
-            } else {
-                allEnclosingIds.addAll(parent.getAllEnclosingIds());
-                return parent.getEnclosingId();
-            }
-        }
     }
 
     /**
@@ -195,7 +158,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     /** Graph views keyed by reference type, lazy loaded but retained for some time after last access */
-    static Cache<FlowExecution, GraphLookupView> graphLookupCache = CacheBuilder.<String, GraphLookupView>newBuilder().expireAfterAccess(5, TimeUnit.MINUTES)
+    static LoadingCache<FlowExecution, GraphLookupView> graphLookupCache = CacheBuilder.<FlowExecution, GraphLookupView>newBuilder().expireAfterAccess(5, TimeUnit.MINUTES)
             .build(new CacheLoader<FlowExecution, GraphLookupView>() {
                 @Override
                 public GraphLookupView load(FlowExecution execution) throws Exception {
@@ -256,7 +219,12 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     @CheckForNull
     public String getEnclosingId() {
-        return enclosingId;
+        try {
+            FlowNode enclosing = graphLookupCache.get(this.exec).findEnclosingBlockStart(this);
+            return enclosing != null ? enclosing.getId() : null;
+        } catch (ExecutionException ee) {
+            throw new RuntimeException(ee);
+        }
     }
 
     /**
@@ -265,22 +233,11 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     @Nonnull
     public List<FlowNode> getEnclosingBlocks() {
-        if (enclosingBlocks == null) {
-            enclosingBlocks = new ArrayList<>();
-            if (!allEnclosingIds.isEmpty()) {
-                try {
-                    for (String enclId : allEnclosingIds) {
-                        FlowNode enclosingNode = exec.getNode(enclId);
-                        if (enclosingNode != null) {
-                            enclosingBlocks.add(enclosingNode);
-                        }
-                    }
-                } catch (IOException e) {
-                    LOGGER.log(Level.WARNING, "failed to load enclosing blocks of " + id, e);
-                }
-            }
+        try {
+            return (List)(graphLookupCache.get(this.exec).findAllEnclosingBlockStarts(this));
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
         }
-        return enclosingBlocks;
     }
 
     /**
@@ -288,7 +245,12 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     @Nonnull
     public List<String> getAllEnclosingIds() {
-        return Collections.unmodifiableList(allEnclosingIds);
+        List<FlowNode> nodes = getEnclosingBlocks();
+        ArrayList<String> output = new ArrayList<String>(nodes.size());
+        for (FlowNode f : nodes) {
+            output.add(f.getId());
+        }
+        return output;
     }
 
     @Restricted(DoNotUse.class)

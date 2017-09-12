@@ -115,12 +115,10 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
     BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull final FlowNode node) {
         FlowNode next = node;
 
-        while (next != null) {  // Hunt back for enclosing blocks, a potentially expensive operation
-            List<FlowNode> parents = node.getParents();
-            if (parents.size() == 0) {
-                return null;
-            }
+        while (!next.getParents().isEmpty()) {  // Hunt back for enclosing blocks, a potentially expensive operation
+            List<FlowNode> parents = next.getParents();
             FlowNode parent = parents.get(0);
+
             if (parent instanceof BlockStartNode) {
                 return (BlockStartNode) parent;
             }

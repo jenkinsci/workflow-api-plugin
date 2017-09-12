@@ -44,14 +44,12 @@ public abstract class BlockEndNode<START extends BlockStartNode> extends FlowNod
         super(exec, id, parents);
         this.start = start;
         startId = start.getId();
-        this.enclosingId = findEnclosingId();
     }
 
     public BlockEndNode(FlowExecution exec, String id, START start, List<FlowNode> parents) {
         super(exec, id, parents);
         this.start = start;
         startId = start.getId();
-        this.enclosingId = findEnclosingId();
     }
 
     /**

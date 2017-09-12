@@ -39,12 +39,10 @@ import java.util.List;
 public abstract class BlockStartNode extends FlowNode {
     protected BlockStartNode(FlowExecution exec, String id, FlowNode... parents) {
         super(exec, id, parents);
-        this.enclosingId = findEnclosingId();
     }
 
     protected BlockStartNode(FlowExecution exec, String id, List<FlowNode> parents) {
         super(exec, id, parents);
-        this.enclosingId = findEnclosingId();
     }
 
 }
