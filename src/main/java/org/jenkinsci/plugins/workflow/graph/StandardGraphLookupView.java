@@ -1,18 +1,10 @@
 package org.jenkinsci.plugins.workflow.graph;
 
-import com.sun.tools.javac.comp.Flow;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.Filterator;
-import org.jenkinsci.plugins.workflow.graphanalysis.FlowNodeVisitor;
-import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.LinearScanner;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -221,10 +213,8 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
         }
         ArrayList<BlockStartNode> starts = new ArrayList<BlockStartNode>(2);
         BlockStartNode currentlyEnclosing = findEnclosingBlockStart(node);
-        // TODO see if we should switch to just doing a bulk scan with indexing
         while (currentlyEnclosing != null) {
             starts.add(currentlyEnclosing);
-            // TODO don't constantly regenerate our scanners, reuse them if we can
             currentlyEnclosing = findEnclosingBlockStart(currentlyEnclosing);
         }
         return starts;
