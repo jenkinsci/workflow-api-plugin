@@ -34,6 +34,7 @@ import java.util.logging.Level;
 import org.jenkinsci.plugins.workflow.actions.ArgumentsAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
@@ -143,22 +144,28 @@ public class FlowNodeTest {
                 // FlowStartNode
                 assertExpectedEnclosing(execution, "2", null);
 
-                // CatchError block
+                // CatchError block, outer block
                 assertExpectedEnclosing(execution, "3", "2");
 
-                // Echo
+                // CatchError block, inner block (body)
                 assertExpectedEnclosing(execution, "4", "3");
 
-                // End of catchError block
-                assertExpectedEnclosing(execution, "5", "2");
+                // Echo step, enclosed in body block for catchError step
+                assertExpectedEnclosing(execution, "5", "4");
 
-                // FlowEndNode
-                assertExpectedEnclosing(execution, "6", null);
+                // End of inner catchError block (end of body), enclosed by outer block
+                assertExpectedEnclosing(execution, "6", "3");
+
+                // End of outer catchError block, enclosed by FlowStartNode
+                assertExpectedEnclosing(execution, "7", "2");
+
+                // FlowEndNode, not inside anything at all
+                assertExpectedEnclosing(execution, "8", null);
             }
         });
     }
 
-    @Ignore
+
     @Issue("JENKINS-27395")
     @Test
     public void enclosingBlocks() throws Exception {
@@ -278,7 +285,7 @@ Action format:
                 assertExpectedEnclosing(execution, "2", null);
 
                 // outermost stage start
-                assertExpectedEnclosing(execution, "3", null);
+                assertExpectedEnclosing(execution, "3", "2");
 
                 // outermost stage body
                 assertExpectedEnclosing(execution, "4", "3");
@@ -368,7 +375,7 @@ Action format:
                 assertExpectedEnclosing(execution, "33", "3");
 
                 // outermost stage end
-                assertExpectedEnclosing(execution, "34", null);
+                assertExpectedEnclosing(execution, "34", "2");
 
                 // FlowEndNode
                 assertExpectedEnclosing(execution, "35", null);
@@ -379,16 +386,18 @@ Action format:
     private void assertExpectedEnclosing(FlowExecution execution, String nodeId, String enclosingId) throws Exception {
         FlowNode node = execution.getNode(nodeId);
         assertNotNull(node);
+        String secondEnclosingId = node.getEnclosingId();
 
-        assertEquals(enclosingId, node.getEnclosingId());
+        assertEquals(MessageFormat.format("Node {0}: enclosingID doesn't match between first and second fetches", node),
+                enclosingId, secondEnclosingId);
         if (enclosingId == null) {
-            assertTrue(MessageFormat.format("Node {0} and enclosingId {1}: null enclosing ID, but non-empty list of enclosing IDs", nodeId, enclosingId),
+            assertTrue(MessageFormat.format("Node {0} and enclosingId {1}: null enclosing ID, but non-empty list of enclosing IDs", node, enclosingId),
                     node.getAllEnclosingIds().isEmpty());
-            assertTrue(MessageFormat.format("Node {0} and enclosingId {1}: null enclosing ID, but non-empty list of enclosing blocks", nodeId, enclosingId),
+            assertTrue(MessageFormat.format("Node {0} and enclosingId {1}: null enclosing ID, but non-empty list of enclosing blocks", node, enclosingId),
                     node.getEnclosingBlocks().isEmpty());
         } else {
             FlowNode enclosingNode = execution.getNode(enclosingId);
-            assertNotNull(MessageFormat.format("Node {0} and enclosingId {1}: no node with enclosing ID exists", nodeId, enclosingId),
+            assertNotNull(MessageFormat.format("Node {0} and enclosingId {1}: no node with enclosing ID exists", node, enclosingId),
                     enclosingNode);
             List<String> enclosingIds = node.getAllEnclosingIds();
             List<String> enclosingIdsIncludingNode = enclosingIdsIncludingNode(enclosingNode);

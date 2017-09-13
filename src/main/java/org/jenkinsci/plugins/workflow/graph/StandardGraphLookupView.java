@@ -111,36 +111,40 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
     }
 
 
+
+
     /** Do a brute-force scan for the enclosing blocks **/
     BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull final FlowNode node) {
-        FlowNode next = node;
+        FlowNode current = node;
 
-        while (!next.getParents().isEmpty()) {  // Hunt back for enclosing blocks, a potentially expensive operation
-            List<FlowNode> parents = next.getParents();
-            FlowNode parent = parents.get(0);
-
-            if (parent instanceof BlockStartNode) {
-                return (BlockStartNode) parent;
+        while (!(current instanceof FlowStartNode)) {  // Hunt back for enclosing blocks, a potentially expensive operation
+            if (current instanceof BlockEndNode) {
+                // Hop over the block to the start
+                BlockStartNode start = ((BlockEndNode) current).getStartNode();
+                blockStartToEnd.put(start.getId(), current.getId());
+                current = start;
+                continue;  // Allows us to use this to handle special cases
             }
 
             // Try for a cache hit
-            String enclosingIdFromCache = nearestEnclosingBlock.get(parent.getId());
-            if (enclosingIdFromCache != null) {
-                try {
-                    return (BlockStartNode) (node.getExecution().getNode(enclosingIdFromCache));
-                } catch (IOException ioe) {
-                    throw new RuntimeException(ioe);
+            if (current != node) {
+                String enclosingIdFromCache = nearestEnclosingBlock.get(current.getId());
+                if (enclosingIdFromCache != null) {
+                    try {
+                        return (BlockStartNode) (node.getExecution().getNode(enclosingIdFromCache));
+                    } catch (IOException ioe) {
+                        throw new RuntimeException(ioe);
+                    }
                 }
             }
 
-            if (parent instanceof BlockEndNode) {
-                // hop over block
-                BlockStartNode start = ((BlockEndNode) parent).getStartNode();
-                blockStartToEnd.put(start.getId(), parent.getId());
-                next = start;
-            } else {
-                next = parent;
+            // Now see if we have a winner among parents
+            FlowNode parent = current.getParents().get(0);
+            if (parent instanceof BlockStartNode) {
+                nearestEnclosingBlock.put(current.getId(), parent.getId());
+                return (BlockStartNode) parent;
             }
+            current = parent;
         }
 
         return null;
