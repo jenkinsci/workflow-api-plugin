@@ -158,7 +158,11 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
                 throw new RuntimeException(ioe);
             }
         } else {
-            return bruteForceScanForEnd(startNode);
+            BlockEndNode node = bruteForceScanForEnd(startNode);
+            if (node != null) {
+                blockStartToEnd.put(startNode.getId(), node.getId());
+            }
+            return node;
         }
     }
 
@@ -196,9 +200,10 @@ final class StandardGraphLookupView implements GraphLookupView, GraphListener, G
             }
         }
 
-        FlowNode enclosing = bruteForceScanForEnclosingBlock(node);
+        BlockStartNode enclosing = bruteForceScanForEnclosingBlock(node);
         if (enclosing != null) {
             nearestEnclosingBlock.put(node.getId(), enclosing.getId());
+            return enclosing;
         }
         return null;
     }
