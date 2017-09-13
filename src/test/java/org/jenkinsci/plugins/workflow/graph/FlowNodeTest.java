@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +37,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -124,6 +126,39 @@ public class FlowNodeTest {
         assertEquals(Arrays.asList(expected), actual);
     }
 
+    @Issue("JENKINS-27395")
+    @Test
+    public void enclosingBlocksSingleBlock() throws Exception {
+        rr.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                WorkflowJob job = rr.j.createProject(WorkflowJob.class, "enclosingBlocks");
+                job.setDefinition(new CpsFlowDefinition(
+                        "catchError {echo 'bob';}", true));
+
+                WorkflowRun r = rr.j.buildAndAssertSuccess(job);
+
+                FlowExecution execution = r.getExecution();
+
+                // FlowStartNode
+                assertExpectedEnclosing(execution, "2", null);
+
+                // CatchError block
+                assertExpectedEnclosing(execution, "3", "2");
+
+                // Echo
+                assertExpectedEnclosing(execution, "4", "3");
+
+                // End of catchError block
+                assertExpectedEnclosing(execution, "5", "2");
+
+                // FlowEndNode
+                assertExpectedEnclosing(execution, "6", null);
+            }
+        });
+    }
+
+    @Ignore
     @Issue("JENKINS-27395")
     @Test
     public void enclosingBlocks() throws Exception {
@@ -347,13 +382,19 @@ Action format:
 
         assertEquals(enclosingId, node.getEnclosingId());
         if (enclosingId == null) {
-            assertTrue(node.getAllEnclosingIds().isEmpty());
-            assertTrue(node.getEnclosingBlocks().isEmpty());
+            assertTrue(MessageFormat.format("Node {0} and enclosingId {1}: null enclosing ID, but non-empty list of enclosing IDs", nodeId, enclosingId),
+                    node.getAllEnclosingIds().isEmpty());
+            assertTrue(MessageFormat.format("Node {0} and enclosingId {1}: null enclosing ID, but non-empty list of enclosing blocks", nodeId, enclosingId),
+                    node.getEnclosingBlocks().isEmpty());
         } else {
             FlowNode enclosingNode = execution.getNode(enclosingId);
-            assertNotNull(enclosingNode);
-            assertEquals(enclosingIdsIncludingNode(enclosingNode), node.getAllEnclosingIds());
-            assertEquals(enclosingBlocksIncludingNode(enclosingNode), node.getEnclosingBlocks());
+            assertNotNull(MessageFormat.format("Node {0} and enclosingId {1}: no node with enclosing ID exists", nodeId, enclosingId),
+                    enclosingNode);
+            List<String> enclosingIds = node.getAllEnclosingIds();
+            List<String> enclosingIdsIncludingNode = enclosingIdsIncludingNode(enclosingNode);
+            assertArrayEquals(enclosingIds.toArray(), enclosingIdsIncludingNode.toArray());
+            assertArrayEquals(enclosingIdsIncludingNode(enclosingNode).toArray(), node.getAllEnclosingIds().toArray());
+            assertArrayEquals(enclosingBlocksIncludingNode(enclosingNode).toArray(), node.getEnclosingBlocks().toArray());
         }
     }
 
