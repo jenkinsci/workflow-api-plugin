@@ -149,22 +149,9 @@ public abstract class FlowNode extends Actionable implements Saveable {
         } if (this instanceof BlockEndNode || this instanceof AtomNode) {
             return this.exec.isCurrentHead(this);
         } else {
-            try {
-                return this.graphLookupCache.get(this.getExecution()).isActive(this);
-            } catch (ExecutionException exec) {
-                throw new RuntimeException(exec); // oh god the failure
-            }
+            return this.getExecution().isActive(this);
         }
     }
-
-    /** Graph views keyed by reference type, lazy loaded but retained for some time after last access */
-    static LoadingCache<FlowExecution, GraphLookupView> graphLookupCache = CacheBuilder.<FlowExecution, GraphLookupView>newBuilder().expireAfterAccess(5, TimeUnit.MINUTES)
-            .build(new CacheLoader<FlowExecution, GraphLookupView>() {
-                @Override
-                public GraphLookupView load(FlowExecution execution) throws Exception {
-                    return new StandardGraphLookupView(execution);
-                }
-    });
 
     /**
      * If this node has terminated with an error, return an object that indicates that.
@@ -219,12 +206,8 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     @CheckForNull
     public String getEnclosingId() {
-        try {
-            FlowNode enclosing = graphLookupCache.get(this.exec).findEnclosingBlockStart(this);
-            return enclosing != null ? enclosing.getId() : null;
-        } catch (ExecutionException ee) {
-            throw new RuntimeException(ee);
-        }
+        FlowNode enclosing = this.exec.findEnclosingBlockStart(this);
+        return enclosing != null ? enclosing.getId() : null;
     }
 
     /**
@@ -233,11 +216,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     @Nonnull
     public List<FlowNode> getEnclosingBlocks() {
-        try {
-            return (List)(graphLookupCache.get(this.exec).findAllEnclosingBlockStarts(this));
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+        return (List)this.exec.findAllEnclosingBlockStarts(this);
     }
 
     /**

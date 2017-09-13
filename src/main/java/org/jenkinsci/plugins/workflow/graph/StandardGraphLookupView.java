@@ -5,6 +5,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -20,7 +22,8 @@ import java.util.List;
  * Designed to work entirely on the basis of the {@link FlowNode#id} rather than the {@link FlowNode}s themselves.
  */
 @SuppressFBWarnings(value = "ES_COMPARING_STRINGS_WITH_EQ", justification = "Can can use instance identity when comparing to a final constant")
-final class StandardGraphLookupView implements GraphLookupView, GraphListener, GraphListener.Synchronous {
+@Restricted(NoExternalUse.class)
+public final class StandardGraphLookupView implements GraphLookupView, GraphListener, GraphListener.Synchronous {
 
     static final String INCOMPLETE = "";
 

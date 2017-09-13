@@ -29,9 +29,14 @@ import hudson.Util;
 import hudson.model.Executor;
 import jenkins.model.CauseOfInterruption;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
+import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
+import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowActionStorage;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
+import org.jenkinsci.plugins.workflow.graph.GraphLookupView;
+import org.jenkinsci.plugins.workflow.graph.StandardGraphLookupView;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import hudson.model.Result;
 import hudson.security.ACL;
@@ -63,7 +68,17 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
  * @author Kohsuke Kawaguchi
  * @author Jesse Glick
  */
-public abstract class FlowExecution implements FlowActionStorage {
+public abstract class FlowExecution implements FlowActionStorage, GraphLookupView {
+
+    protected transient GraphLookupView internalGraphLookup = null;
+
+    /** This may be overridden if the FlowExecution has a better source of structural information, such as the {@link FlowNode} storage.*/
+    protected synchronized GraphLookupView getInternalGraphLookup() {
+        if (internalGraphLookup == null) {
+            internalGraphLookup = new StandardGraphLookupView(this);
+        }
+        return internalGraphLookup;
+    }
 
     /**
      * Called after {@link FlowDefinition#create(FlowExecutionOwner, List)} to
@@ -219,5 +234,55 @@ public abstract class FlowExecution implements FlowActionStorage {
      * @return an authentication; {@link ACL#SYSTEM} as a fallback, or {@link Jenkins#ANONYMOUS} if the flow is supposed to be limited to a specific user but that user cannot now be looked up
      */
     public abstract @Nonnull Authentication getAuthentication();
+
+
+    /** Tests if the node (in this execution) is a currently running head, or the start of a block that has not completed executing
+     * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    public boolean isActive(@Nonnull  FlowNode node) {
+        if (!this.equals(node.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().isActive(node);
+    }
+
+    /** Find the end node corresponding to a start node in this execution, and can be used to tell if the block is completed.
+     *  @return {@link BlockEndNode} matching the given start node, or null if block hasn't completed
+     *  @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    @CheckForNull
+    public BlockEndNode getEndNode(@Nonnull BlockStartNode startNode) {
+        if (!this.equals(startNode.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().getEndNode(startNode);
+    }
+
+    /**
+     * Find the immediately enclosing {@link BlockStartNode} around a {@link FlowNode} in this execution
+     * @param node Node to find block enclosing it - note that it this is a BlockStartNode, you will return the start of the block enclosing this one.
+     * @return Null if node is a {@link FlowStartNode} or {@link FlowEndNode}
+     * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    @CheckForNull
+    public BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node) {
+        if (!this.equals(node.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().findEnclosingBlockStart(node);
+    }
+
+    /** Return all enclosing block start nodes, as with {@link #findEnclosingBlockStart(FlowNode)}.
+     *  @param node Node to find enclosing blocks for, which must belong to this FlowExecution
+     *  @return All enclosing block starts in no particular sort order, or EMPTY_LIST if this is a start or end node
+     * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    @Nonnull
+    public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node) {
+        if (!this.equals(node.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().findAllEnclosingBlockStarts(node);
+    }
 
 }
