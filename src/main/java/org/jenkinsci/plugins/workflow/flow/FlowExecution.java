@@ -70,7 +70,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
  * @author Kohsuke Kawaguchi
  * @author Jesse Glick
  */
-public abstract class FlowExecution implements FlowActionStorage, GraphLookupView {
+public abstract class FlowExecution implements FlowActionStorage, GraphLookupView {  // Implements GraphLookupView because FlowNode lives in another package
 
     protected transient GraphLookupView internalGraphLookup = null;
 
