@@ -401,9 +401,14 @@ Action format:
                     enclosingNode);
             List<String> enclosingIds = node.getAllEnclosingIds();
             List<String> enclosingIdsIncludingNode = enclosingIdsIncludingNode(enclosingNode);
+            List<String> iteratedEnclosingBlockIds = new ArrayList<String>();
+            for (BlockStartNode bsn : node.iterateEnclosingBlocks()) {
+                iteratedEnclosingBlockIds.add(bsn.getId());
+            }
             assertArrayEquals(enclosingIds.toArray(), enclosingIdsIncludingNode.toArray());
             assertArrayEquals(enclosingIdsIncludingNode(enclosingNode).toArray(), node.getAllEnclosingIds().toArray());
             assertArrayEquals(enclosingBlocksIncludingNode(enclosingNode).toArray(), node.getEnclosingBlocks().toArray());
+            assertArrayEquals(enclosingIdsIncludingNode(enclosingNode).toArray(), iteratedEnclosingBlockIds.toArray());
         }
     }
 

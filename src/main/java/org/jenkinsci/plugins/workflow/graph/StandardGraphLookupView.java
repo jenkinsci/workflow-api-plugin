@@ -215,6 +215,11 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         return null;
     }
 
+    @Override
+    public Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node) {
+        return new EnclosingBlocksIterable(this, node);
+    }
+
     @Nonnull
     @Override
     public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node) {

@@ -219,6 +219,13 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return (List)this.exec.findAllEnclosingBlockStarts(this);
     }
 
+    /** Return an iterator over all enclosing blocks, prefer this to {@link #getEnclosingBlocks()} unless you need ALL nodes,
+     *  because it can evaluate lazily. */
+    @Nonnull
+    public Iterable<BlockStartNode> iterateEnclosingBlocks() {
+        return this.exec.iterateEnclosingBlocks(this);
+    }
+
     /**
      * Returns a read-only view of the IDs for enclosing blocks of this flow node, innermost first. May be empty.
      */
