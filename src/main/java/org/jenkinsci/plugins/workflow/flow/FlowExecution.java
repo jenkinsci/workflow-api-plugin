@@ -50,6 +50,8 @@ import jenkins.model.Jenkins;
 import jenkins.model.queue.AsynchronousExecution;
 import org.acegisecurity.Authentication;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * State of a currently executing workflow.
@@ -239,6 +241,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     /** Tests if the node (in this execution) is a currently running head, or the start of a block that has not completed executing
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
+    @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
     public boolean isActive(@Nonnull  FlowNode node) {
         if (!this.equals(node.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
@@ -251,6 +254,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      *  @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @CheckForNull
+    @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
     public BlockEndNode getEndNode(@Nonnull BlockStartNode startNode) {
         if (!this.equals(startNode.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
@@ -265,6 +269,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @CheckForNull
+    @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
     public BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node) {
         if (!this.equals(node.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
@@ -278,6 +283,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @Nonnull
+    @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
     public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node) {
         if (!this.equals(node.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
