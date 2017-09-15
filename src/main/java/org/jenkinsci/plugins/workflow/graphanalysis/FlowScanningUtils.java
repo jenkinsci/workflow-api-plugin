@@ -118,8 +118,6 @@ public final class FlowScanningUtils {
      */
     @Nonnull
     public static Filterator<FlowNode> fetchEnclosingBlocks(@Nonnull FlowNode f) {
-        LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
-        scanner.setup(f);
-        return scanner.filter(MATCH_BLOCK_START);
+        return new FilteratorImpl<FlowNode>(f.getEnclosingBlocks().iterator(), Predicates.<FlowNode>alwaysTrue());
     }
 }
