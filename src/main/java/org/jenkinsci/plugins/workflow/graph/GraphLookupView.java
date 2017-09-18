@@ -76,7 +76,9 @@ public interface GraphLookupView {
             @Override
             public BlockStartNode next() {
                 if (hasNext()) {
-                    return next;
+                    BlockStartNode retVal = next;
+                    next = view.findEnclosingBlockStart(next);
+                    return retVal;
                 } else {
                     throw new NoSuchElementException("No more block start nodes");
                 }
