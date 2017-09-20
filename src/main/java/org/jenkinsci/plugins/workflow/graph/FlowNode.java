@@ -144,13 +144,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     @Exported(name="running")
     public final boolean isActive() {
-        if (this instanceof FlowEndNode) { // cf. JENKINS-26139
-            return false;
-        } if (this instanceof BlockEndNode || this instanceof AtomNode) {
-            return this.exec.isCurrentHead(this);
-        } else {
-            return this.getExecution().isActive(this);
-        }
+        return this.getExecution().isActive(this);
     }
 
     /**
@@ -178,31 +172,25 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Nonnull
     private List<FlowNode> loadParents(List<String> parentIds) {
-        List<FlowNode> _parents;
-
-        if (parentIds.size() == 1) {
-            try {
+        try {
+            if (parentIds.size() == 1) {
                 return Collections.singletonList(exec.getNode(parentIds.get(0)));
-            } catch (IOException x) {
-                LOGGER.log(Level.WARNING, "failed to load parents of " + id, x);
-                return Collections.emptyList();
-            }
-        } else {
-            _parents = new ArrayList<>(parentIds.size());
-            for (String parentId : parentIds) {
-                try {
+            } else {
+                List<FlowNode> _parents = new ArrayList<>(parentIds.size());
+                for (String parentId : parentIds) {
                     _parents.add(exec.getNode(parentId));
-                } catch (IOException x) {
-                    LOGGER.log(Level.WARNING, "failed to load parents of " + id, x);
                 }
+                return _parents;
             }
-            return _parents;
+        } catch (IOException x) {
+            LOGGER.log(Level.WARNING, "failed to load parents of " + id, x);
+            return Collections.emptyList();
         }
     }
 
     /**
-     * Get the first enclosing block ID for this node. Can be null.
-     * @return
+     * Get the {@link #id} of the enclosing {@link BlockStartNode}for this node, or null if none.
+     * Only {@link FlowStartNode} and {@link FlowEndNode} should generally return null.
      */
     @CheckForNull
     public String getEnclosingId() {
@@ -211,16 +199,16 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     /**
-     * Get the list of enclosing blocks, starting from innermost, for this node. May be empty. Loads the flow nodes into
-     * the transient {@code enclosingBlocks} field if needed.
+     * Get the list of enclosing {@link BlockStartNode}s, starting from innermost, for this node.
+     * May be empty if we are the {@link FlowStartNode} or {@link FlowEndNode}
      */
     @Nonnull
     public List<FlowNode> getEnclosingBlocks() {
         return (List)this.exec.findAllEnclosingBlockStarts(this);
     }
 
-    /** Return an iterator over all enclosing blocks, prefer this to {@link #getEnclosingBlocks()} unless you need ALL nodes,
-     *  because it can evaluate lazily. */
+    /** Return an iterator over all enclosing blocks.
+     *  Prefer this to {@link #getEnclosingBlocks()} unless you need ALL nodes, because it can evaluate lazily. */
     @Nonnull
     public Iterable<BlockStartNode> iterateEnclosingBlocks() {
         return this.exec.iterateEnclosingBlocks(this);
@@ -310,7 +298,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     /**
      * Gets a human readable name for this type of the node.
      *
-     * This is used to implement {@link #getDisplayName()} as a fallback in case {@link LabelAction} doesnt exist.
+     * This is used to implement {@link #getDisplayName()} as a fallback in case {@link LabelAction} does not exist.
      */
     protected abstract String getTypeDisplayName();
 

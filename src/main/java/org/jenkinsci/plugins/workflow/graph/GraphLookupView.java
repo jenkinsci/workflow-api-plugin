@@ -1,5 +1,7 @@
 package org.jenkinsci.plugins.workflow.graph;
 
+import org.kohsuke.accmod.Restricted;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -10,13 +12,13 @@ import java.util.NoSuchElementException;
  * Interface that can be exposed by objects providing means to easily look up information about the structure of a pipeline run
  * Usually this is scoped to a specific {@link org.jenkinsci.plugins.workflow.flow.FlowExecution}.
  *
- * Exists because we may want to offer this as part of the storage for {@link FlowNode}s at some point.
+ * Exists because we do not want to ourselves to only using the standard implementation in {@link StandardGraphLookupView}.
  *
  * <strong>Implementation note:</strong>
  * <p>Normally this should only be used internally to power APIs, but if exposed publicly remember that {@link FlowNode}s
  *  from different executions may be given as inputs.  There needs to be a way to handle that.
- *  Either throw IllegalArgumentExceptions if tied to a single {@link org.jenkinsci.plugins.workflow.flow.FlowExecution},
- *  or use the ID of the execution as a key to delegate to different cache objects.
+ *  Either throw {@link IllegalArgumentException}s if tied to a single {@link org.jenkinsci.plugins.workflow.flow.FlowExecution}
+ *  or {@link org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner} or use the ID of the execution as a key to delegate to different cache objects.
  *
  */
 public interface GraphLookupView {

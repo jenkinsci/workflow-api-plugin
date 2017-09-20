@@ -74,10 +74,12 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
 
     protected transient GraphLookupView internalGraphLookup = null;
 
-    /** This may be overridden if the FlowExecution has a better source of structural information, such as the {@link FlowNode} storage.*/
+    /** Eventually this may be overridden if the FlowExecution has a better source of structural information, such as the {@link FlowNode} storage. */
     protected synchronized GraphLookupView getInternalGraphLookup() {
         if (internalGraphLookup == null) {
-            internalGraphLookup = new StandardGraphLookupView(this);
+            StandardGraphLookupView lookupView = new StandardGraphLookupView();
+            this.internalGraphLookup = lookupView;
+            this.addListener(lookupView);
         }
         return internalGraphLookup;
     }
@@ -238,7 +240,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     public abstract @Nonnull Authentication getAuthentication();
 
 
-    /** Tests if the node (in this execution) is a currently running head, or the start of a block that has not completed executing
+    /** @see GraphLookupView#isActive(FlowNode)
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
@@ -249,8 +251,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
         return getInternalGraphLookup().isActive(node);
     }
 
-    /** Find the end node corresponding to a start node in this execution, and can be used to tell if the block is completed.
-     *  @return {@link BlockEndNode} matching the given start node, or null if block hasn't completed
+    /** @see GraphLookupView#getEndNode(BlockStartNode)
      *  @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @CheckForNull
@@ -262,10 +263,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
         return getInternalGraphLookup().getEndNode(startNode);
     }
 
-    /**
-     * Find the immediately enclosing {@link BlockStartNode} around a {@link FlowNode} in this execution
-     * @param node Node to find block enclosing it - note that it this is a BlockStartNode, you will return the start of the block enclosing this one.
-     * @return Null if node is a {@link FlowStartNode} or {@link FlowEndNode}
+    /** @see GraphLookupView#findEnclosingBlockStart(FlowNode)
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @CheckForNull
@@ -277,9 +275,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
         return getInternalGraphLookup().findEnclosingBlockStart(node);
     }
 
-    /** Return all enclosing block start nodes, as with {@link #findEnclosingBlockStart(FlowNode)}.
-     *  @param node Node to find enclosing blocks for, which must belong to this FlowExecution
-     *  @return All enclosing block starts in no particular sort order, or EMPTY_LIST if this is a start or end node
+    /** @see GraphLookupView#findAllEnclosingBlockStarts(FlowNode)
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @Nonnull
@@ -291,6 +287,9 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
         return getInternalGraphLookup().findAllEnclosingBlockStarts(node);
     }
 
+    /** @see GraphLookupView#iterateEnclosingBlocks(FlowNode)
+     * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
     @Nonnull
     @Restricted(NoExternalUse.class)
     public Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node) {

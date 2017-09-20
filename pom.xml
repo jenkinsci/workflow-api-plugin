@@ -65,6 +65,7 @@
         <jenkins.version>2.7.3</jenkins.version>
         <no-test-jar>false</no-test-jar>
         <workflow-support-plugin.version>2.14</workflow-support-plugin.version>
+        <jenkins-test-harness.version>2.27</jenkins-test-harness.version>
     </properties>
     <dependencies>
         <dependency>

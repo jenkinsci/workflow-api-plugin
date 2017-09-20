@@ -34,6 +34,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     HashMap<String, String> nearestEnclosingBlock = new HashMap<String, String>();
 
     /** Update with a new node added to the flowgraph */
+    @Override
     public void onNewHead(@Nonnull FlowNode newHead) {
         if (newHead instanceof BlockEndNode) {
             blockStartToEnd.put(((BlockEndNode)newHead).getStartNode().getId(), newHead.getId());
@@ -69,8 +70,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     }
 
     /** Create a lookup view for an execution */
-    public StandardGraphLookupView(FlowExecution execution) {
-        execution.addListener(this);
+    public StandardGraphLookupView() {
     }
 
     @Override
@@ -126,7 +126,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
                 BlockStartNode start = ((BlockEndNode) current).getStartNode();
                 blockStartToEnd.put(start.getId(), current.getId());
                 current = start;
-                continue;  // Allows us to use this to handle special cases
+                continue;  // Simplifies cases below we only need to look at the immediately preceding node.
             }
 
             // Try for a cache hit
