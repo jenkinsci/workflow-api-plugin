@@ -76,7 +76,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     @Override
     public boolean isActive(@Nonnull FlowNode node) {
         if (node instanceof FlowEndNode) { // cf. JENKINS-26139
-            return node.getExecution().isComplete();
+            return !node.getExecution().isComplete();
         } else if (node instanceof BlockStartNode){  // BlockStartNode
             return this.getEndNode((BlockStartNode)node) == null;
         } else {
