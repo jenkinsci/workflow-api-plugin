@@ -29,9 +29,13 @@ import hudson.Util;
 import hudson.model.Executor;
 import jenkins.model.CauseOfInterruption;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
+import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
+import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowActionStorage;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.GraphLookupView;
+import org.jenkinsci.plugins.workflow.graph.StandardGraphLookupView;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import hudson.model.Result;
 import hudson.security.ACL;
@@ -45,6 +49,8 @@ import jenkins.model.Jenkins;
 import jenkins.model.queue.AsynchronousExecution;
 import org.acegisecurity.Authentication;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * State of a currently executing workflow.
@@ -63,7 +69,19 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
  * @author Kohsuke Kawaguchi
  * @author Jesse Glick
  */
-public abstract class FlowExecution implements FlowActionStorage {
+public abstract class FlowExecution implements FlowActionStorage, GraphLookupView {  // Implements GraphLookupView because FlowNode lives in another package
+
+    protected transient GraphLookupView internalGraphLookup = null;
+
+    /** Eventually this may be overridden if the FlowExecution has a better source of structural information, such as the {@link FlowNode} storage. */
+    protected synchronized GraphLookupView getInternalGraphLookup() {
+        if (internalGraphLookup == null) {
+            StandardGraphLookupView lookupView = new StandardGraphLookupView();
+            this.internalGraphLookup = lookupView;
+            this.addListener(lookupView);
+        }
+        return internalGraphLookup;
+    }
 
     /**
      * Called after {@link FlowDefinition#create(FlowExecutionOwner, List)} to
@@ -220,4 +238,63 @@ public abstract class FlowExecution implements FlowActionStorage {
      */
     public abstract @Nonnull Authentication getAuthentication();
 
+
+    /** @see GraphLookupView#isActive(FlowNode)
+     * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
+    public boolean isActive(@Nonnull  FlowNode node) {
+        if (!this.equals(node.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().isActive(node);
+    }
+
+    /** @see GraphLookupView#getEndNode(BlockStartNode)
+     *  @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    @CheckForNull
+    @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
+    public BlockEndNode getEndNode(@Nonnull BlockStartNode startNode) {
+        if (!this.equals(startNode.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().getEndNode(startNode);
+    }
+
+    /** @see GraphLookupView#findEnclosingBlockStart(FlowNode)
+     * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    @CheckForNull
+    @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
+    public BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node) {
+        if (!this.equals(node.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().findEnclosingBlockStart(node);
+    }
+
+    /** @see GraphLookupView#findAllEnclosingBlockStarts(FlowNode)
+     * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    @Nonnull
+    @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
+    public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node) {
+        if (!this.equals(node.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().findAllEnclosingBlockStarts(node);
+    }
+
+    /** @see GraphLookupView#iterateEnclosingBlocks(FlowNode)
+     * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
+     */
+    @Nonnull
+    @Restricted(NoExternalUse.class)
+    public Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node) {
+        if (!this.equals(node.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().iterateEnclosingBlocks(node);
+    }
 }

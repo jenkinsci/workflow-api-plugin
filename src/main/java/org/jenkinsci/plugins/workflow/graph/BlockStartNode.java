@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.graph;
 
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
+import javax.annotation.CheckForNull;
 import java.util.List;
 
 /**
@@ -45,4 +46,9 @@ public abstract class BlockStartNode extends FlowNode {
         super(exec, id, parents);
     }
 
+    /** Return the {@link BlockEndNode} for this block, or null if the block hasn't completed yet. */
+    @CheckForNull
+    public BlockEndNode getEndNode() {
+        return this.getExecution().getEndNode(this);
+    }
 }
