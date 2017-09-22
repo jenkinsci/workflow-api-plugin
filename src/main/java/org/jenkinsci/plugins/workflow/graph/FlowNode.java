@@ -231,11 +231,15 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Exported(name="parents")
     @Nonnull
     public List<String> getParentIds() {
-        List<String> ids = new ArrayList<>(2);
-        for (FlowNode parent : getParents()) {
-            ids.add(parent.getId());
+        if (parentIds != null) {
+            return Collections.unmodifiableList(parentIds);
+        } else {
+            List<String> ids = new ArrayList<>(parents.size());
+            for (FlowNode parent : getParents()) {
+                ids.add(parent.getId());
+            }
+            return ids;
         }
-        return ids;
     }
 
     /**
