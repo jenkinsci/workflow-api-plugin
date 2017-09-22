@@ -41,7 +41,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /** Predicate that matches {@link FlowNode}s (specifically {@link StepNode}s) with a specific {@link StepDescriptor} name.
- *  May be used in preference to {@link NodeStepTypePredicate} in cases whern dependencie structures prevent import
+ *  May be used in preference to {@link NodeStepTypePredicate} in cases whern dependency structures prevent import
  *   of the actual descriptor class (I.E. when writing code in the workflow-api plugin that looks for step types in workflow-cps).
  */
 public final class NodeStepNamePredicate implements Predicate<FlowNode> {
