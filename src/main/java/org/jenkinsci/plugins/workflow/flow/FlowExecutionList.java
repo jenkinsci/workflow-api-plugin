@@ -98,8 +98,8 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
             try {
                 runningTasks.replaceBy((List<FlowExecutionOwner>) cf.read());
                 LOGGER.log(FINE, "loaded: {0}", runningTasks);
-            } catch (IOException x) {
-                LOGGER.log(WARNING, null, x);
+            } catch (Exception x) {
+                LOGGER.log(WARNING, "ignoring broken " + cf, x);
             }
         }
     }
