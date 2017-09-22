@@ -168,27 +168,9 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             BlockEndNode node = bruteForceScanForEnd(startNode);
             if (node != null) {
                 blockStartToEnd.put(startNode.getId(), node.getId());
-            }
+            }  //
             return node;
         }
-    }
-
-    /** Get all enclosed nodes in a block, roughly in order with some quirks for parallel branches */
-    public List<FlowNode> getEnclosedNodes(BlockStartNode bsn) {
-        ForkScanner scan = new ForkScanner();
-        BlockEndNode end = getEndNode(bsn);
-        Collection<FlowNode> ends = (end != null) ? (Collection<FlowNode>) Collections.singleton((FlowNode)end) : bsn.getExecution().getCurrentHeads();
-        scan.setup(ends, Collections.singleton((FlowNode)bsn));
-
-        ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
-        if (end != null && scan.hasNext()) { // Skip the BlockEndNode, since it's inside
-            scan.next();
-        }
-        for (FlowNode f : scan) {
-            nodes.add(f);
-        }
-        Collections.reverse(nodes);
-        return nodes;
     }
 
     @CheckForNull
