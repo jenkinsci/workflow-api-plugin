@@ -177,15 +177,14 @@ public class FlowScannerTest {
 
         // Visitor pattern tests
         FlowTestUtils.CollectingVisitor visitor = new FlowTestUtils.CollectingVisitor();
-        linear.visitAll(Collections.EMPTY_SET, visitor);
+        linear.visitAll(Collections.EMPTY_SET, null);
         Assert.assertEquals(0, visitor.getVisited().size());
-        visitor.reset();
 
         linear.visitAll(heads, visitor);
         assertNodeOrder("Visiting all nodes", visitor.getVisited(), 6, 5, 4, 3, 2);
 
         // And visiting with blacklist
-        visitor.reset();
+        visitor.visited.clear();
         linear.visitAll(heads, Collections.singleton(intermediateNode), visitor);
         assertNodeOrder("Visiting all nodes with blacklist", visitor.getVisited(), 6, 5);
 
