@@ -34,6 +34,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Comparator;
+import java.util.Iterator;
 
 /**
  * Library of common functionality when analyzing/walking flow graphs
@@ -113,13 +114,14 @@ public final class FlowScanningUtils {
      * Returns all {@link BlockStartNode}s enclosing the given FlowNode, starting from the inside out.
      * This is useful if we want to obtain information about its scope, such as the workspace, parallel branch, or label.
      * Warning: while this is efficient for one node, batch operations are far more efficient when handling many nodes.
+     * <p>Deprecated, prefer {@link FlowNode#iterateEnclosingBlocks()} instead, possibly using {@link FilteratorImpl#FilteratorImpl(Iterator, Predicate)}
+     *  or Guava or Java 8 APIs if filtering needed.
      * @param f {@link FlowNode} to start from.
      * @return Iterator that returns all enclosing BlockStartNodes from the inside out.
      */
     @Nonnull
+    @Deprecated
     public static Filterator<FlowNode> fetchEnclosingBlocks(@Nonnull FlowNode f) {
-        LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
-        scanner.setup(f);
-        return scanner.filter(MATCH_BLOCK_START);
+        return new FilteratorImpl<>((Iterator)(f.iterateEnclosingBlocks().iterator()), Predicates.<FlowNode>alwaysTrue());
     }
 }
