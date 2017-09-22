@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
+import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,9 +32,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 
+import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.actions.ArgumentsAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -114,17 +117,39 @@ public class FlowNodeTest {
             }
         });
     }
-    private static void assertActiveSteps(WorkflowRun b, String... expected) {
+
+    private static void assertActiveSteps(WorkflowRun b, String... expected) throws Exception{
+        List<String> expectedList = Arrays.asList(expected);
+        Collections.sort(expectedList);
         List<String> actual = new ArrayList<>();
-        for (FlowNode n : new FlowGraphWalker(b.getExecution())) {
+        DepthFirstScanner scan = new DepthFirstScanner();
+        for (FlowNode n : scan.allNodes(b.getExecution())) {
             if (n.isActive()) {
                 String args = ArgumentsAction.getStepArgumentsAsString(n);
                 String name = n.getDisplayFunctionName();
                 actual.add(args != null ? name + ": " + args : name);
             }
         }
-        Collections.reverse(actual); // more readable
-        assertEquals(Arrays.asList(expected), actual);
+        Collections.sort(actual);
+        assertEquals(expectedList, actual);
+
+        // Now we clear the cache and try this again
+        Method m = FlowExecution.class.getDeclaredMethod("getInternalGraphLookup", null);
+        m.setAccessible(true);
+        Object ob = m.invoke((FlowExecution)(b.getExecution()), null);
+        StandardGraphLookupView view = (StandardGraphLookupView)ob;
+        ((StandardGraphLookupView) ob).clearCache();
+
+        actual.clear();
+        for (FlowNode n : scan.allNodes(b.getExecution())) {
+            if (n.isActive()) {
+                String args = ArgumentsAction.getStepArgumentsAsString(n);
+                String name = n.getDisplayFunctionName();
+                actual.add(args != null ? name + ": " + args : name);
+            }
+        }
+        Collections.sort(actual);
+        assertEquals(expectedList, actual);
     }
 
     @Issue("JENKINS-27395")

@@ -33,6 +33,11 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     /** Map a node to its nearest enclosing block */
     HashMap<String, String> nearestEnclosingBlock = new HashMap<String, String>();
 
+    public void clearCache() {
+        blockStartToEnd.clear();
+        nearestEnclosingBlock.clear();
+    }
+
     /** Update with a new node added to the flowgraph */
     @Override
     public void onNewHead(@Nonnull FlowNode newHead) {
@@ -168,7 +173,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             BlockEndNode node = bruteForceScanForEnd(startNode);
             if (node != null) {
                 blockStartToEnd.put(startNode.getId(), node.getId());
-            }  //
+            }
             return node;
         }
     }

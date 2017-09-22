@@ -34,7 +34,6 @@ import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowActionStorage;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
 import org.jenkinsci.plugins.workflow.graph.GraphLookupView;
 import org.jenkinsci.plugins.workflow.graph.StandardGraphLookupView;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
