@@ -24,15 +24,8 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
-import com.google.common.base.Predicates;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import hudson.Extension;
-import hudson.ExtensionList;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
@@ -43,13 +36,9 @@ import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
@@ -59,11 +48,6 @@ import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
-import org.jenkinsci.plugins.workflow.flow.FlowExecutionListener;
-import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
-import org.jenkinsci.plugins.workflow.flow.GraphListener;
-import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -466,7 +450,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     private void persistSafe() {
         try {
             save();
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.WARNING, "failed to save actions for FlowNode id=" + this.id, e);
         }
     }
