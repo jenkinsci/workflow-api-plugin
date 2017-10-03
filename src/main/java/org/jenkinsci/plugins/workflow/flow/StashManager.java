@@ -44,7 +44,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.annotation.CheckForNull;
@@ -163,6 +165,38 @@ public class StashManager {
             return;
         }
         FileUtils.copyDirectory(fromStorage, storage(to));
+    }
+
+    /**
+     * Get a list of files included in a particular stash.
+     *
+     * @param build The build to look in
+     * @param name The stash name to look for
+     * @return A list of file names included in that stash, if it exists. Otherwise, an empty list.
+     * @throws IOException If errors occur while reading from the archived stash tarball.
+     */
+    public static List<String> fileNamesForStash(@Nonnull Run<?,?> build, @Nonnull String name) throws IOException {
+        List<String> fileNames = new ArrayList<>();
+        File[] kids = storage(build).listFiles();
+        if (kids != null) {
+            for (File kid : kids) {
+                String n = kid.getName();
+                if (n.endsWith(SUFFIX) && n.substring(0, n.length() - SUFFIX.length()).equals(name)) {
+                    InputStream is = new FileInputStream(kid);
+                    try {
+                        InputStream wrapped = FilePath.TarCompression.GZIP.extract(is);
+                        TarInputStream tis = new TarInputStream(wrapped);
+                        TarEntry te;
+                        while ((te = tis.getNextEntry()) != null) {
+                            fileNames.add(te.getName());
+                        }
+                    } finally {
+                        is.close();
+                    }
+                }
+            }
+        }
+        return fileNames;
     }
 
     @Restricted(DoNotUse.class) // currently just for tests
