@@ -191,6 +191,17 @@ public class StashManager {
     }
 
     @Restricted(DoNotUse.class) // currently just for tests
+    @SuppressWarnings("unchecked")
+    public static List<String> getStashFiles(@Nonnull Run<?,?> build, @Nonnull String name) throws IOException {
+        Object o = manifestStorage(build, name).read();
+        if (o != null) {
+            return (List<String>)o;
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    @Restricted(DoNotUse.class) // currently just for tests
     @SuppressFBWarnings(value="DM_DEFAULT_ENCODING", justification="test code")
     public static Map<String,Map<String,String>> stashesOf(@Nonnull Run<?,?> build) throws IOException {
         Map<String,Map<String,String>> result = new TreeMap<String,Map<String,String>>();
