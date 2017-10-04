@@ -183,9 +183,7 @@ public class StashManager {
                 String n = kid.getName();
                 if (n.endsWith(SUFFIX) && n.substring(0, n.length() - SUFFIX.length()).equals(name)) {
                     InputStream is = new FileInputStream(kid);
-                    try {
-                        InputStream wrapped = FilePath.TarCompression.GZIP.extract(is);
-                        TarInputStream tis = new TarInputStream(wrapped);
+                    try (TarInputStream tis = new TarInputStream(FilePath.TarCompression.GZIP.extract(is))) {
                         TarEntry te;
                         while ((te = tis.getNextEntry()) != null) {
                             fileNames.add(te.getName());
