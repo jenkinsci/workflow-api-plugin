@@ -23,6 +23,8 @@
  */
 package org.jenkinsci.plugins.workflow.flow;
 
+import javax.annotation.Nonnull;
+
 /**
  * Provides hints about just how hard we should try to protect our workflow from failures of the master.
  * There is a trade-off between durability and performance, with higher levels carrying much higher overheads to execution.
@@ -32,16 +34,16 @@ package org.jenkinsci.plugins.workflow.flow;
 public enum FlowDurabilityHint {
 
     /** Make no promises, we pull out all the stops for speed. */
-    NO_PROMISES(false, false, false),
+    NO_PROMISES(false, false, false, "Make no promises, we pull out all the stops for speed"),
 
     /** Should be able to recover and resume as long as master shut down cleanly without errors. */
-    SURVIVE_CLEAN_RESTART(false, false, true),
+    SURVIVE_CLEAN_RESTART(false, false, true, "Should be able to recover and resume as long as master shut down cleanly without errors."),
 
     /** Sometimes able to recover from an unplanned failure of the master, depending on when and how it happens. */
-    PARTIALLY_DURABLE(true, false, true),
+    PARTIALLY_DURABLE(true, false, true, "Sometimes able to recover from an unplanned failure of the master, depending on when and how it happens."),
 
-    /** Do our best to handle even catastrophic failures of the master. Default level. */
-    FULLY_DURABLE(true, true, true);
+    /** Do our best to handle even catastrophic failures of the master and resume pipelines. Default level. */
+    FULLY_DURABLE(true, true, true, "Do our best to handle even catastrophic failures of the master and resume pipelines. Default level.");
 
     private final boolean atomicWrite;
 
@@ -49,10 +51,13 @@ public enum FlowDurabilityHint {
 
     private final boolean allowPersistPartially;
 
-    FlowDurabilityHint(boolean useAtomicWrite, boolean synchronousWrite, boolean allowPersistPartially) {
+    private final String description;
+
+    FlowDurabilityHint(boolean useAtomicWrite, boolean synchronousWrite, boolean allowPersistPartially, @Nonnull String description) {
         this.atomicWrite = useAtomicWrite;
         this.synchronousWrite = synchronousWrite;
         this.allowPersistPartially = allowPersistPartially;
+        this.description = description;
     }
 
     /** Should we try to use an atomic write to protect from corrupting data with failures and errors during writes? */
@@ -69,4 +74,6 @@ public enum FlowDurabilityHint {
     public boolean isAllowPersistPartially() {
         return allowPersistPartially;
     }
+
+    public String getDescription() {return  description;}
 }
