@@ -12,6 +12,7 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 
+import java.io.File;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -59,7 +60,7 @@ public class StashManagerTest {
                 List<String> fromTopFiles = StashManager.getStashFiles(b, "from-top");
                 assertNotNull(fromTopFiles);
                 assertEquals(1, fromTopFiles.size());
-                assertTrue(fromTopFiles.contains("elsewhere/fname"));
+                assertTrue(fromTopFiles.contains("elsewhere" + File.separator + "fname"));
 
                 SemaphoreStep.success("ending/1", null);
                 rr.j.assertBuildStatusSuccess(rr.j.waitForCompletion(b));
