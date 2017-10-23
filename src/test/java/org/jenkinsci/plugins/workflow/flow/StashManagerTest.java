@@ -5,9 +5,11 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runners.model.Statement;
+import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
@@ -23,6 +25,8 @@ import static org.junit.Assert.assertTrue;
 
 public class StashManagerTest {
     @Rule public RestartableJenkinsRule rr = new RestartableJenkinsRule();
+    @ClassRule
+    public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public LoggerRule logging = new LoggerRule().record(FlowNode.class, Level.FINER);
 
     @Issue("JENKINS-40912")
