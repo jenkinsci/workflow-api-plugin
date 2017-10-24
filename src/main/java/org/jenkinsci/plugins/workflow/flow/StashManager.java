@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
-import com.thoughtworks.xstream.XStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.Extension;
@@ -33,14 +32,10 @@ import hudson.ExtensionPoint;
 import hudson.FilePath;
 import hudson.Launcher.LocalLauncher;
 import hudson.Util;
-import hudson.XmlFile;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.org.apache.tools.tar.TarInputStream;
-import hudson.remoting.VirtualChannel;
 import hudson.util.DirScanner;
-import hudson.util.FileVisitor;
-import hudson.util.XStream2;
 import hudson.util.io.ArchiverFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -49,17 +44,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-
-import jenkins.FilePathFilter;
-import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.ArtifactManager;
 import jenkins.model.Jenkins;
 import jenkins.util.BuildListenerAdapter;
@@ -103,12 +92,10 @@ public class StashManager {
      * @param excludes an optional set of Ant-style file excludes
      * @param useDefaultExcludes whether to use Ant default excludes
      * @param allowEmpty whether to allow an empty stash
-     * @return The list of files included in the stash
      */
     @SuppressFBWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", justification="fine if mkdirs returns false")
-    public static List<String> stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
-                                     @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty)
-            throws IOException, InterruptedException {
+    public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
+                             @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
         File storage = storage(build, name);
         storage.getParentFile().mkdirs();
@@ -125,9 +112,6 @@ public class StashManager {
         } finally {
             os.close();
         }
-        List<String> stashedFiles = filesToAddToStash(workspace, includes, excludes, useDefaultExcludes);
-        manifestStorage(build, name).write(stashedFiles);
-        return stashedFiles;
     }
 
     /**
@@ -135,10 +119,8 @@ public class StashManager {
      * @param build a build used as storage
      * @param name a name passed previously to {@link #stash}
      * @param workspace a directory to copy into
-     * @return The list of files included in the stash
      */
-    @SuppressWarnings("unchecked")
-    public static List<String> unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public static void unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
         File storage = storage(build, name);
         if (!storage.isFile()) {
@@ -146,13 +128,6 @@ public class StashManager {
         }
         new FilePath(storage).untar(workspace, FilePath.TarCompression.GZIP);
         // currently nothing to print; listener is a placeholder
-
-        Object o = manifestStorage(build, name).read();
-        if (o != null) {
-            return (List<String>)o;
-        } else {
-            return Collections.emptyList();
-        }
     }
 
     /**
@@ -188,17 +163,6 @@ public class StashManager {
             return;
         }
         FileUtils.copyDirectory(fromStorage, storage(to));
-    }
-
-    @Restricted(DoNotUse.class) // currently just for tests
-    @SuppressWarnings("unchecked")
-    public static List<String> getStashFiles(@Nonnull Run<?,?> build, @Nonnull String name) throws IOException {
-        Object o = manifestStorage(build, name).read();
-        if (o != null) {
-            return (List<String>)o;
-        } else {
-            return Collections.emptyList();
-        }
     }
 
     @Restricted(DoNotUse.class) // currently just for tests
@@ -244,80 +208,7 @@ public class StashManager {
         return f;
     }
 
-    private static @Nonnull XmlFile manifestStorage(@Nonnull Run<?,?> build, @Nonnull String name) {
-        File dir = storage(build);
-        File f = new File(dir, name + MANIFEST_SUFFIX);
-        if (!f.getParentFile().equals(dir)) {
-            throw new IllegalArgumentException();
-        }
-        return new XmlFile(XSTREAM, f);
-    }
-
-    /**
-     * Wraps {@link FileVisitor} to notify read access to {@link FilePathFilter}.
-     * Lifted from {@link FilePath#reading(FileVisitor)}.
-     */
-    private static FileVisitor reading(final FileVisitor v) {
-        final FilePathFilter filter = FilePathFilter.current();
-        if (filter==null)    return v;
-
-        return new FileVisitor() {
-            @Override
-            public void visit(File f, String relativePath) throws IOException {
-                filter.read(f);
-                v.visit(f,relativePath);
-            }
-
-            @Override
-            public void visitSymlink(File link, String target, String relativePath) throws IOException {
-                filter.read(link);
-                v.visitSymlink(link, target, relativePath);
-            }
-
-            @Override
-            public boolean understandsSymlink() {
-                return v.understandsSymlink();
-            }
-        };
-    }
-
-    private static List<String> filesToAddToStash(@Nonnull FilePath workspace, @CheckForNull String includes,
-                                                  @CheckForNull String excludes, boolean useDefaultExcludes)
-            throws IOException, InterruptedException {
-
-        final DirScanner scanner = new DirScanner.Glob(Util.fixEmpty(includes) == null ? "**" : includes, excludes, useDefaultExcludes);
-        return workspace.act(new MasterToSlaveFileCallable<List<String>>() {
-            public List<String> invoke(File f, VirtualChannel channel) throws IOException {
-                StashListVisitor v = new StashListVisitor();
-                scanner.scan(f, reading(v));
-                return v.getFiles();
-            }
-
-            private static final long serialVersionUID = 1L;
-        });
-
-    }
-
-    private static final class StashListVisitor extends FileVisitor {
-        private final List<String> files = new ArrayList<>();
-
-        @Override
-        public void visit(File file, String relativePath) throws IOException {
-            if (!file.isDirectory()) {
-                files.add(relativePath);
-            }
-        }
-
-        public List<String> getFiles() {
-            return files;
-        }
-    }
-
     private static final String SUFFIX = ".tar.gz";
-
-    private static final String MANIFEST_SUFFIX = "-stash-manifest.xml";
-
-    private static final XStream XSTREAM = new XStream2();
 
     private StashManager() {}
 
@@ -375,4 +266,5 @@ public class StashManager {
         }
 
     }
+
 }
