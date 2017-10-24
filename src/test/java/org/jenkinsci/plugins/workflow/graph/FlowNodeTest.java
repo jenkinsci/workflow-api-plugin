@@ -41,14 +41,12 @@ import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.runners.model.Statement;
-import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
@@ -56,7 +54,7 @@ import org.jvnet.hudson.test.RestartableJenkinsRule;
 public class FlowNodeTest {
 
     @Rule public RestartableJenkinsRule rr = new RestartableJenkinsRule();
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
+    @Rule public LoggerRule logging = new LoggerRule().record(FlowNode.class, Level.FINER);
 
     @Issue("JENKINS-38223")
     @Test public void isActive() {
