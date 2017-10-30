@@ -115,7 +115,6 @@ public class FilePathUtils {
 
         private static final Map<VirtualChannel,String> channelNames = Collections.synchronizedMap(new WeakHashMap<VirtualChannel,String>());
 
-        // TODO: sync access?
         static String getChannelName(@Nonnull VirtualChannel channel) {
             String channelName = channelNames.get(channel);
 
