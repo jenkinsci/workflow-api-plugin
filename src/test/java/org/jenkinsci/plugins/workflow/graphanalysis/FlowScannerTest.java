@@ -481,4 +481,58 @@ public class FlowScannerTest {
         matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
         Assert.assertEquals(6, matches.size()); // Commented out since temporarily failing
     }
+
+    @Test
+    public void displayNamePredicate() throws Exception {
+        WorkflowJob job = r.createProject(WorkflowJob.class, "displayNamePredicate");
+        job.setDefinition(new CpsFlowDefinition(
+                "stage('outermost') {\n" +
+                        "  echo 'in outermost'\n" +
+                        "  parallel(a: {\n" +
+                        "    stage('inner-a') {\n" +
+                        "      echo 'in inner-a'\n" +
+                        "      stage('innermost-a') {\n" +
+                        "        echo 'in innermost-a'\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "  },\n" +
+                        "  b: {\n" +
+                        "    stage('inner-b') {\n" +
+                        "      echo 'in inner-b'\n" +
+                        "      stage('innermost-b') {\n" +
+                        "        echo 'in innermost-b'\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "  })\n" +
+                        "}\n", true));
+
+        // See FlowNodeTest#enclosingBlocks for node dump
+
+        WorkflowRun b = r.buildAndAssertSuccess(job);
+
+        FlowExecution execution = b.getExecution();
+
+        DepthFirstScanner scanner = new DepthFirstScanner();
+
+        FlowNode outermostStage = scanner.findFirstMatch(execution, new NodeDisplayNamePredicate("outermost"));
+        Assert.assertNotNull(outermostStage);
+        Assert.assertEquals("4", outermostStage.getId());
+
+        FlowNode innerAStage = scanner.findFirstMatch(execution, new NodeDisplayNamePredicate("inner-a"));
+        Assert.assertNotNull(innerAStage);
+        Assert.assertEquals("11", innerAStage.getId());
+
+        FlowNode innermostAStage = scanner.findFirstMatch(execution, new NodeDisplayNamePredicate("innermost-a"));
+        Assert.assertNotNull(innermostAStage);
+        Assert.assertEquals("16", innermostAStage.getId());
+
+        FlowNode innerBStage = scanner.findFirstMatch(execution, new NodeDisplayNamePredicate("inner-b"));
+        Assert.assertNotNull(innerBStage);
+        Assert.assertEquals("13", innerBStage.getId());
+
+        FlowNode innermostBStage = scanner.findFirstMatch(execution, new NodeDisplayNamePredicate("innermost-b"));
+        Assert.assertNotNull(innermostBStage);
+        Assert.assertEquals("19", innermostBStage.getId());
+    }
+
 }
