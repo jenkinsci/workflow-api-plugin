@@ -24,6 +24,7 @@
 package org.jenkinsci.plugins.workflow.flow;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 
 /**
  * Provides hints about just how hard we should try to protect our workflow from failures of the master.
@@ -34,16 +35,16 @@ import javax.annotation.Nonnull;
 public enum FlowDurabilityHint {
 
     /** Make no promises, we pull out all the stops for speed. */
-    NO_PROMISES(false, false, false, "Make no promises, we pull out all the stops for speed"),
+    NO_PROMISES(false, false, false, "Fastest. Makes no guarantees about resuming pipelines if Jenkins fails."),
 
     /** Should be able to recover and resume as long as master shut down cleanly without errors. */
-    SURVIVE_CLEAN_RESTART(false, false, true, "Should be able to recover and resume as long as master shut down cleanly without errors."),
+    SURVIVE_CLEAN_RESTART(false, false, true, "Fast. Able to resume pipelines if Jenkins shuts down cleanly."),
 
     /** Sometimes able to recover from an unplanned failure of the master, depending on when and how it happens. */
-    PARTIALLY_DURABLE(true, false, true, "Sometimes able to recover from an unplanned failure of the master, depending on when and how it happens."),
+    PARTIALLY_DURABLE(true, false, true, "Slower.  Able to recover from some unplanned Jenkins failures."),
 
     /** Do our best to handle even catastrophic failures of the master and resume pipelines. Default level. */
-    FULLY_DURABLE(true, true, true, "Do our best to handle even catastrophic failures of the master and resume pipelines. Default level.");
+    FULLY_DURABLE(true, true, true, "Slowest but safest. Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
 
     private final boolean atomicWrite;
 
