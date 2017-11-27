@@ -23,6 +23,11 @@
  */
 package org.jenkinsci.plugins.workflow.flow;
 
+import hudson.Extension;
+import hudson.ExtensionList;
+import hudson.ExtensionPoint;
+import jenkins.model.Jenkins;
+
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 
@@ -30,34 +35,42 @@ import java.io.Serializable;
  * Provides hints about just how hard we should try to protect our workflow from failures of the master.
  * There is a trade-off between durability and performance, with higher levels carrying much higher overheads to execution.
  * Storage and persistence of data should try to provide at least the specified level (may offer more).
+ *
+ * <p> Implementation note: all implementations should be static.
  * @author Sam Van Oort
  */
-public enum FlowDurabilityHint {
+public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable {
 
-    /** Make no promises, we pull out all the stops for speed. */
-    NO_PROMISES(false, false, false, "Fastest. Makes no guarantees about resuming pipelines if Jenkins fails."),
+    public static ExtensionList<FlowDurabilityHint> all() {
+        return Jenkins.getInstance().getExtensionList(FlowDurabilityHint.class);
+    }
 
-    /** Should be able to recover and resume as long as master shut down cleanly without errors. */
-    SURVIVE_CLEAN_RESTART(false, false, true, "Fast. Able to resume pipelines if Jenkins shuts down cleanly."),
+    @Extension
+    public static class FullyDurable extends FlowDurabilityHint {
+        private FullyDurable() {
+            super("Fully durable", true,  true, "Slowest but safest. Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
+        }
+    }
 
-    /** Sometimes able to recover from an unplanned failure of the master, depending on when and how it happens. */
-    PARTIALLY_DURABLE(true, false, true, "Slower.  Able to recover from some unplanned Jenkins failures."),
+    @Extension
+    public static class SurviveCleanRestart extends FlowDurabilityHint {
+        private SurviveCleanRestart() {
+            super("Survive clean restart", false, false, "Fast. Able to resume pipelines if Jenkins shuts down cleanly.");
+        }
+    }
 
-    /** Do our best to handle even catastrophic failures of the master and resume pipelines. Default level. */
-    FULLY_DURABLE(true, true, true, "Slowest but safest. Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
+    private final String name;
 
     private final boolean atomicWrite;
 
-    private final boolean synchronousWrite;
-
-    private final boolean allowPersistPartially;
+    private final boolean persistWithEveryStep;
 
     private final String description;
 
-    FlowDurabilityHint(boolean useAtomicWrite, boolean synchronousWrite, boolean allowPersistPartially, @Nonnull String description) {
+    protected FlowDurabilityHint(@Nonnull String name, boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description) {
+        this.name = name;
         this.atomicWrite = useAtomicWrite;
-        this.synchronousWrite = synchronousWrite;
-        this.allowPersistPartially = allowPersistPartially;
+        this.persistWithEveryStep = persistWithEveryStep;
         this.description = description;
     }
 
@@ -66,14 +79,9 @@ public enum FlowDurabilityHint {
         return atomicWrite;
     }
 
-    /** Do we block execution while writing out state? */
-    public boolean isSynchronousWrite() {
-        return synchronousWrite;
-    }
-
     /** If false, the flow has to complete one way or the other in order to be persisted. */
-    public boolean isAllowPersistPartially() {
-        return allowPersistPartially;
+    public boolean isPersistWithEveryStep() {
+        return persistWithEveryStep;
     }
 
     public String getDescription() {return  description;}
