@@ -92,7 +92,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      */
     @Nonnull
     public FlowDurabilityHint getDurabilityHint() {
-        return (durabilityHint != null) ? durabilityHint : FlowDurabilityHint.FULLY_DURABLE;
+        return (durabilityHint != null) ? durabilityHint : Jenkins.getInstance().getExtensionList(FlowDurabilityHint.FullyDurable.class).get(0);
     }
 
     /**

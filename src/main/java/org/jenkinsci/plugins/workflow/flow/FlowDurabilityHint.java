@@ -36,7 +36,8 @@ import java.io.Serializable;
  * There is a trade-off between durability and performance, with higher levels carrying much higher overheads to execution.
  * Storage and persistence of data should try to provide at least the specified level (may offer more).
  *
- * <p> Implementation note: all implementations should be static.
+ * <p> Implementation note: all implementations should be immutable - this is only an extension point rather than enum because
+ *     we may add additional durability flags.
  * @author Sam Van Oort
  */
 public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable {
@@ -46,15 +47,15 @@ public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable
     }
 
     @Extension
-    public static class FullyDurable extends FlowDurabilityHint {
-        private FullyDurable() {
+    public static final class FullyDurable extends FlowDurabilityHint {
+        public FullyDurable() {
             super("Fully durable", true,  true, "Slowest but safest. Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
         }
     }
 
     @Extension
-    public static class SurviveCleanRestart extends FlowDurabilityHint {
-        private SurviveCleanRestart() {
+    public static final class SurviveCleanRestart extends FlowDurabilityHint {
+        public SurviveCleanRestart() {
             super("Survive clean restart", false, false, "Fast. Able to resume pipelines if Jenkins shuts down cleanly.");
         }
     }
@@ -67,7 +68,7 @@ public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable
 
     private final String description;
 
-    protected FlowDurabilityHint(@Nonnull String name, boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description) {
+    private FlowDurabilityHint(@Nonnull String name, boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description) {
         this.name = name;
         this.atomicWrite = useAtomicWrite;
         this.persistWithEveryStep = persistWithEveryStep;
