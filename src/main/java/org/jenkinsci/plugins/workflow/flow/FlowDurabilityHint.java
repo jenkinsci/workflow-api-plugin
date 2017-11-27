@@ -86,4 +86,8 @@ public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable
     }
 
     public String getDescription() {return  description;}
+
+    public boolean equals(Object ob) {
+        return ob instanceof FlowDurabilityHint && this.getClass().equals(ob.getClass());
+    }
 }
