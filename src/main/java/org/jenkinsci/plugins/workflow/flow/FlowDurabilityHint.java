@@ -28,8 +28,12 @@ import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import jenkins.model.Jenkins;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Provides hints about just how hard we should try to protect our workflow from failures of the master.
@@ -40,10 +44,16 @@ import java.io.Serializable;
  *     we may add additional durability flags.
  * @author Sam Van Oort
  */
-public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable {
+public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable, Comparable<FlowDurabilityHint> {
 
     public static ExtensionList<FlowDurabilityHint> all() {
         return Jenkins.getInstance().getExtensionList(FlowDurabilityHint.class);
+    }
+
+    public static List<FlowDurabilityHint> allSorted() {
+        ArrayList<FlowDurabilityHint> list = new ArrayList<FlowDurabilityHint>(all());
+        Collections.sort(list);
+        return list;
     }
 
     @Extension
@@ -87,6 +97,10 @@ public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable
 
     public String getDescription() {return  description;}
 
+    public String getName() {
+        return name;
+    }
+
     @Override
     public boolean equals(Object ob) {
         return ob instanceof FlowDurabilityHint && this.getClass().equals(ob.getClass());
@@ -95,5 +109,17 @@ public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable
     @Override
     public int hashCode() {
         return getClass().toString().hashCode();
+    }
+
+    public int compareTo(FlowDurabilityHint hint) {
+        if (hint == null || hint == this || hint.getClass() == this.getClass()) {
+            return 0;
+        }
+        if (this.isPersistWithEveryStep() != hint.isPersistWithEveryStep()) {
+            return hint.isPersistWithEveryStep() ? -1 : 1;
+        } else if (this.isAtomicWrite() != hint.isAtomicWrite()) {
+            return (hint.isAtomicWrite()) ? -1 : 1;
+        }
+        return 0;
     }
 }
