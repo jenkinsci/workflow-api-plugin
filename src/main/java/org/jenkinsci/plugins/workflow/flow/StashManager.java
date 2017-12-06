@@ -171,7 +171,7 @@ public class StashManager {
      * Get the filenames included in a particular stash.
      * @param build The build to look in.
      * @param stashName The stash name to look up.
-     * @return A possibly empty list of filenames included in the given stash name in the given build.
+     * @return A possibly empty list of filenames included in the given stash name in the given build. Unix separators will be used.
      * @throws IOException If unable to interact with the stash files.
      */
     @Nonnull

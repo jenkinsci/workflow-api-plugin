@@ -79,7 +79,7 @@ public class StashManagerTest {
                 List<String> secondList = StashManager.stashFileList(b, "second");
                 assertFalse(secondList.isEmpty());
                 assertEquals(1, secondList.size());
-                assertTrue(secondList.contains("elsewhere" + File.separator + "nested"));
+                assertTrue(secondList.contains("elsewhere/nested"));
             }
         });
     }
