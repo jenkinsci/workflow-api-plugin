@@ -23,17 +23,7 @@
  */
 package org.jenkinsci.plugins.workflow.flow;
 
-import hudson.Extension;
-import hudson.ExtensionList;
-import hudson.ExtensionPoint;
-import jenkins.model.Jenkins;
-
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Provides hints about just how hard we should try to protect our workflow from failures of the master.
@@ -44,41 +34,13 @@ import java.util.List;
  *     we may add additional durability flags.
  * @author Sam Van Oort
  */
-public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable, Comparable<FlowDurabilityHint> {
+public enum FlowDurabilityHint {
+    PERFORMANCE_OPTIMIZED(false, false, "Performance-optimized. Pipelines resume if Jenkins shuts down cleanly, but running pipelines lose information and can't resume if Jenkins unexpectedly fails."),
 
-    public static ExtensionList<FlowDurabilityHint> all() {
-        return Jenkins.getInstance().getExtensionList(FlowDurabilityHint.class);
-    }
+    SURVIVABLE_NONATOMIC(false,  true, "Less survivability, a bit faster. Survives most failures but does not rely on atomic writes to XML files, so data may be lost if writes fail or are interrupted."),
 
-    public static List<FlowDurabilityHint> allSorted() {
-        ArrayList<FlowDurabilityHint> list = new ArrayList<FlowDurabilityHint>(all());
-        Collections.sort(list);
-        return list;
-    }
-
-    @Extension
-    public static final class FullyDurable extends FlowDurabilityHint {
-        public FullyDurable() {
-            super("FULLY_DURABLE", true,  true, "Maximum survivability but slowest " +
-                    "Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
-        }
-    }
-
-    @Extension
-    public static final class DurableButNonAtomic extends FlowDurabilityHint {
-        public DurableButNonAtomic() {
-            super("DURABLE_NONATOMIC", false,  true, "Less survivability, a bit faster. Survives most failures but does not rely on atomic writes to XML files, so data may be lost if writes fail or are interrupted.");
-        }
-    }
-
-    @Extension
-    public static final class SurviveCleanRestart extends FlowDurabilityHint {
-        public SurviveCleanRestart() {
-            super("SURVIVE_CLEAN_RESTART", false, false, "Performance-optimized. Pipelines resume if Jenkins shuts down cleanly, but running pipelines lose information and can't resume if Jenkins unexpectedly fails.");
-        }
-    }
-
-    private final String name;
+    MAX_SURVIVABILITY (true,  true, "Maximum survivability but slowest. " +
+            "Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
 
     private final boolean atomicWrite;
 
@@ -86,8 +48,7 @@ public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable
 
     private final String description;
 
-    private FlowDurabilityHint(@Nonnull String name, boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description) {
-        this.name = name;
+    FlowDurabilityHint (boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description) {
         this.atomicWrite = useAtomicWrite;
         this.persistWithEveryStep = persistWithEveryStep;
         this.description = description;
@@ -103,31 +64,10 @@ public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable
         return persistWithEveryStep;
     }
 
-    public String getDescription() {return  description;}
-
+    /** For compatibility with Jelly, etc. */
     public String getName() {
-        return name;
+        return name();
     }
 
-    @Override
-    public boolean equals(Object ob) {
-        return ob instanceof FlowDurabilityHint && this.getClass().equals(ob.getClass());
-    }
-
-    @Override
-    public int hashCode() {
-        return getClass().toString().hashCode();
-    }
-
-    public int compareTo(FlowDurabilityHint hint) {
-        if (hint == null || hint == this || hint.getClass() == this.getClass()) {
-            return 0;
-        }
-        if (this.isPersistWithEveryStep() != hint.isPersistWithEveryStep()) {
-            return hint.isPersistWithEveryStep() ? -1 : 1;
-        } else if (this.isAtomicWrite() != hint.isAtomicWrite()) {
-            return (hint.isAtomicWrite()) ? -1 : 1;
-        }
-        return 0;
-    }
+    public String getDescription() {return  description;}
 }

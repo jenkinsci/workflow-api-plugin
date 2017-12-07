@@ -32,6 +32,7 @@ import hudson.model.TaskListener;
 import hudson.util.LogTaskListener;
 
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
@@ -50,9 +51,9 @@ public abstract class FlowDefinition extends AbstractDescribableImpl<FlowDefinit
     /** Provide a {@link FlowDurabilityHint} to be passed into the {@link FlowExecution} at creation time.
      *  Implementations should try to set {@link FlowExecution#durabilityHint} using this, if not null, otherwise set a default.
      */
-    @CheckForNull
+    @Nonnull
     public FlowDurabilityHint getDurabilityHint() {
-        return myHint;
+        return myHint != null ? myHint : GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint();
     }
 
     public void setDurabilityHint(@CheckForNull FlowDurabilityHint hint) {

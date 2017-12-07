@@ -73,7 +73,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
 
     protected transient GraphLookupView internalGraphLookup = null;
 
-    @CheckForNull
+    @CheckForNull /** CheckForNull due to loading pre-durability runs. */
     protected FlowDurabilityHint durabilityHint = null;
 
     /** Eventually this may be overridden if the FlowExecution has a better source of structural information, such as the {@link FlowNode} storage. */
@@ -92,7 +92,8 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      */
     @Nonnull
     public FlowDurabilityHint getDurabilityHint() {
-        return (durabilityHint != null) ? durabilityHint : Jenkins.getInstance().getExtensionList(FlowDurabilityHint.FullyDurable.class).get(0);
+        // MAX_SURVIVABILITY is the behavior of builds before the change was introduced.
+        return (durabilityHint != null) ? durabilityHint : FlowDurabilityHint.MAX_SURVIVABILITY;
     }
 
     /**
