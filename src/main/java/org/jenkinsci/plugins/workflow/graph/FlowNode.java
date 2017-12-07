@@ -29,6 +29,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
+import hudson.model.Result;
 import hudson.model.Saveable;
 import hudson.search.SearchItem;
 import java.io.IOException;
@@ -317,6 +318,8 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return getExecution().getUrl()+"node/"+getId()+'/';
     }
 
+    @CheckForNull
+    public abstract Result getStatus();
 
     /**
      * SPI for subtypes to directly manipulate the actions field.

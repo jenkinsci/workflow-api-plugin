@@ -297,4 +297,16 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
         }
         return getInternalGraphLookup().iterateEnclosingBlocks(node);
     }
+
+    /** @see GraphLookupView#getImmediateChildrenForBlockStart(BlockStartNode)
+     * @throws IllegalArgumentException If the input {@link BlockStartNode} does not belong to this execution
+     */
+    @Nonnull
+    @Restricted(NoExternalUse.class)
+    public List<FlowNode> getImmediateChildrenForBlockStart(@Nonnull BlockStartNode node) {
+        if (!this.equals(node.getExecution())) {
+            throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
+        }
+        return getInternalGraphLookup().getImmediateChildrenForBlockStart(node);
+    }
 }

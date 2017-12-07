@@ -25,11 +25,17 @@
 package org.jenkinsci.plugins.workflow.graph;
 
 import java.io.IOException;
+
+import hudson.model.Result;
+import org.jenkinsci.plugins.workflow.actions.ErrorAction;
+import org.jenkinsci.plugins.workflow.actions.FlowNodeStatusAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
@@ -69,6 +75,26 @@ public abstract class BlockEndNode<START extends BlockStartNode> extends FlowNod
             }
         }
         return start;
+    }
+
+    @CheckForNull
+    @Override
+    public Result getStatus() {
+        ErrorAction errorAction = getError();
+        if (errorAction != null) {
+            if (errorAction.getError() instanceof FlowInterruptedException) {
+                return Result.ABORTED;
+            } else {
+                return Result.FAILURE;
+            }
+        } else {
+            FlowNodeStatusAction statusAction = getPersistentAction(FlowNodeStatusAction.class);
+            if (statusAction != null) {
+                return statusAction.getResult();
+            }
+        }
+        // If there's no error on the end node or status action on the end node, return success.
+        return Result.SUCCESS;
     }
 
 }

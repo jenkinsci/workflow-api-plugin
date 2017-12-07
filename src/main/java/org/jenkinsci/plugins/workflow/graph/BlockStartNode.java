@@ -24,9 +24,14 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
+import hudson.model.Result;
+import org.jenkinsci.plugins.workflow.actions.ErrorAction;
+import org.jenkinsci.plugins.workflow.actions.FlowNodeStatusAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import java.util.List;
 
 /**
@@ -50,5 +55,24 @@ public abstract class BlockStartNode extends FlowNode {
     @CheckForNull
     public BlockEndNode getEndNode() {
         return this.getExecution().getEndNode(this);
+    }
+
+    /** Get the immedate children of this block. */
+    @Nonnull
+    public List<FlowNode> getImmediateChildren() {
+        return this.getExecution().getImmediateChildrenForBlockStart(this);
+    }
+
+    @CheckForNull
+    @Override
+    public Result getStatus() {
+        BlockEndNode endNode = getEndNode();
+        // Only check for errors or explicit status if this block is complete.
+        if (endNode != null) {
+            return endNode.getStatus();
+        }
+
+        // If there's no end node, return null - i.e., still in progress.
+        return null;
     }
 }
