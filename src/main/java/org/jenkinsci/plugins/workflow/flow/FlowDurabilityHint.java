@@ -59,14 +59,22 @@ public abstract class FlowDurabilityHint implements ExtensionPoint, Serializable
     @Extension
     public static final class FullyDurable extends FlowDurabilityHint {
         public FullyDurable() {
-            super("Fully durable", true,  true, "Slowest but safest. Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
+            super("FULLY_DURABLE", true,  true, "Maximum survivability but slowest " +
+                    "Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
+        }
+    }
+
+    @Extension
+    public static final class DurableButNonAtomic extends FlowDurabilityHint {
+        public DurableButNonAtomic() {
+            super("DURABLE_NONATOMIC", false,  true, "Less survivability, a bit faster. Survives most failures but does not rely on atomic writes to XML files, so data may be lost if writes fail or are interrupted.");
         }
     }
 
     @Extension
     public static final class SurviveCleanRestart extends FlowDurabilityHint {
         public SurviveCleanRestart() {
-            super("Survive clean restart", false, false, "Fast. Able to resume pipelines if Jenkins shuts down cleanly.");
+            super("SURVIVE_CLEAN_RESTART", false, false, "Performance-optimized. Pipelines resume if Jenkins shuts down cleanly, but running pipelines lose information and can't resume if Jenkins unexpectedly fails.");
         }
     }
 
