@@ -40,6 +40,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
+            // TODO verify if this is covered by permissions checks or we need an explicit check here.
             Object ob = json.opt("durabilityHint");
             FlowDurabilityHint hint = null;
             if (ob instanceof String) {
