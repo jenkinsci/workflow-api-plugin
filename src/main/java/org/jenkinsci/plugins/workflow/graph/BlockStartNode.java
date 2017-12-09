@@ -57,12 +57,6 @@ public abstract class BlockStartNode extends FlowNode {
         return this.getExecution().getEndNode(this);
     }
 
-    /** Get the immedate children of this block. */
-    @Nonnull
-    public List<FlowNode> getImmediateChildren() {
-        return this.getExecution().getImmediateChildrenForBlockStart(this);
-    }
-
     @CheckForNull
     @Override
     public Result getStatus() {

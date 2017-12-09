@@ -30,22 +30,9 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     /** Map a node to its nearest enclosing block */
     HashMap<String, String> nearestEnclosingBlock = new HashMap<String, String>();
 
-    /** Map a block start node to its immediate children nodes, including AtomNode, BlockStartNode, and BlockEndNode */
-    HashMap<String, List<String>> blockChildren = new HashMap<>();
-
     public void clearCache() {
         blockStartToEnd.clear();
         nearestEnclosingBlock.clear();
-        blockChildren.clear();
-    }
-
-    private void addToBlockChildren(@Nonnull String blockId, @Nonnull String childId) {
-        if (!blockChildren.containsKey(blockId)) {
-            blockChildren.put(blockId, new ArrayList<String>());
-        }
-        if (!blockChildren.get(blockId).contains(childId)) {
-            blockChildren.get(blockId).add(childId);
-        }
     }
 
     /** Update with a new node added to the flowgraph */
@@ -78,7 +65,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
                     String enclosingId = nearestEnclosingBlock.get(lookupId);
                     if (enclosingId != null) {
                         nearestEnclosingBlock.put(newHead.getId(), enclosingId);
-                                    }
+                    }
                 }
             }
         }
@@ -227,37 +214,5 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             currentlyEnclosing = findEnclosingBlockStart(currentlyEnclosing);
         }
         return starts;
-    }
-
-    @Nonnull
-    @Override
-    public List<FlowNode> getImmediateChildrenForBlockStart(@Nonnull BlockStartNode start) {
-        if (!blockChildren.containsKey(start.getId())) {
-            // TODO: Maybe this should just be literally reversing nearestEnclosingBlock.
-            BlockEndNode end = getEndNode(start);
-            DepthFirstScanner scan = new DepthFirstScanner();
-            if (end != null) {
-                scan.setup(end, Collections.<FlowNode>singletonList(start));
-            } else {
-                scan.setup(start.getExecution().getCurrentHeads(), Collections.<FlowNode>singletonList(start));
-            }
-            for (FlowNode f : scan) {
-                BlockStartNode s = findEnclosingBlockStart(f);
-                if (s != null && s.equals(start)) {
-                    addToBlockChildren(s.getId(), f.getId());
-                }
-            }
-        }
-        List<FlowNode> children = new ArrayList<>();
-        if (blockChildren.get(start.getId()) != null) {
-            for (String childId : blockChildren.get(start.getId())) {
-                try {
-                    children.add(start.getExecution().getNode(childId));
-                } catch (IOException ioe) {
-                    throw new RuntimeException(ioe);
-                }
-            }
-        }
-        return children;
     }
 }
