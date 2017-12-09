@@ -249,11 +249,13 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             }
         }
         List<FlowNode> children = new ArrayList<>();
-        for (String childId : blockChildren.get(start.getId())) {
-            try {
-                children.add(start.getExecution().getNode(childId));
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
+        if (blockChildren.get(start.getId()) != null) {
+            for (String childId : blockChildren.get(start.getId())) {
+                try {
+                    children.add(start.getExecution().getNode(childId));
+                } catch (IOException ioe) {
+                    throw new RuntimeException(ioe);
+                }
             }
         }
         return children;

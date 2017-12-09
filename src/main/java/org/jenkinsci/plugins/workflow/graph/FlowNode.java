@@ -46,9 +46,11 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
+import org.jenkinsci.plugins.workflow.actions.FlowNodeStatusAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -319,7 +321,26 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     @CheckForNull
-    public abstract Result getStatus();
+    public Result getStatus() {
+        if (isActive()) {
+            return null;
+        }
+
+        ErrorAction errorAction = getError();
+        if (errorAction != null) {
+            if (errorAction.getError() instanceof FlowInterruptedException) {
+                return Result.ABORTED;
+            } else {
+                return Result.FAILURE;
+            }
+        }
+        FlowNodeStatusAction statusAction = getPersistentAction(FlowNodeStatusAction.class);
+        if (statusAction != null) {
+            return statusAction.getResult();
+        }
+
+        return Result.SUCCESS;
+    }
 
     /**
      * SPI for subtypes to directly manipulate the actions field.
