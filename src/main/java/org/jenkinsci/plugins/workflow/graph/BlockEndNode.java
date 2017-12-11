@@ -26,8 +26,12 @@ package org.jenkinsci.plugins.workflow.graph;
 
 import java.io.IOException;
 
+import hudson.model.Result;
+import org.jenkinsci.plugins.workflow.actions.FlowNodeStatusAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 
+import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 
@@ -68,5 +72,32 @@ public abstract class BlockEndNode<START extends BlockStartNode> extends FlowNod
             }
         }
         return start;
+    }
+
+    public void setFlowNodeStatus() {
+        Result r = null;
+
+        // If there's already a FlowNodeStatusAction on this end node for some reason, use that as the starting point.
+        FlowNodeStatusAction existingAction = getPersistentAction(FlowNodeStatusAction.class);
+        if (existingAction != null) {
+            r = existingAction.getResult();
+        }
+
+        START start = getStartNode();
+        final String startId = start.getId();
+        DepthFirstScanner scan = new DepthFirstScanner();
+        for (FlowNode f : scan.filteredNodes(Collections.singletonList(this),
+                Collections.singletonList(start),
+                (input) -> input != null && startId.equals(input.getEnclosingId()))) {
+            FlowNodeStatusAction statusAction = f.getPersistentAction(FlowNodeStatusAction.class);
+            if (statusAction != null) {
+                if (r == null || r.isBetterThan(statusAction.getResult())) {
+                    r = statusAction.getResult();
+                }
+            }
+        }
+        if (r != null) {
+            addOrReplaceAction(new FlowNodeStatusAction(r));
+        }
     }
 }
