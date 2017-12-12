@@ -30,8 +30,6 @@ import javax.annotation.Nonnull;
  * There is a trade-off between durability and performance, with higher levels carrying much higher overheads to execution.
  * Storage and persistence of data should try to provide at least the specified level (may offer more).
  *
- * <p> Implementation note: all implementations should be immutable - this is only an extension point rather than enum because
- *     we may add additional durability flags.
  * @author Sam Van Oort
  */
 public enum FlowDurabilityHint {
