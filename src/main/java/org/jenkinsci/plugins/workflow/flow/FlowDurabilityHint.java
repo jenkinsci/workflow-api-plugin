@@ -35,12 +35,14 @@ import javax.annotation.Nonnull;
  * @author Sam Van Oort
  */
 public enum FlowDurabilityHint {
-    PERFORMANCE_OPTIMIZED(false, false, "Performance-optimized. Pipelines resume if Jenkins shuts down cleanly, but running pipelines lose information and can't resume if Jenkins unexpectedly fails."),
+    PERFORMANCE_OPTIMIZED(false, false, "Performance-optimized: much faster (requires clean shutdown to save running pipelines)",
+            "Avoids writing data with every step, avoids atomic writes of data.  Pipelines can resume if Jenkins shuts down cleanly, but running pipelines lose step information and can't resume if Jenkins unexpectedly fails."),
 
-    SURVIVABLE_NONATOMIC(false,  true, "Less survivability, a bit faster. Survives most failures but does not rely on atomic writes to XML files, so data may be lost if writes fail or are interrupted."),
+    SURVIVABLE_NONATOMIC(false,  true, "Less durability, a bit faster (specialty use only)",
+            "Writes data with every step but avoids atomic writes. On some filesytems this is faster than maximum durability mode, but running pipeline data may be lost if disk writes are interrupted or fail."),
 
-    MAX_SURVIVABILITY (true,  true, "Maximum survivability but slowest. " +
-            "Previously the only option.  Able to recover and resume pipelines in many cases even after catastrophic failures.");
+    MAX_SURVIVABILITY (true,  true, "Maximum durability but slowest (previously the only option)",
+            "Writes data with every step, using atomic writes for integrity.  Provides maximum ability to retain running pipeline data and resume in the event of a Jenkins failure.");
 
     private final boolean atomicWrite;
 
@@ -48,10 +50,13 @@ public enum FlowDurabilityHint {
 
     private final String description;
 
-    FlowDurabilityHint (boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description) {
+    private final String tooltip;
+
+    FlowDurabilityHint (boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description, String tooltip) {
         this.atomicWrite = useAtomicWrite;
         this.persistWithEveryStep = persistWithEveryStep;
         this.description = description;
+        this.tooltip = tooltip;
     }
 
     /** Should we try to use an atomic write to protect from corrupting data with failures and errors during writes? */
@@ -70,4 +75,8 @@ public enum FlowDurabilityHint {
     }
 
     public String getDescription() {return  description;}
+
+    public String getTooltip() {
+        return tooltip;
+    };
 }

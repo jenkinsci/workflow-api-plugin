@@ -56,6 +56,10 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
             return true;
         }
 
+        public static FlowDurabilityHint getSuggestedDurabilityHint() {
+            return GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT;
+        }
+
         public static FlowDurabilityHint[] getDurabilityHintValues() {
             return FlowDurabilityHint.values();
         }
