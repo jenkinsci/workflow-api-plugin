@@ -12,8 +12,6 @@ import org.jvnet.hudson.test.JenkinsRule;
  * @author Sam Van Oort
  */
 public class DurabilityBasicsTest {
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
 
     @Rule
     public JenkinsRule r = new JenkinsRule();

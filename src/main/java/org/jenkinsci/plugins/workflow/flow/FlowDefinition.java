@@ -45,21 +45,6 @@ import java.util.logging.Logger;
  * @author Jesse Glick
  */
 public abstract class FlowDefinition extends AbstractDescribableImpl<FlowDefinition> implements ExtensionPoint {
-
-    protected FlowDurabilityHint myHint = null;
-
-    /** Provide a {@link FlowDurabilityHint} to be passed into the {@link FlowExecution} at creation time.
-     *  Implementations should try to set {@link FlowExecution#durabilityHint} using this, if not null, otherwise set a default.
-     */
-    @Nonnull
-    public FlowDurabilityHint getDurabilityHint() {
-        return myHint != null ? myHint : GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint();
-    }
-
-    public void setDurabilityHint(@CheckForNull FlowDurabilityHint hint) {
-        this.myHint = hint;
-    }
-
     /**
      * Starts a brand new execution of this definition from the beginning.
      *
