@@ -27,6 +27,7 @@ public interface DurabilityHintProvider extends ExtensionPoint {
             if (h != null) {
                 if (p.ordinal() < ordinal) {
                     hint = h;
+                    ordinal = p.ordinal();
                 }
             }
         }
