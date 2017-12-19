@@ -13,5 +13,5 @@
             </select>
         </f:entry>
     </f:section>
-    <f:section title=""></f:section>  <!-- Visual boundary -->
+    <br/><br/>
 </j:jelly>
