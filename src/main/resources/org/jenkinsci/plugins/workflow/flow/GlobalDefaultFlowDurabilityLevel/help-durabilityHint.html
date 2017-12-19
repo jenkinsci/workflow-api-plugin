@@ -5,7 +5,7 @@
 
         <br><br><strong>What does this do?</strong>
         <ul>
-            <li>Previously, running pipelines wrote data constantly, so that they could resume even if the master fails.
+            <li>Previously, running pipelines wrote data constantly, so that they could resume even if Jenkins fails.
                 This setting gives the user the ability to adjust this write behavior.</li>
             <li>Higher-performance/lower-durability modes write data to disk <strong>much</strong> less often for running pipelines.</li>
             <li>Writing data less often can massively reduce build times for Pipelines with many steps or complex logic.
