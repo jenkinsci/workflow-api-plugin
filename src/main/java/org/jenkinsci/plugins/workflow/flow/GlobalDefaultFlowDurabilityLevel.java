@@ -20,6 +20,14 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
     @Extension
     public static class DescriptorImpl extends Descriptor<GlobalDefaultFlowDurabilityLevel> {
 
+        public DescriptorImpl() {
+            super();
+            load();
+            if (this.durabilityHint == null) {
+                System.out.println("Null durability hint");
+            }
+        }
+
         /** Null to use the platform default, which may change over time as enhanced options are available. */
         private FlowDurabilityHint durabilityHint = null;
 
