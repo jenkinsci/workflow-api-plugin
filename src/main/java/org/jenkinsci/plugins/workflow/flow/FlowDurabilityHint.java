@@ -33,14 +33,11 @@ import javax.annotation.Nonnull;
  * @author Sam Van Oort
  */
 public enum FlowDurabilityHint {
-    PERFORMANCE_OPTIMIZED(false, false, "Performance-optimized: much faster (requires clean shutdown to save running pipelines)",
-            "Avoids writing data with every step, avoids atomic writes of data.  Pipelines can resume if Jenkins shuts down cleanly, but running pipelines lose step information and can't resume if Jenkins unexpectedly fails."),
+    PERFORMANCE_OPTIMIZED(false, false, Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_description(), Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_tooltip()),
 
-    SURVIVABLE_NONATOMIC(false,  true, "Less durability, a bit faster (specialty use only)",
-            "Writes data with every step but avoids atomic writes. On some filesytems this is faster than maximum durability mode, but running pipeline data may be lost if disk writes are interrupted or fail."),
+    SURVIVABLE_NONATOMIC(false,  true, Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_description(), Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_tooltip()),
 
-    MAX_SURVIVABILITY (true,  true, "Maximum durability but slowest (previously the only option)",
-            "Writes data with every step, using atomic writes for integrity.  Provides maximum ability to retain running pipeline data and resume in the event of a Jenkins failure.");
+    MAX_SURVIVABILITY (true,  true, Messages.FlowDurabilityHint_MAX_SURVIVABILITY_description(), Messages.FlowDurabilityHint_MAX_SURVIVABILITY_tooltip());
 
     private final boolean atomicWrite;
 
