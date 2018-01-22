@@ -240,6 +240,15 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     @Restricted(DoNotUse.class)
     @Terminator public static void saveAll() throws InterruptedException {
         LOGGER.fine("ensuring all executions are saved");
+
+        for (FlowExecutionOwner owner : get().runningTasks.getView()) {
+            try {
+                owner.notifyShutdown();
+            } catch (Exception ex) {
+                LOGGER.log(Level.WARNING, "Error shutting down task", ex);
+            }
+        }
+
         SingleLaneExecutorService executor = get().executor;
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
