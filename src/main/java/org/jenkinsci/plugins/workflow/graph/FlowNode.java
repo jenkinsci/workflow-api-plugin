@@ -35,14 +35,15 @@ import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
-import static java.util.logging.Level.*;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
@@ -50,7 +51,6 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
@@ -60,12 +60,11 @@ import org.kohsuke.stapler.export.ExportedBean;
 @ExportedBean
 public abstract class FlowNode extends Actionable implements Saveable {
     private transient List<FlowNode> parents;
-    private List<String> parentIds;
+    private final List<String> parentIds;
 
     private String id;
 
-    // this is a copy-on-write array so synchronization isn't needed between reader & writer.
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings("IS2_INCONSISTENT_SYNC")
+    @SuppressFBWarnings(value="IS2_INCONSISTENT_SYNC", justification="this is a copy-on-write array so synchronization isn't needed between reader & writer")
     private transient CopyOnWriteArrayList<Action> actions = new CopyOnWriteArrayList<Action>();
 
     private transient final FlowExecution exec;
@@ -75,6 +74,8 @@ public abstract class FlowNode extends Actionable implements Saveable {
         this.exec = exec;
         this.parents = ImmutableList.copyOf(parents);
         parentIds = ids();
+        // Note that enclosingId is set in the constructors of AtomNode, BlockEndNode, and BlockStartNode, since we need
+        // BlockEndNode in particular to have its start node beforehand.
     }
 
     protected FlowNode(FlowExecution exec, String id, FlowNode... parents) {
@@ -82,10 +83,12 @@ public abstract class FlowNode extends Actionable implements Saveable {
         this.exec = exec;
         this.parents = ImmutableList.copyOf(parents);
         parentIds = ids();
+        // Note that enclosingId is set in the constructors of AtomNode, BlockEndNode, and BlockStartNode, since we need
+        // BlockEndNode in particular to have its start node beforehand.
     }
 
     private List<String> ids() {
-        List<String> ids = new ArrayList<String>(parents.size());
+        List<String> ids = new ArrayList<>(parents.size());
         for (FlowNode n : parents) {
             ids.add(n.id);
         }
@@ -110,11 +113,22 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * <p>It will be false for a node which still has active children, like a step with a running body.
      * It will also be false for something that has finished but is pending child node creation,
      * such as a completed fork branch which is waiting for the join node to be created.
-     * <p>This can only go from true to false and is a shortcut for {@link FlowExecution#isCurrentHead}.
+     * <p>This can only go from true to false.
+     * @deprecated Usually {@link #isActive} is what you want. If you really wanted the original behavior, use {@link FlowExecution#isCurrentHead}.
      */
-    @Exported
+    @Deprecated
     public final boolean isRunning() {
         return getExecution().isCurrentHead(this);
+    }
+
+    /**
+     * Checks whether a node is still part of the active part of the graph.
+     * Unlike {@link #isRunning}, this behaves intuitively for a {@link BlockStartNode}:
+     * it will be considered active until the {@link BlockEndNode} is added.
+     */
+    @Exported(name="running")
+    public final boolean isActive() {
+        return this.getExecution().isActive(this);
     }
 
     /**
@@ -142,26 +156,74 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Nonnull
     private List<FlowNode> loadParents(List<String> parentIds) {
-        List<FlowNode> _parents = new ArrayList<FlowNode>(parentIds.size());
-        for (String parentId : parentIds) {
-            try {
-                _parents.add(exec.getNode(parentId));
-            } catch (IOException x) {
-                LOGGER.log(Level.WARNING, "failed to load parents of " + id, x);
+        try {
+            if (parentIds.size() == 1) {
+                return Collections.singletonList(exec.getNode(parentIds.get(0)));
+            } else {
+                List<FlowNode> _parents = new ArrayList<>(parentIds.size());
+                for (String parentId : parentIds) {
+                    _parents.add(exec.getNode(parentId));
+                }
+                return _parents;
             }
+        } catch (IOException x) {
+            LOGGER.log(Level.WARNING, "failed to load parents of " + id, x);
+            return Collections.emptyList();
         }
-        return _parents;
+    }
+
+    /**
+     * Get the {@link #id} of the enclosing {@link BlockStartNode}for this node, or null if none.
+     * Only {@link FlowStartNode} and {@link FlowEndNode} should generally return null.
+     */
+    @CheckForNull
+    public String getEnclosingId() {
+        FlowNode enclosing = this.exec.findEnclosingBlockStart(this);
+        return enclosing != null ? enclosing.getId() : null;
+    }
+
+    /**
+     * Get the list of enclosing {@link BlockStartNode}s, starting from innermost, for this node.
+     * May be empty if we are the {@link FlowStartNode} or {@link FlowEndNode}
+     */
+    @Nonnull
+    public List<? extends BlockStartNode> getEnclosingBlocks() {
+        return this.exec.findAllEnclosingBlockStarts(this);
+    }
+
+    /** Return an iterator over all enclosing blocks.
+     *  Prefer this to {@link #getEnclosingBlocks()} unless you need ALL nodes, because it can evaluate lazily. */
+    @Nonnull
+    public Iterable<BlockStartNode> iterateEnclosingBlocks() {
+        return this.exec.iterateEnclosingBlocks(this);
+    }
+
+    /**
+     * Returns a read-only view of the IDs for enclosing blocks of this flow node, innermost first. May be empty.
+     */
+    @Nonnull
+    public List<String> getAllEnclosingIds() {
+        List<? extends BlockStartNode> nodes = getEnclosingBlocks();
+        ArrayList<String> output = new ArrayList<String>(nodes.size());
+        for (FlowNode f : nodes) {
+            output.add(f.getId());
+        }
+        return output;
     }
 
     @Restricted(DoNotUse.class)
     @Exported(name="parents")
     @Nonnull
     public List<String> getParentIds() {
-        List<String> ids = new ArrayList<String>(2);
-        for (FlowNode parent : getParents()) {
-            ids.add(parent.getId());
+        if (parentIds != null) {
+            return Collections.unmodifiableList(parentIds);
+        } else {
+            List<String> ids = new ArrayList<>(parents.size());
+            for (FlowNode parent : getParents()) {
+                ids.add(parent.getId());
+            }
+            return ids;
         }
-        return ids;
     }
 
     /**
@@ -179,11 +241,13 @@ public abstract class FlowNode extends Actionable implements Saveable {
     /**
      * Reference from the parent {@link SearchItem} is through {@link FlowExecution#getNode(String)}
      */
+    @Override
     public final String getSearchUrl() {
         return getId();
     }
 
     @Exported
+    @Override
     public String getDisplayName() {
         LabelAction a = getPersistentAction(LabelAction.class);
         if (a!=null)    return a.getDisplayName();
@@ -213,15 +277,16 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Exported
     public BallColor getIconColor() {
         BallColor c = getError()!=null ? BallColor.RED : BallColor.BLUE;
-        // TODO this should probably also be _anime in case this is a step node with a body and the body is still running (try FlowGraphTable for example)
-        if (isRunning())        c = c.anime();
+        if (isActive()) {
+            c = c.anime();
+        }
         return c;
     }
 
     /**
      * Gets a human readable name for this type of the node.
      *
-     * This is used to implement {@link #getDisplayName()} as a fallback in case {@link LabelAction} doesnt exist.
+     * This is used to implement {@link #getDisplayName()} as a fallback in case {@link LabelAction} does not exist.
      */
     protected abstract String getTypeDisplayName();
 
@@ -263,7 +328,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * This method provides such an opportunity for subtypes.
      */
     protected synchronized void setActions(List<Action> actions) {
-            this.actions = new CopyOnWriteArrayList<Action>(actions);
+            this.actions = new CopyOnWriteArrayList<>(actions);
     }
 
     /**
@@ -275,7 +340,6 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * @return First nontransient action or null if not found.
      */
     @CheckForNull
-    @Restricted(NoExternalUse.class)  // Limit use to workflow-api packages until we have a case where we need the performance badly.
     public final <T extends Action> T getPersistentAction(@Nonnull Class<T> type) {
         loadActions();
         for (Action a : actions) {
@@ -314,14 +378,15 @@ public abstract class FlowNode extends Actionable implements Saveable {
             return;
         }
         try {
-            actions = new CopyOnWriteArrayList<Action>(exec.loadActions(this));
+            actions = new CopyOnWriteArrayList<>(exec.loadActions(this));
         } catch (IOException e) {
-            LOGGER.log(WARNING, "Failed to load actions for FlowNode id=" + id, e);
-            actions = new CopyOnWriteArrayList<Action>();
+            LOGGER.log(Level.WARNING, "Failed to load actions for FlowNode id=" + id, e);
+            actions = new CopyOnWriteArrayList<>();
         }
     }
 
     @Exported
+    @SuppressWarnings("deprecation") // of override
     @Override
     @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "CopyOnWrite ArrayList, and field load & modification is synchronized")
     public List<Action> getActions() {
@@ -376,6 +441,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * Explicitly save all the actions in this {@link FlowNode}.
      * Useful when an existing {@link Action} gets updated.
      */
+    @Override
     public void save() throws IOException {
         exec.saveActions(this, actions);
     }
@@ -385,7 +451,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         try {
             save();
         } catch (IOException e) {
-            LOGGER.log(WARNING, "failed to save actions for FlowNode id=" + this.id, e);
+            LOGGER.log(Level.WARNING, "failed to save actions for FlowNode id=" + this.id, e);
         }
     }
 

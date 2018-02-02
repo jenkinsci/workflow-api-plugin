@@ -27,25 +27,24 @@ package org.jenkinsci.plugins.workflow.actions;
 import groovy.lang.MissingMethodException;
 import hudson.remoting.ClassFilter;
 import hudson.remoting.ProxyException;
+import javax.annotation.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.graph.AtomNode;
-import hudson.model.Action;
+import javax.annotation.Nonnull;
 
 /**
  * Attached to {@link AtomNode} that caused an error.
  *
  * This has to be Action because it's added after a node is created.
- *
- * @author Kohsuke Kawaguchi
  */
 public class ErrorAction implements PersistentAction {
-    private final Throwable error;
 
-    public ErrorAction(Throwable error) {
+    private final @Nonnull Throwable error;
+
+    public ErrorAction(@Nonnull Throwable error) {
         if (isUnserializableException(error)) {
             error = new ProxyException(error);
         }
-        assert error!=null;
         this.error = error;
     }
 
@@ -53,9 +52,8 @@ public class ErrorAction implements PersistentAction {
      * Some exceptions don't serialize properly. If so, we need to replace that with
      * an equivalent that captures the same details but serializes nicely.
      */
-    private boolean isUnserializableException(Throwable error) {
+    private boolean isUnserializableException(@CheckForNull Throwable error) {
         if (error == null) {
-            // This shouldn't happen.
             return false;
         }
         try {
@@ -67,11 +65,21 @@ public class ErrorAction implements PersistentAction {
         } catch (SecurityException x) {
             return true;
         }
-        return error instanceof MultipleCompilationErrorsException ||
-               error instanceof MissingMethodException;
+        if (error instanceof MultipleCompilationErrorsException || error instanceof MissingMethodException) {
+            return true;
+        }
+        if (isUnserializableException(error.getCause())) {
+            return true;
+        }
+        for (Throwable t : error.getSuppressed()) {
+            if (isUnserializableException(t)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public Throwable getError() {
+    public @Nonnull Throwable getError() {
         return error;
     }
 

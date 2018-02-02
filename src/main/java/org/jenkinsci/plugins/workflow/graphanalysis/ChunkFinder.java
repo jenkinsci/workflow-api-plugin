@@ -6,13 +6,34 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * Used to define the start and end of a {@link FlowChunk} to split a {@link org.jenkinsci.plugins.workflow.flow.FlowExecution}
- * (For use with a {@link SimpleChunkVisitor} in the {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)}
+ * Think of this as setting conditions to mark a region of interest in the graph of {@link FlowNode} from a {@link org.jenkinsci.plugins.workflow.flow.FlowExecution}.
+ * <p>This is used to define a linear "chunk" from the graph of FlowNodes returned by a {@link ForkScanner}, after it applies ordering.
+ * <p>This is done by invoking {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)}.
+ * <p>Your {@link SimpleChunkVisitor} will receive callbacks about chunk boundaries on the basis of the ChunkFinder.
+ *   It is responsible for tracking the state based on events fired
+ *
+ * <p><p><em>Common uses:</em>
+ * <ul>
+ *     <li>Find all {@link FlowNode}s within a specific block type, such the block created by a timeout block, 'node' (executor) block, etc</li>
+ *     <li>Find all {@link FlowNode}s between specific markers, such as labels, milestones, or steps generating an error</li>
+ * </ul>
+ *
+ * <p><em>Implementation Notes:</em>
+ * <ul>
+ *     <li>This can be used to detect both block-delimited regions of interest and marker-based regions</li>
+ *     <li>Block-delimited regions should END when encountering the right kind of {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode}
+ *         and start when seeing the right kind of {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode}</li>
+ *     <li>Marker-based regions should start when you find the marker, and END when the previous node is a marker</li>
+ *     <li>If you need to handle both for the same set of criteria... good grief. See the StageChunkFinder in the pipeline-graph-analysis plugin.</li>
+ * </ul>
+ *
  * @author Sam Van Oort
  */
 public interface ChunkFinder {
 
-    /** If true, a chunk is implicitly created whenever we begin */
+    /** If true, a chunk is implicitly created whenever we begin.
+     *  <p>If you are matching the start/end of a block, should always return false.
+     *  <p>If you are trying to match markers (such as single-node labels or milestones), should always be true. */
     boolean isStartInsideChunk();
 
     /**

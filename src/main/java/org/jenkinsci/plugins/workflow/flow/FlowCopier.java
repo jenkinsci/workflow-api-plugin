@@ -24,11 +24,18 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
+import com.google.common.collect.ImmutableList;
+import hudson.Extension;
 import hudson.ExtensionPoint;
+import hudson.model.Action;
+import hudson.model.ParametersAction;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import java.io.IOException;
+import jenkins.scm.api.SCMRevisionAction;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 
 /**
  * A way for plugins to copy metadata and associated files from one flow execution to another.
@@ -59,6 +66,28 @@ public abstract class FlowCopier implements ExtensionPoint {
             Queue.Executable copyExec = copy.getExecutable();
             if (originalExec instanceof Run && copyExec instanceof Run) {
                 copy((Run) originalExec, (Run) copyExec, copy.getListener());
+            }
+        }
+
+    }
+
+    @Restricted(DoNotUse.class) // impl
+    @Extension public static class StandardActions extends FlowCopier.ByRun {
+
+        // TODO cloned from ReplayAction; consider whether it is appropriate to share these (related but not identical case)
+        private static final Iterable<Class<? extends Action>> COPIED_ACTIONS = ImmutableList.of(
+            ParametersAction.class,
+            SCMRevisionAction.class
+        );
+
+        @Override public void copy(Run<?, ?> original, Run<?, ?> copy, TaskListener listener) throws IOException, InterruptedException {
+            for (Class<? extends Action> type : COPIED_ACTIONS) {
+                Action a = original.getAction(type);
+                if (a != null) {
+                    // Especially for ParametersAction we must replace any existing action.
+                    // For example, scheduleBuild2 will typically create an instance from default parameter values.
+                    copy.replaceAction(a);
+                }
             }
         }
 

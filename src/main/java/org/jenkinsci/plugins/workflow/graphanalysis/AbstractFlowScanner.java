@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
@@ -307,6 +308,25 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return nodes;
     }
 
+    /** Convenience method to get the list all flownodes in the iterator order. */
+    @Nonnull
+    public List<FlowNode> allNodes(@CheckForNull Collection<FlowNode> heads) {
+        if (!setup(heads)) {
+            return Collections.EMPTY_LIST;
+        }
+        List<FlowNode> nodes = new ArrayList<FlowNode>();
+        for (FlowNode f : this) {
+            nodes.add(f);
+        }
+        return nodes;
+    }
+
+    /** Convenience method to get the list of all {@link FlowNode}s for the execution, in iterator order. */
+    @Nonnull
+    public List<FlowNode> allNodes(@CheckForNull FlowExecution exec) {
+        return (exec == null) ? Collections.EMPTY_LIST : allNodes(exec.getCurrentHeads());
+    }
+
     /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with no blackList nodes */
     @Nonnull
     public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
@@ -317,6 +337,14 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     @Nonnull
     public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
+    }
+
+    @Nonnull
+    public List<FlowNode> filteredNodes(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
+        if (exec == null) {
+            return Collections.emptyList();
+        }
+        return this.filteredNodes(exec.getCurrentHeads(), null, matchPredicate);
     }
 
     /**

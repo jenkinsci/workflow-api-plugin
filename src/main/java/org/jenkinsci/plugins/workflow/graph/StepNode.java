@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2013-2014, CloudBees, Inc.
+ * Copyright (c) 2013-2017, CloudBees, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,34 +21,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package org.jenkinsci.plugins.workflow.graph;
 
-import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.CheckForNull;
-import java.util.List;
 
 /**
- * Together with {@link BlockEndNode}, designates some kind of nested structure that contains "children",
- * which are {@link FlowNode}s that are in between {@link BlockStartNode} and {@link BlockEndNode}
- *
- * @author Kohsuke Kawaguchi
- * @author Jesse Glick
- * @see BlockEndNode
+ * Optional interface for a {@link FlowNode} that has an associated {@link StepDescriptor}.
+ * Supertype of the equivalent in the workflow-cps to allow access at a higher level of the dependency tree.
  */
-public abstract class BlockStartNode extends FlowNode {
-    protected BlockStartNode(FlowExecution exec, String id, FlowNode... parents) {
-        super(exec, id, parents);
-    }
-
-    protected BlockStartNode(FlowExecution exec, String id, List<FlowNode> parents) {
-        super(exec, id, parents);
-    }
-
-    /** Return the {@link BlockEndNode} for this block, or null if the block hasn't completed yet. */
+public interface StepNode {
+    /**
+     * Returns the descriptor for {@link Step} that produced this flow node.
+     *
+     * @return
+     *      null for example if the descriptor that created the node has since been uninstalled.
+     */
     @CheckForNull
-    public BlockEndNode getEndNode() {
-        return this.getExecution().getEndNode(this);
-    }
+    StepDescriptor getDescriptor();
 }

@@ -74,7 +74,13 @@ public class StashManager {
     @Deprecated
     public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
                              @CheckForNull String includes, @CheckForNull String excludes) throws IOException, InterruptedException {
-        stash(build, name, workspace, listener, includes, excludes, true);
+        stash(build, name, workspace, listener, includes, excludes, true, false);
+    }
+
+    @Deprecated
+    public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
+                             @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes) throws IOException, InterruptedException {
+        stash(build, name, workspace, listener, includes, excludes, useDefaultExcludes, false);
     }
 
     /**
@@ -85,10 +91,11 @@ public class StashManager {
      * @param includes a set of Ant-style file includes, separated by commas; null/blank is allowed as a synonym for {@code **} (i.e., everything)
      * @param excludes an optional set of Ant-style file excludes
      * @param useDefaultExcludes whether to use Ant default excludes
+     * @param allowEmpty whether to allow an empty stash
      */
     @SuppressFBWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", justification="fine if mkdirs returns false")
     public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
-                             @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes) throws IOException, InterruptedException {
+                             @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
         File storage = storage(build, name);
         storage.getParentFile().mkdirs();
@@ -98,7 +105,7 @@ public class StashManager {
         OutputStream os = new FileOutputStream(storage);
         try {
             int count = workspace.archive(ArchiverFactory.TARGZ, os, new DirScanner.Glob(Util.fixEmpty(includes) == null ? "**" : includes, excludes, useDefaultExcludes));
-            if (count == 0) {
+            if (count == 0 && !allowEmpty) {
                 throw new AbortException("No files included in stash");
             }
             listener.getLogger().println("Stashed " + count + " file(s)");
