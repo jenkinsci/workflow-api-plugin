@@ -46,6 +46,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 import hudson.model.Result;
 import hudson.remoting.ProxyException;
+import org.codehaus.groovy.runtime.NullObject;
 
 /**
  * Tests for {@link ErrorAction}
@@ -130,6 +131,27 @@ public class ErrorActionTest {
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
         r.assertLogContains("got to the end", b);
         r.assertLogContains("java.lang.NullPointerException: oops", b);
+    }
+
+    @Issue("JENKINS-49025")
+    @Test public void nestedFieldUnserializable() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(
+            "catchError {\n" +
+            "  throw new " + X.class.getCanonicalName() + "()\n" +
+            "}\n" +
+            "echo 'got to the end'", false));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
+        r.assertLogContains("got to the end", b);
+        r.assertLogContains(X.class.getName(), b);
+        List<ErrorAction> errorActionList = extractErrorActions(b.asFlowExecutionOwner().get());
+        assertThat(errorActionList, Matchers.not(Matchers.empty()));
+        for (ErrorAction e : errorActionList) {
+            assertEquals(ProxyException.class, e.getError().getClass());
+        }
+    }
+    public static class X extends Exception {
+        final NullObject nil = NullObject.getNullObject();
     }
 
 }
