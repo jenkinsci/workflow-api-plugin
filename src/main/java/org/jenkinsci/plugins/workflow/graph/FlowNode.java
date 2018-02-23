@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.graph;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Actionable;
@@ -48,6 +49,8 @@ import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
+import org.jenkinsci.plugins.workflow.graphanalysis.NodeStepTypePredicate;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -191,7 +194,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return this.exec.findAllEnclosingBlockStarts(this);
     }
 
-    /** Return an iterator over all enclosing blocks.
+    /** Return an iterator over all enclosing blocks, from the nearest-enclosing outward ("inside-out" order).
      *  Prefer this to {@link #getEnclosingBlocks()} unless you need ALL nodes, because it can evaluate lazily. */
     @Nonnull
     public Iterable<BlockStartNode> iterateEnclosingBlocks() {
