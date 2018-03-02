@@ -47,6 +47,7 @@ import org.junit.Assert;
 
 /**
  * Exercises direct download of artifacts.
+ * Whereas {@link ArtifactManagerTest} allows you to test an implementation, this allows you to test a caller.
  * @see <a href="https://issues.jenkins-ci.org/browse/JENKINS-49635">JENKINS-49635</a>
  */
 public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
