@@ -39,6 +39,7 @@ import jenkins.model.ArtifactManagerFactory;
 import jenkins.security.MasterToSlaveCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
@@ -95,9 +96,12 @@ public class ArtifactManagerTest {
         }
 
         @Override public Void call() throws Exception {
-            try (InputStream is = root.child("file").open()) {
+            VirtualFile file = root.child("file");
+            try (InputStream is = file.open()) {
                 assertEquals("content", IOUtils.toString(is));
             }
+            assertArrayEquals(new VirtualFile[] {file}, root.list());
+            assertThat(root.list("file", null, false), containsInAnyOrder("file"));
             // TODO everything interesting in VirtualFileTest and then some
             return null;
         }
