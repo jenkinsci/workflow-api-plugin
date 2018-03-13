@@ -24,13 +24,20 @@
 
 package org.jenkinsci.plugins.workflow;
 
+import hudson.EnvVars;
+import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.Functions;
+import hudson.Launcher;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.TaskListener;
 import hudson.slaves.DumbSlave;
 import hudson.tasks.ArtifactArchiver;
+import hudson.util.StreamTaskListener;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Collections;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.ArtifactManager;
@@ -40,6 +47,7 @@ import jenkins.security.MasterToSlaveCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
 import static org.hamcrest.Matchers.*;
+import org.jenkinsci.plugins.workflow.flow.StashManager;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,15 +69,48 @@ public class ArtifactManagerTest {
         DumbSlave upstreamNode = r.createOnlineSlave();
         FreeStyleProject p = r.createFreeStyleProject();
         p.setAssignedNode(upstreamNode);
-        setUpWorkspace(upstreamNode.getWorkspaceFor(p), platformSpecifics);
+        FilePath upstreamWS = upstreamNode.getWorkspaceFor(p);
+        setUpWorkspace(upstreamWS, platformSpecifics);
         p.getPublishersList().add(new ArtifactArchiver("**"));
         FreeStyleBuild b = r.buildAndAssertSuccess(p);
         VirtualFile root = b.getArtifactManager().root();
         VirtualFile remotable = root.asRemotable();
+        DumbSlave downstreamNode;
         if (remotable != null) {
-            r.createOnlineSlave().getChannel().call(new Verify(remotable, platformSpecifics));
+            downstreamNode = r.createOnlineSlave();
+            downstreamNode.getChannel().call(new Verify(remotable, platformSpecifics));
         } else {
+            downstreamNode = null;
             new Verify(root, platformSpecifics).call();
+        }
+        if (b.getArtifactManager() instanceof StashManager.StashAwareArtifactManager) {
+            TaskListener listener = StreamTaskListener.fromStderr();
+            Launcher launcher = upstreamNode.createLauncher(listener);
+            EnvVars env = upstreamNode.toComputer().getEnvironment();
+            env.putAll(upstreamNode.toComputer().buildEnvironment(listener));
+            // Make sure we can stash and then unstash within a build:
+            StashManager.stash(b, "stuff", upstreamWS, launcher, env, listener, "file", null, false, false);
+            upstreamWS.child("file").delete();
+            StashManager.unstash(b, "stuff", upstreamWS, launcher, env, listener);
+            assertEquals("content", upstreamWS.child("file").readToString());
+            upstreamWS.child("file").delete();
+            // Copy stashes and artifacts from one build to a second one:
+            p.getPublishersList().clear();
+            FreeStyleBuild b2 = r.buildAndAssertSuccess(p);
+            ExtensionList.lookupSingleton(StashManager.CopyStashesAndArtifacts.class).copy(b, b2, listener);
+            // Verify the copied stashes:
+            StashManager.unstash(b2, "stuff", upstreamWS, launcher, env, listener);
+            assertEquals("content", upstreamWS.child("file").readToString());
+            // And the copied artifacts:
+            root = b2.getArtifactManager().root();
+            remotable = root.asRemotable();
+            if (remotable != null) {
+                downstreamNode.getChannel().call(new Verify(remotable, platformSpecifics));
+            } else {
+                new Verify(root, platformSpecifics).call();
+            }
+            // Also delete the original:
+            StashManager.clearAll(b, listener);
         }
     }
 
@@ -100,7 +141,7 @@ public class ArtifactManagerTest {
             try (InputStream is = file.open()) {
                 assertEquals("content", IOUtils.toString(is));
             }
-            assertArrayEquals(new VirtualFile[] {file}, root.list());
+            assertEquals(Collections.singletonList(file), Arrays.asList(root.list()));
             assertThat(root.list("file", null, false), containsInAnyOrder("file"));
             // TODO everything interesting in VirtualFileTest and then some
             return null;
