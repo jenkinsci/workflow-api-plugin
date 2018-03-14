@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.5</version>
+        <version>3.6</version>
         <relativePath />
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -62,8 +62,8 @@
         </pluginRepository>
     </pluginRepositories>
     <properties>
-        <jenkins-core.version>2.110-20180228.232138-2</jenkins-core.version> <!-- TODO https://github.com/jenkinsci/jenkins/pull/3302 -->
-        <jenkins-war.version>2.110-20180228.232235-2</jenkins-war.version>
+        <jenkins-core.version>2.112-20180314.180003-1</jenkins-core.version> <!-- TODO https://github.com/jenkinsci/jenkins/pull/3302 -->
+        <jenkins-war.version>2.112-20180314.180029-1</jenkins-war.version>
         <java.level>8</java.level>
         <no-test-jar>false</no-test-jar>
         <workflow-support-plugin.version>2.14</workflow-support-plugin.version>
