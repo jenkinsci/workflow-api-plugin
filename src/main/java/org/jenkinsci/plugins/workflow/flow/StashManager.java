@@ -316,6 +316,7 @@ public class StashManager {
         return am instanceof StashAwareArtifactManager ? (StashAwareArtifactManager) am : null;
     }
 
+    @Deprecated
     private static @Nonnull Launcher launcherFor(@Nonnull FilePath workspace, @Nonnull TaskListener listener) {
         Computer c = workspace.toComputer();
         if (c != null) {
@@ -332,6 +333,7 @@ public class StashManager {
         }
     }
 
+    @Deprecated
     private static @Nonnull EnvVars envFor(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull TaskListener listener) throws IOException, InterruptedException {
         Computer c = workspace.toComputer();
         if (c != null) {
