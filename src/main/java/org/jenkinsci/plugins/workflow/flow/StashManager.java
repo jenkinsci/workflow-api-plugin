@@ -91,7 +91,7 @@ public class StashManager {
     @Deprecated
     public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
                              @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException {
-        stash(build, name, workspace, launcherFor(workspace, listener), envFor(workspace, listener), listener, includes, excludes, useDefaultExcludes, allowEmpty);
+        stash(build, name, workspace, launcherFor(workspace, listener), envFor(build, workspace, listener), listener, includes, excludes, useDefaultExcludes, allowEmpty);
     }
 
     /**
@@ -136,7 +136,7 @@ public class StashManager {
 
     @Deprecated
     public static void unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener) throws IOException, InterruptedException {
-        unstash(build, name, workspace, launcherFor(workspace, listener), envFor(workspace, listener), listener);
+        unstash(build, name, workspace, launcherFor(workspace, listener), envFor(build, workspace, listener), listener);
     }
 
     /**
@@ -332,11 +332,12 @@ public class StashManager {
         }
     }
 
-    private static @Nonnull EnvVars envFor(@Nonnull FilePath workspace, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    private static @Nonnull EnvVars envFor(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull TaskListener listener) throws IOException, InterruptedException {
         Computer c = workspace.toComputer();
         if (c != null) {
             EnvVars e = c.getEnvironment();
             e.putAll(c.buildEnvironment(listener));
+            e.putAll(build.getEnvironment(listener));
             return e;
         } else {
             listener.error(workspace + " seems to be offline");
