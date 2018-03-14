@@ -36,6 +36,7 @@ import hudson.slaves.DumbSlave;
 import hudson.tasks.ArtifactArchiver;
 import hudson.util.StreamTaskListener;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import javax.annotation.CheckForNull;
@@ -140,6 +141,12 @@ public class ArtifactManagerTest {
             VirtualFile file = root.child("file");
             try (InputStream is = file.open()) {
                 assertEquals("content", IOUtils.toString(is));
+            }
+            URL url = file.toExternalURL();
+            if (url != null) { // TODO try to do this in a docker slave, so we can be sure the environment is not affecting anything
+                try (InputStream is = url.openStream()) {
+                    assertEquals("content", IOUtils.toString(is));
+                }
             }
             assertEquals(Collections.singletonList(file), Arrays.asList(root.list()));
             assertThat(root.list("file", null, false), containsInAnyOrder("file"));
