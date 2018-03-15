@@ -40,11 +40,13 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.logging.Level;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.ArtifactManager;
 import jenkins.model.ArtifactManagerConfiguration;
 import jenkins.model.ArtifactManagerFactory;
+import jenkins.model.StandardArtifactManager;
 import jenkins.security.MasterToSlaveCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
@@ -54,6 +56,7 @@ import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LoggerRule;
 
 /**
  * {@link #run} allows an implementation of {@link ArtifactManager} plus {@link VirtualFile} to be run through a standard gantlet of tests.
@@ -61,6 +64,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ArtifactManagerTest {
 
     @Rule public JenkinsRule r = new JenkinsRule();
+    @Rule public LoggerRule logging = new LoggerRule();
 
     public static void run(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory) throws Exception {
         // Certainly file mode tests will not work on Windows; symlink tests may or may not; and who knows about weird characters on NTFS:
@@ -154,7 +158,9 @@ public class ArtifactManagerTest {
         }
 
         @Override public Void call() throws Exception {
+            assertThat("root name is unspecified generally", root.getName(), not(endsWith("/")));
             VirtualFile file = root.child("file");
+            assertEquals("file", file.getName());
             try (InputStream is = file.open()) {
                 assertEquals("content", IOUtils.toString(is));
             }
@@ -174,6 +180,7 @@ public class ArtifactManagerTest {
 
     /** Run the standard one, as a control. */
     @Test public void standard() throws Exception {
+        logging.record(StandardArtifactManager.class, Level.FINE);
         run(r, null);
     }
 

@@ -79,7 +79,11 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         }
 
         @Override public boolean delete() throws IOException, InterruptedException {
-            return false;
+            if (!dir.exists()) {
+                return false;
+            }
+            Util.deleteRecursive(dir);
+            return true;
         }
 
     }
