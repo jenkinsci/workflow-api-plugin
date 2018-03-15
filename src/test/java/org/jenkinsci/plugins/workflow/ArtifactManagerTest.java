@@ -36,6 +36,7 @@ import hudson.model.TaskListener;
 import hudson.slaves.DumbSlave;
 import hudson.tasks.ArtifactArchiver;
 import hudson.util.StreamTaskListener;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Arrays;
@@ -81,16 +82,16 @@ public class ArtifactManagerTest {
         FreeStyleBuild b = r.buildAndAssertSuccess(p);
         VirtualFile root = b.getArtifactManager().root();
         VirtualFile remotable = root.asRemotable();
+        TaskListener listener = StreamTaskListener.fromStderr();
         DumbSlave downstreamNode;
         if (remotable != null) {
             downstreamNode = r.createOnlineSlave();
-            downstreamNode.getChannel().call(new Verify(remotable, platformSpecifics));
+            downstreamNode.getChannel().call(new Verify(listener, remotable, platformSpecifics));
         } else {
             downstreamNode = null;
-            new Verify(root, platformSpecifics).call();
+            new Verify(listener, root, platformSpecifics).call();
         }
         if (b.getArtifactManager() instanceof StashManager.StashAwareArtifactManager) {
-            TaskListener listener = StreamTaskListener.fromStderr();
             Launcher launcher = upstreamNode.createLauncher(listener);
             EnvVars env = upstreamNode.toComputer().getEnvironment();
             env.putAll(upstreamNode.toComputer().buildEnvironment(listener));
@@ -111,14 +112,14 @@ public class ArtifactManagerTest {
             root = b2.getArtifactManager().root();
             remotable = root.asRemotable();
             if (remotable != null) {
-                downstreamNode.getChannel().call(new Verify(remotable, platformSpecifics));
+                downstreamNode.getChannel().call(new Verify(listener, remotable, platformSpecifics));
             } else {
-                new Verify(root, platformSpecifics).call();
+                new Verify(listener, root, platformSpecifics).call();
             }
             // Also delete the original:
             StashManager.clearAll(b, listener);
             // Stashes should have been deleted, but not artifacts:
-            assertTrue(b.getArtifactManager().root().child("file").isFile());
+            assertFile(b.getArtifactManager().root().child("file"));
             upstreamWS.deleteContents();
             assertFalse(upstreamWS.child("file").exists());
             try {
@@ -131,7 +132,7 @@ public class ArtifactManagerTest {
         }
         // Also check deletion:
         assertTrue(b.getArtifactManager().delete());
-        assertFalse(b.getArtifactManager().root().child("file").isFile());
+        assertNonexistent(b.getArtifactManager().root().child("file"));
         assertFalse(b.getArtifactManager().delete());
     }
 
@@ -149,10 +150,12 @@ public class ArtifactManagerTest {
 
     private static class Verify extends MasterToSlaveCallable<Void, Exception> {
 
+        private final TaskListener listener;
         private final VirtualFile root;
         private final boolean platformSpecifics;
 
-        Verify(VirtualFile root, boolean platformSpecifics) {
+        Verify(TaskListener listener, VirtualFile root, boolean platformSpecifics) {
+            this.listener = listener;
             this.root = root;
             this.platformSpecifics = platformSpecifics;
         }
@@ -161,34 +164,38 @@ public class ArtifactManagerTest {
             assertThat("root name is unspecified generally", root.getName(), not(endsWith("/")));
             VirtualFile file = root.child("file");
             assertEquals("file", file.getName());
+            assertFile(file);
             try (InputStream is = file.open()) {
                 assertEquals("content", IOUtils.toString(is));
             }
             URL url = file.toExternalURL();
             if (url != null) { // TODO try to do this in a docker slave, so we can be sure the environment is not affecting anything
+                listener.getLogger().println("opening " + url);
                 try (InputStream is = url.openStream()) {
                     assertEquals("content", IOUtils.toString(is));
                 }
             }
             VirtualFile some = root.child("some");
             assertEquals("some", some.getName());
-            assertTrue(some.isDirectory());
+            assertDir(some);
             assertThat(root.list(), arrayContainingInAnyOrder(file, some));
             assertThat(root.list("file", null, false), containsInAnyOrder("file"));
             VirtualFile subfile = root.child("some/deeply/nested/dir/subfile");
             assertEquals("subfile", subfile.getName());
+            assertFile(subfile);
             try (InputStream is = subfile.open()) {
                 assertEquals("content", IOUtils.toString(is));
             }
             url = subfile.toExternalURL();
             if (url != null) {
+                listener.getLogger().println("opening " + url);
                 try (InputStream is = url.openStream()) {
                     assertEquals("content", IOUtils.toString(is));
                 }
             }
             VirtualFile someDeeplyNestedDir = some.child("deeply/nested/dir");
             assertEquals("dir", someDeeplyNestedDir.getName());
-            assertTrue(someDeeplyNestedDir.isDirectory());
+            assertDir(someDeeplyNestedDir);
             assertEquals(Collections.singletonList(subfile), Arrays.asList(someDeeplyNestedDir.list()));
             assertThat(someDeeplyNestedDir.list("subfile", null, false), containsInAnyOrder("subfile"));
             assertThat(root.list("**/*file", null, false), containsInAnyOrder("file", "some/deeply/nested/dir/subfile"));
@@ -197,6 +204,24 @@ public class ArtifactManagerTest {
             return null;
         }
 
+    }
+
+    private static void assertFile(VirtualFile f) throws Exception {
+        assertTrue(f.isFile());
+        assertFalse(f.isDirectory());
+        assertTrue(f.exists());
+    }
+
+    private static void assertDir(VirtualFile f) throws Exception {
+        assertFalse(f.isFile());
+        assertTrue(f.isDirectory());
+        assertTrue(f.exists());
+    }
+
+    private static void assertNonexistent(VirtualFile f) throws Exception {
+        assertFalse(f.isFile());
+        assertFalse(f.isDirectory());
+        assertFalse(f.exists());
     }
 
     /** Run the standard one, as a control. */
