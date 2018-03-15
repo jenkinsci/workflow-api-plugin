@@ -137,7 +137,7 @@ public class ArtifactManagerTest {
 
     private static void setUpWorkspace(FilePath workspace, boolean platformSpecifics) throws Exception {
         workspace.child("file").write("content", null);
-        // TODO deeply nested subdirectories
+        workspace.child("some/deeply/nested/dir/subfile").write("content", null);
         // TODO files matching default excludes
         if (platformSpecifics) {
             // TODO symlinks
@@ -170,8 +170,29 @@ public class ArtifactManagerTest {
                     assertEquals("content", IOUtils.toString(is));
                 }
             }
-            assertEquals(Collections.singletonList(file), Arrays.asList(root.list()));
+            VirtualFile some = root.child("some");
+            assertEquals("some", some.getName());
+            assertTrue(some.isDirectory());
+            assertThat(root.list(), arrayContainingInAnyOrder(file, some));
             assertThat(root.list("file", null, false), containsInAnyOrder("file"));
+            VirtualFile subfile = root.child("some/deeply/nested/dir/subfile");
+            assertEquals("subfile", subfile.getName());
+            try (InputStream is = subfile.open()) {
+                assertEquals("content", IOUtils.toString(is));
+            }
+            url = subfile.toExternalURL();
+            if (url != null) {
+                try (InputStream is = url.openStream()) {
+                    assertEquals("content", IOUtils.toString(is));
+                }
+            }
+            VirtualFile someDeeplyNestedDir = some.child("deeply/nested/dir");
+            assertEquals("dir", someDeeplyNestedDir.getName());
+            assertTrue(someDeeplyNestedDir.isDirectory());
+            assertEquals(Collections.singletonList(subfile), Arrays.asList(someDeeplyNestedDir.list()));
+            assertThat(someDeeplyNestedDir.list("subfile", null, false), containsInAnyOrder("subfile"));
+            assertThat(root.list("**/*file", null, false), containsInAnyOrder("file", "some/deeply/nested/dir/subfile"));
+            assertThat(some.list("**/*file", null, false), containsInAnyOrder("deeply/nested/dir/subfile"));
             // TODO everything interesting in VirtualFileTest and then some
             return null;
         }
