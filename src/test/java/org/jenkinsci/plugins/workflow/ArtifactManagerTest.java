@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow;
 
+import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.ExtensionList;
 import hudson.FilePath;
@@ -112,7 +113,22 @@ public class ArtifactManagerTest {
             }
             // Also delete the original:
             StashManager.clearAll(b, listener);
+            // Stashes should have been deleted, but not artifacts:
+            assertTrue(b.getArtifactManager().root().child("file").isFile());
+            upstreamWS.deleteContents();
+            assertFalse(upstreamWS.child("file").exists());
+            try {
+                StashManager.unstash(b, "stuff", upstreamWS, launcher, env, listener);
+                fail("should not have succeeded in unstashing");
+            } catch (AbortException x) {
+                System.err.println("caught as expected: " + x);
+            }
+            assertFalse(upstreamWS.child("file").exists());
         }
+        // Also check deletion:
+        assertTrue(b.getArtifactManager().delete());
+        assertFalse(b.getArtifactManager().root().child("file").isFile());
+        assertFalse(b.getArtifactManager().delete());
     }
 
     private static void setUpWorkspace(FilePath workspace, boolean platformSpecifics) throws Exception {

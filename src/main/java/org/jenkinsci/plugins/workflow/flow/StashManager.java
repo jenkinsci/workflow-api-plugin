@@ -147,6 +147,7 @@ public class StashManager {
      * @param launcher a way to launch processes, if required
      * @param env environment to use when launching processes, if required
      * @param listener a way to report progress or problems
+     * @throws AbortException in case there is no such saved stash
      * @see StashAwareArtifactManager#unstash
      */
     public static void unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException {
