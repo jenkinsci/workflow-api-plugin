@@ -187,6 +187,8 @@ public class ArtifactManagerTest {
             if (weirdCharacters) {
                 assertFile(root.child("otherdir/xxx#?:$&'\"<>čॐ"), "whatever", listener);
             }
+            assertNonexistent(root.child("does-not-exist"));
+            assertNonexistent(root.child("some/deeply/nested/dir/does-not-exist"));
             return null;
         }
 
