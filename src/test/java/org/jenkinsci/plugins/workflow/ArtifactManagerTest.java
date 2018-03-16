@@ -67,7 +67,7 @@ public class ArtifactManagerTest {
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public LoggerRule logging = new LoggerRule();
 
-    public static void run(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory) throws Exception {
+    public static void run(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters) throws Exception {
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
         }
@@ -75,7 +75,7 @@ public class ArtifactManagerTest {
         FreeStyleProject p = r.createFreeStyleProject();
         p.setAssignedNode(upstreamNode);
         FilePath upstreamWS = upstreamNode.getWorkspaceFor(p);
-        setUpWorkspace(upstreamWS);
+        setUpWorkspace(upstreamWS, weirdCharacters);
         ArtifactArchiver aa = new ArtifactArchiver("**");
         aa.setDefaultExcludes(false);
         p.getPublishersList().add(aa);
@@ -86,10 +86,10 @@ public class ArtifactManagerTest {
         DumbSlave downstreamNode;
         if (remotable != null) {
             downstreamNode = r.createOnlineSlave();
-            downstreamNode.getChannel().call(new Verify(listener, remotable));
+            downstreamNode.getChannel().call(new Verify(listener, remotable, weirdCharacters));
         } else {
             downstreamNode = null;
-            new Verify(listener, root).call();
+            new Verify(listener, root, weirdCharacters).call();
         }
         if (b.getArtifactManager() instanceof StashManager.StashAwareArtifactManager) {
             Launcher launcher = upstreamNode.createLauncher(listener);
@@ -112,9 +112,9 @@ public class ArtifactManagerTest {
             root = b2.getArtifactManager().root();
             remotable = root.asRemotable();
             if (remotable != null) {
-                downstreamNode.getChannel().call(new Verify(listener, remotable));
+                downstreamNode.getChannel().call(new Verify(listener, remotable, weirdCharacters));
             } else {
-                new Verify(listener, root).call();
+                new Verify(listener, root, weirdCharacters).call();
             }
             // Also delete the original:
             StashManager.clearAll(b, listener);
@@ -136,14 +136,14 @@ public class ArtifactManagerTest {
         assertFalse(b.getArtifactManager().delete());
     }
 
-    private static void setUpWorkspace(FilePath workspace) throws Exception {
+    private static void setUpWorkspace(FilePath workspace, boolean weirdCharacters) throws Exception {
         workspace.child("file").write("content", null);
         workspace.child("some/deeply/nested/dir/subfile").write("content", null);
         workspace.child(".git/config").write("whatever", null);
         workspace.child("otherdir/somefile~").write("whatever", null);
-        if (!Functions.isWindows()) {
+        if (weirdCharacters) {
             workspace.child("otherdir/xxx#?:$&'\"<>čॐ").write("whatever", null);
-        } // who knows about weird characters on NTFS; also case-sensitivity could confuse things
+        }
         // best to avoid scalability tests (large number of files, single large file) here—too fragile
         // also avoiding tests of file mode and symlinks: will not work on Windows, and may or may not work in various providers
     }
@@ -152,10 +152,12 @@ public class ArtifactManagerTest {
 
         private final TaskListener listener;
         private final VirtualFile root;
+        private final boolean weirdCharacters;
 
-        Verify(TaskListener listener, VirtualFile root) {
+        Verify(TaskListener listener, VirtualFile root, boolean weirdCharacters) {
             this.listener = listener;
             this.root = root;
+            this.weirdCharacters = weirdCharacters;
         }
 
         @Override public Void call() throws Exception {
@@ -182,7 +184,7 @@ public class ArtifactManagerTest {
             assertThat(root.list("**/*file", null, false), containsInAnyOrder("file", "some/deeply/nested/dir/subfile"));
             assertThat(some.list("**/*file", null, false), containsInAnyOrder("deeply/nested/dir/subfile"));
             assertThat(root.list("**", "**/xxx*", true), containsInAnyOrder("file", "some/deeply/nested/dir/subfile"));
-            if (!Functions.isWindows()) {
+            if (weirdCharacters) {
                 assertFile(root.child("otherdir/xxx#?:$&'\"<>čॐ"), "whatever", listener);
             }
             return null;
@@ -234,12 +236,13 @@ public class ArtifactManagerTest {
     /** Run the standard one, as a control. */
     @Test public void standard() throws Exception {
         logging.record(StandardArtifactManager.class, Level.FINE);
-        run(r, null);
+        // Who knows about weird characters on NTFS; also case-sensitivity could confuse things
+        run(r, null, !Functions.isWindows());
     }
 
     /** Check that {@link #run} complies with the expectations of {@link DirectArtifactManagerFactory}. */
     @Test public void direct() throws Exception {
-        run(r, new DirectArtifactManagerFactory());
+        run(r, new DirectArtifactManagerFactory(), !Functions.isWindows());
     }
 
 }
