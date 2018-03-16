@@ -68,8 +68,6 @@ public class ArtifactManagerTest {
     @Rule public LoggerRule logging = new LoggerRule();
 
     public static void run(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory) throws Exception {
-        // Certainly file mode tests will not work on Windows; symlink tests may or may not; and who knows about weird characters on NTFS:
-        boolean platformSpecifics = !Functions.isWindows();
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
         }
@@ -77,8 +75,10 @@ public class ArtifactManagerTest {
         FreeStyleProject p = r.createFreeStyleProject();
         p.setAssignedNode(upstreamNode);
         FilePath upstreamWS = upstreamNode.getWorkspaceFor(p);
-        setUpWorkspace(upstreamWS, platformSpecifics);
-        p.getPublishersList().add(new ArtifactArchiver("**"));
+        setUpWorkspace(upstreamWS);
+        ArtifactArchiver aa = new ArtifactArchiver("**");
+        aa.setDefaultExcludes(false);
+        p.getPublishersList().add(aa);
         FreeStyleBuild b = r.buildAndAssertSuccess(p);
         VirtualFile root = b.getArtifactManager().root();
         VirtualFile remotable = root.asRemotable();
@@ -86,10 +86,10 @@ public class ArtifactManagerTest {
         DumbSlave downstreamNode;
         if (remotable != null) {
             downstreamNode = r.createOnlineSlave();
-            downstreamNode.getChannel().call(new Verify(listener, remotable, platformSpecifics));
+            downstreamNode.getChannel().call(new Verify(listener, remotable));
         } else {
             downstreamNode = null;
-            new Verify(listener, root, platformSpecifics).call();
+            new Verify(listener, root).call();
         }
         if (b.getArtifactManager() instanceof StashManager.StashAwareArtifactManager) {
             Launcher launcher = upstreamNode.createLauncher(listener);
@@ -112,9 +112,9 @@ public class ArtifactManagerTest {
             root = b2.getArtifactManager().root();
             remotable = root.asRemotable();
             if (remotable != null) {
-                downstreamNode.getChannel().call(new Verify(listener, remotable, platformSpecifics));
+                downstreamNode.getChannel().call(new Verify(listener, remotable));
             } else {
-                new Verify(listener, root, platformSpecifics).call();
+                new Verify(listener, root).call();
             }
             // Also delete the original:
             StashManager.clearAll(b, listener);
@@ -132,32 +132,30 @@ public class ArtifactManagerTest {
         }
         // Also check deletion:
         assertTrue(b.getArtifactManager().delete());
-        assertNonexistent(b.getArtifactManager().root().child("file"));
+        assertFalse(b.getArtifactManager().root().child("file").isFile());
         assertFalse(b.getArtifactManager().delete());
     }
 
-    private static void setUpWorkspace(FilePath workspace, boolean platformSpecifics) throws Exception {
+    private static void setUpWorkspace(FilePath workspace) throws Exception {
         workspace.child("file").write("content", null);
         workspace.child("some/deeply/nested/dir/subfile").write("content", null);
-        // TODO files matching default excludes
-        if (platformSpecifics) {
-            // TODO symlinks
-            // TODO file modes
-            // TODO unusual filename characters
-        }
+        workspace.child(".git/config").write("whatever", null);
+        workspace.child("otherdir/somefile~").write("whatever", null);
+        if (!Functions.isWindows()) {
+            workspace.child("otherdir/xxx#?:$&'\"<>čॐ").write("whatever", null);
+        } // who knows about weird characters on NTFS; also case-sensitivity could confuse things
         // best to avoid scalability tests (large number of files, single large file) here—too fragile
+        // also avoiding tests of file mode and symlinks: will not work on Windows, and may or may not work in various providers
     }
 
     private static class Verify extends MasterToSlaveCallable<Void, Exception> {
 
         private final TaskListener listener;
         private final VirtualFile root;
-        private final boolean platformSpecifics;
 
-        Verify(TaskListener listener, VirtualFile root, boolean platformSpecifics) {
+        Verify(TaskListener listener, VirtualFile root) {
             this.listener = listener;
             this.root = root;
-            this.platformSpecifics = platformSpecifics;
         }
 
         @Override public Void call() throws Exception {
@@ -165,9 +163,11 @@ public class ArtifactManagerTest {
             VirtualFile file = root.child("file");
             assertEquals("file", file.getName());
             assertFile(file);
+            assertEquals(root, file.getParent());
             try (InputStream is = file.open()) {
                 assertEquals("content", IOUtils.toString(is));
             }
+            assertEquals(7, file.length());
             URL url = file.toExternalURL();
             if (url != null) { // TODO try to do this in a docker slave, so we can be sure the environment is not affecting anything
                 listener.getLogger().println("opening " + url);
@@ -178,7 +178,8 @@ public class ArtifactManagerTest {
             VirtualFile some = root.child("some");
             assertEquals("some", some.getName());
             assertDir(some);
-            assertThat(root.list(), arrayContainingInAnyOrder(file, some));
+            assertEquals(root, some.getParent());
+            assertThat(root.list(), arrayContainingInAnyOrder(file, some, root.child("otherdir"), root.child(".git")));
             assertThat(root.list("file", null, false), containsInAnyOrder("file"));
             VirtualFile subfile = root.child("some/deeply/nested/dir/subfile");
             assertEquals("subfile", subfile.getName());
@@ -196,11 +197,15 @@ public class ArtifactManagerTest {
             VirtualFile someDeeplyNestedDir = some.child("deeply/nested/dir");
             assertEquals("dir", someDeeplyNestedDir.getName());
             assertDir(someDeeplyNestedDir);
+            assertEquals(some, someDeeplyNestedDir.getParent().getParent().getParent());
             assertEquals(Collections.singletonList(subfile), Arrays.asList(someDeeplyNestedDir.list()));
             assertThat(someDeeplyNestedDir.list("subfile", null, false), containsInAnyOrder("subfile"));
             assertThat(root.list("**/*file", null, false), containsInAnyOrder("file", "some/deeply/nested/dir/subfile"));
             assertThat(some.list("**/*file", null, false), containsInAnyOrder("deeply/nested/dir/subfile"));
-            // TODO everything interesting in VirtualFileTest and then some
+            assertThat(root.list("**", "**/xxx*", true), containsInAnyOrder("file", "some/deeply/nested/dir/subfile"));
+            if (!Functions.isWindows()) {
+                assertFile(root.child("otherdir/xxx#?:$&'\"<>čॐ"));
+            }
             return null;
         }
 
@@ -210,18 +215,31 @@ public class ArtifactManagerTest {
         assertTrue(f.isFile());
         assertFalse(f.isDirectory());
         assertTrue(f.exists());
+        assertThat(f.length(), not(is(0)));
+        assertThat(f.lastModified(), not(is(0)));
     }
 
     private static void assertDir(VirtualFile f) throws Exception {
         assertFalse(f.isFile());
         assertTrue(f.isDirectory());
         assertTrue(f.exists());
+        // length & lastModified may or may not be defined
     }
 
     private static void assertNonexistent(VirtualFile f) throws Exception {
         assertFalse(f.isFile());
         assertFalse(f.isDirectory());
         assertFalse(f.exists());
+        try {
+            assertEquals(0, f.length());
+        } catch (IOException x) {
+            // also OK
+        }
+        try {
+            assertEquals(0, f.lastModified());
+        } catch (IOException x) {
+            // also OK
+        }
     }
 
     /** Run the standard one, as a control. */
