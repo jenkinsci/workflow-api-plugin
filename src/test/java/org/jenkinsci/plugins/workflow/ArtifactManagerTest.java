@@ -119,7 +119,7 @@ public class ArtifactManagerTest {
             // Also delete the original:
             StashManager.clearAll(b, listener);
             // Stashes should have been deleted, but not artifacts:
-            assertFile(b.getArtifactManager().root().child("file"));
+            assertTrue(b.getArtifactManager().root().child("file").isFile());
             upstreamWS.deleteContents();
             assertFalse(upstreamWS.child("file").exists());
             try {
@@ -162,19 +162,8 @@ public class ArtifactManagerTest {
             assertThat("root name is unspecified generally", root.getName(), not(endsWith("/")));
             VirtualFile file = root.child("file");
             assertEquals("file", file.getName());
-            assertFile(file);
+            assertFile(file, "content", listener);
             assertEquals(root, file.getParent());
-            try (InputStream is = file.open()) {
-                assertEquals("content", IOUtils.toString(is));
-            }
-            assertEquals(7, file.length());
-            URL url = file.toExternalURL();
-            if (url != null) { // TODO try to do this in a docker slave, so we can be sure the environment is not affecting anything
-                listener.getLogger().println("opening " + url);
-                try (InputStream is = url.openStream()) {
-                    assertEquals("content", IOUtils.toString(is));
-                }
-            }
             VirtualFile some = root.child("some");
             assertEquals("some", some.getName());
             assertDir(some);
@@ -183,17 +172,7 @@ public class ArtifactManagerTest {
             assertThat(root.list("file", null, false), containsInAnyOrder("file"));
             VirtualFile subfile = root.child("some/deeply/nested/dir/subfile");
             assertEquals("subfile", subfile.getName());
-            assertFile(subfile);
-            try (InputStream is = subfile.open()) {
-                assertEquals("content", IOUtils.toString(is));
-            }
-            url = subfile.toExternalURL();
-            if (url != null) {
-                listener.getLogger().println("opening " + url);
-                try (InputStream is = url.openStream()) {
-                    assertEquals("content", IOUtils.toString(is));
-                }
-            }
+            assertFile(subfile, "content", listener);
             VirtualFile someDeeplyNestedDir = some.child("deeply/nested/dir");
             assertEquals("dir", someDeeplyNestedDir.getName());
             assertDir(someDeeplyNestedDir);
@@ -204,19 +183,29 @@ public class ArtifactManagerTest {
             assertThat(some.list("**/*file", null, false), containsInAnyOrder("deeply/nested/dir/subfile"));
             assertThat(root.list("**", "**/xxx*", true), containsInAnyOrder("file", "some/deeply/nested/dir/subfile"));
             if (!Functions.isWindows()) {
-                assertFile(root.child("otherdir/xxx#?:$&'\"<>čॐ"));
+                assertFile(root.child("otherdir/xxx#?:$&'\"<>čॐ"), "whatever", listener);
             }
             return null;
         }
 
     }
 
-    private static void assertFile(VirtualFile f) throws Exception {
+    private static void assertFile(VirtualFile f, String contents, TaskListener listener) throws Exception {
         assertTrue(f.isFile());
         assertFalse(f.isDirectory());
         assertTrue(f.exists());
-        assertThat(f.length(), not(is(0)));
+        assertEquals(contents.length(), f.length());
         assertThat(f.lastModified(), not(is(0)));
+        try (InputStream is = f.open()) {
+            assertEquals(contents, IOUtils.toString(is));
+        }
+        URL url = f.toExternalURL();
+        if (url != null) { // TODO try to do this in a docker slave, so we can be sure the environment is not affecting anything
+            listener.getLogger().println("opening " + url);
+            try (InputStream is = url.openStream()) {
+                assertEquals(contents, IOUtils.toString(is));
+            }
+        }
     }
 
     private static void assertDir(VirtualFile f) throws Exception {
