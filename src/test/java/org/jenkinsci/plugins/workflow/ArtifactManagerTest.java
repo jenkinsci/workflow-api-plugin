@@ -30,9 +30,11 @@ import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.Functions;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.TaskListener;
+import hudson.remoting.Callable;
 import hudson.slaves.DumbSlave;
 import hudson.tasks.ArtifactArchiver;
 import hudson.util.StreamTaskListener;
@@ -148,7 +150,7 @@ public class ArtifactManagerTest {
         // also avoiding tests of file mode and symlinks: will not work on Windows, and may or may not work in various providers
     }
 
-    private static class Verify extends MasterToSlaveCallable<Void, Exception> {
+    private static class Verify extends MasterToSlaveCallable<Void, IOException> {
 
         private final TaskListener listener;
         private final VirtualFile root;
@@ -160,7 +162,29 @@ public class ArtifactManagerTest {
             this.weirdCharacters = weirdCharacters;
         }
 
-        @Override public Void call() throws Exception {
+        @Override public Void call() throws IOException {
+            test();
+            if (Util.isOverridden(VirtualFile.class, root.getClass(), "run", Callable.class)) {
+                for (VirtualFile r : Arrays.asList(root, root.child("some"), root.child("file"), root.child("does-not-exist"))) {
+                    listener.getLogger().println("testing batch operations starting from " + r);
+                    r.run(new VerifyBatch(this));
+                }
+            }
+            return null;
+        }
+
+        private static class VerifyBatch extends MasterToSlaveCallable<Void, IOException> {
+            private final Verify verification;
+            VerifyBatch(Verify verification) {
+                this.verification = verification;
+            }
+            @Override public Void call() throws IOException {
+                verification.test();
+                return null;
+            }
+        }
+
+        private void test() throws IOException {
             assertThat("root name is unspecified generally", root.getName(), not(endsWith("/")));
             VirtualFile file = root.child("file");
             assertEquals("file", file.getName());
@@ -189,12 +213,11 @@ public class ArtifactManagerTest {
             }
             assertNonexistent(root.child("does-not-exist"));
             assertNonexistent(root.child("some/deeply/nested/dir/does-not-exist"));
-            return null;
         }
 
     }
 
-    private static void assertFile(VirtualFile f, String contents, TaskListener listener) throws Exception {
+    private static void assertFile(VirtualFile f, String contents, TaskListener listener) throws IOException {
         assertTrue(f.isFile());
         assertFalse(f.isDirectory());
         assertTrue(f.exists());
@@ -212,14 +235,14 @@ public class ArtifactManagerTest {
         }
     }
 
-    private static void assertDir(VirtualFile f) throws Exception {
+    private static void assertDir(VirtualFile f) throws IOException {
         assertFalse(f.isFile());
         assertTrue(f.isDirectory());
         assertTrue(f.exists());
         // length & lastModified may or may not be defined
     }
 
-    private static void assertNonexistent(VirtualFile f) throws Exception {
+    private static void assertNonexistent(VirtualFile f) throws IOException {
         assertFalse(f.isFile());
         assertFalse(f.isDirectory());
         assertFalse(f.exists());
