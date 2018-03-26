@@ -61,6 +61,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.tools.tar.TarEntry;
 import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
@@ -291,6 +292,7 @@ public class StashManager {
     /**
      * Mixin interface for an {@link ArtifactManager} which supports specialized stash behavior as well.
      */
+    @Restricted(Beta.class)
     public interface StashAwareArtifactManager /* extends ArtifactManager */ {
 
         /** @see StashManager#stash(Run, String, FilePath, Launcher, EnvVars, TaskListener, String, String, boolean, boolean) */
