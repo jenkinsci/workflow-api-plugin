@@ -35,25 +35,47 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import jenkins.model.ArtifactManager;
 import jenkins.model.ArtifactManagerFactory;
 import jenkins.model.ArtifactManagerFactoryDescriptor;
 import jenkins.model.Jenkins;
 import jenkins.util.VirtualFile;
-import org.junit.Assert;
+import org.apache.commons.io.FileUtils;
+import org.jvnet.hudson.test.JenkinsRule;
 
 /**
  * Exercises direct download of artifacts.
  * Whereas {@link ArtifactManagerTest} allows you to test an implementation, this allows you to test a caller.
+ * Use {@link #whileBlockingOpen} to exercise the behavior.
  * @see <a href="https://issues.jenkins-ci.org/browse/JENKINS-49635">JENKINS-49635</a>
  */
 public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
 
+    private static final AtomicInteger blockOpen = new AtomicInteger();
+
     @Override public ArtifactManager managerFor(Run<?, ?> build) {
         return new DirectArtifactManager(build);
+    }
+
+    /**
+     * Within this dynamic scope (not sensitive to a thread), prevent {@link VirtualFile#open} from being called.
+     * {@link VirtualFile#toExternalURL} may be called, but the URL may not be opened inside this JVM
+     * (so you must send it for example to {@link JenkinsRule#createOnlineSlave()}).
+     */
+    public static <T> T whileBlockingOpen(java.util.concurrent.Callable<T> block) throws Exception {
+        blockOpen.incrementAndGet();
+        try {
+            return block.call();
+        } finally {
+            blockOpen.decrementAndGet();
+        }
     }
 
     @Extension public static final class DescriptorImpl extends ArtifactManagerFactoryDescriptor {}
@@ -71,7 +93,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         }
 
         @Override public VirtualFile root() {
-            return new RemotableVF(VirtualFile.forFile(dir), 0);
+            return new NoOpenVF(VirtualFile.forFile(dir));
         }
 
         @Override public void onLoad(Run<?, ?> build) {
@@ -88,30 +110,38 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
 
     }
 
-    private static final class RemotableVF extends VirtualFile {
+    private static final class NoOpenVF extends VirtualFile {
 
         private final VirtualFile delegate;
 
-        /** 0 for initial object; 1 for return value of {@link #asRemotable}; 2 for copy actually serialized to agent. */
-        private final int remoted;
-
-        RemotableVF(VirtualFile delegate, int remoted) {
+        NoOpenVF(VirtualFile delegate) {
             this.delegate = delegate;
-            this.remoted = remoted;
         }
 
-        @Override public VirtualFile asRemotable() {
-            Assert.assertEquals(0, remoted);
-            return new RemotableVF(delegate, 1);
+        @Override public InputStream open() throws IOException {
+            if (blockOpen.get() > 0) {
+                throw new IllegalStateException("should not be called; use toExternalURL instead");
+            } else {
+                return delegate.open();
+            }
         }
 
-        private Object writeReplace() {
-            Assert.assertEquals(1, remoted);
-            return new RemotableVF(delegate, 2);
-        }
-
-        private void remoteOnly() {
-            Assert.assertEquals(2, remoted);
+        @Override public URL toExternalURL() throws IOException {
+            if (blockOpen.get() > 0) {
+                File copy = File.createTempFile("external", getName(), Jenkins.get().root);
+                copy.deleteOnExit();
+                try (InputStream is = delegate.open()) {
+                    FileUtils.copyInputStreamToFile(is, copy);
+                }
+                URI u = copy.toURI();
+                return new URL(null, u.toString(), new URLStreamHandler() {
+                    @Override protected URLConnection openConnection(URL u) throws IOException {
+                        throw new IOException("not allowed to open " + u + " from this JVM");
+                    }
+                });
+            } else {
+                return delegate.toExternalURL();
+            }
         }
 
         @Override public String getName() {
@@ -123,7 +153,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         }
 
         @Override public VirtualFile getParent() {
-            return new RemotableVF(delegate.getParent(), remoted);
+            return new NoOpenVF(delegate.getParent());
         }
 
         @Override public boolean isDirectory() throws IOException {
@@ -143,42 +173,31 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         }
 
         @Override public VirtualFile[] list() throws IOException {
-            remoteOnly();
-            return Arrays.stream(delegate.list()).map((jenkins.util.VirtualFile f) -> new RemotableVF(f, remoted)).toArray(VirtualFile[]::new);
+            return Arrays.stream(delegate.list()).map(NoOpenVF::new).toArray(VirtualFile[]::new);
         }
 
         @Override public Collection<String> list(String includes, String excludes, boolean useDefaultExcludes) throws IOException {
-            remoteOnly();
             return delegate.list(includes, excludes, useDefaultExcludes);
         }
 
         @Override public VirtualFile child(String string) {
-            return new RemotableVF(delegate.child(string), remoted);
+            return new NoOpenVF(delegate.child(string));
         }
 
         @Override public long length() throws IOException {
-            remoteOnly();
             return delegate.length();
         }
 
         @Override public long lastModified() throws IOException {
-            remoteOnly();
             return delegate.lastModified();
         }
 
         @Override public int mode() throws IOException {
-            remoteOnly();
             return delegate.mode();
         }
 
         @Override public boolean canRead() throws IOException {
-            remoteOnly();
             return delegate.canRead();
-        }
-
-        @Override public InputStream open() throws IOException {
-            remoteOnly();
-            return delegate.open();
         }
 
         @Override public <V> V run(Callable<V, IOException> clbl) throws IOException {

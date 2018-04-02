@@ -83,16 +83,8 @@ public class ArtifactManagerTest {
         p.getPublishersList().add(aa);
         FreeStyleBuild b = r.buildAndAssertSuccess(p);
         VirtualFile root = b.getArtifactManager().root();
-        VirtualFile remotable = root.asRemotable();
         TaskListener listener = StreamTaskListener.fromStderr();
-        DumbSlave downstreamNode;
-        if (remotable != null) {
-            downstreamNode = r.createOnlineSlave();
-            downstreamNode.getChannel().call(new Verify(listener, remotable, weirdCharacters));
-        } else {
-            downstreamNode = null;
-            new Verify(listener, root, weirdCharacters).call();
-        }
+        new Verify(listener, root, weirdCharacters).run();
         if (b.getArtifactManager() instanceof StashManager.StashAwareArtifactManager) {
             Launcher launcher = upstreamNode.createLauncher(listener);
             EnvVars env = upstreamNode.toComputer().getEnvironment();
@@ -112,12 +104,7 @@ public class ArtifactManagerTest {
             assertEquals("content", upstreamWS.child("file").readToString());
             // And the copied artifacts:
             root = b2.getArtifactManager().root();
-            remotable = root.asRemotable();
-            if (remotable != null) {
-                downstreamNode.getChannel().call(new Verify(listener, remotable, weirdCharacters));
-            } else {
-                new Verify(listener, root, weirdCharacters).call();
-            }
+            new Verify(listener, root, weirdCharacters).run();
             // Also delete the original:
             StashManager.clearAll(b, listener);
             // Stashes should have been deleted, but not artifacts:
@@ -150,7 +137,7 @@ public class ArtifactManagerTest {
         // also avoiding tests of file mode and symlinks: will not work on Windows, and may or may not work in various providers
     }
 
-    private static class Verify extends MasterToSlaveCallable<Void, IOException> {
+    private static class Verify {
 
         private final TaskListener listener;
         private final VirtualFile root;
@@ -162,7 +149,7 @@ public class ArtifactManagerTest {
             this.weirdCharacters = weirdCharacters;
         }
 
-        @Override public Void call() throws IOException {
+        void run() throws IOException {
             test();
             if (Util.isOverridden(VirtualFile.class, root.getClass(), "run", Callable.class)) {
                 for (VirtualFile r : Arrays.asList(root, root.child("some"), root.child("file"), root.child("does-not-exist"))) {
@@ -170,7 +157,6 @@ public class ArtifactManagerTest {
                     r.run(new VerifyBatch(this));
                 }
             }
-            return null;
         }
 
         private static class VerifyBatch extends MasterToSlaveCallable<Void, IOException> {
@@ -263,11 +249,6 @@ public class ArtifactManagerTest {
         logging.record(StandardArtifactManager.class, Level.FINE);
         // Who knows about weird characters on NTFS; also case-sensitivity could confuse things
         run(r, null, !Functions.isWindows());
-    }
-
-    /** Check that {@link #run} complies with the expectations of {@link DirectArtifactManagerFactory}. */
-    @Test public void direct() throws Exception {
-        run(r, new DirectArtifactManagerFactory(), !Functions.isWindows());
     }
 
 }
