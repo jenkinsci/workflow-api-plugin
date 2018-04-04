@@ -235,9 +235,10 @@ public class ArtifactManagerTest {
         }
 
         private void assertFile(VirtualFile f, String contents) throws Exception {
-            assertTrue(f.isFile());
-            assertFalse(f.isDirectory());
-            assertTrue(f.exists());
+            System.err.println("Asserting file: " + f);
+            assertTrue("Not a file: " + f, f.isFile());
+            assertFalse("Unexpected directory: " + f, f.isDirectory());
+            assertTrue("Does not exist: " + f, f.exists());
             assertEquals(contents.length(), f.length());
             assertThat(f.lastModified(), not(is(0)));
             try (InputStream is = f.open()) {
@@ -263,16 +264,18 @@ public class ArtifactManagerTest {
     }
 
     private static void assertDir(VirtualFile f) throws IOException {
-        assertFalse(f.isFile());
-        assertTrue(f.isDirectory());
-        assertTrue(f.exists());
+        System.err.println("Asserting dir: " + f);
+        assertFalse("Unexpected file: " + f, f.isFile());
+        assertTrue("Not a directory: " + f, f.isDirectory());
+        assertTrue("Does not exist: " + f, f.exists());
         // length & lastModified may or may not be defined
     }
 
     private static void assertNonexistent(VirtualFile f) throws IOException {
-        assertFalse(f.isFile());
-        assertFalse(f.isDirectory());
-        assertFalse(f.exists());
+        System.err.println("Asserting nonexistent: " + f);
+        assertFalse("Unexpected file: " + f, f.isFile());
+        assertFalse("Unexpected dir: " + f, f.isDirectory());
+        assertFalse("Unexpectedly exists: " + f, f.exists());
         try {
             assertEquals(0, f.length());
         } catch (IOException x) {
