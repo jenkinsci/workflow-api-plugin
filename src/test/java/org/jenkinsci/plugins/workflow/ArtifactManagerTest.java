@@ -34,6 +34,7 @@ import hudson.Util;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.TaskListener;
+import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.remoting.Callable;
 import hudson.slaves.DumbSlave;
 import hudson.tasks.ArtifactArchiver;
@@ -49,12 +50,15 @@ import javax.annotation.Nonnull;
 import jenkins.model.ArtifactManager;
 import jenkins.model.ArtifactManagerConfiguration;
 import jenkins.model.ArtifactManagerFactory;
+import jenkins.model.Jenkins;
 import jenkins.model.StandardArtifactManager;
 import jenkins.security.MasterToSlaveCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
 import static org.hamcrest.Matchers.*;
 import org.jenkinsci.plugins.workflow.flow.StashManager;
+import org.jenkinsci.test.acceptance.docker.Docker;
+import org.jenkinsci.test.acceptance.docker.fixtures.JavaContainer;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
@@ -73,56 +77,73 @@ public class ArtifactManagerTest {
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
         }
-        DumbSlave upstreamNode = r.createOnlineSlave();
-        FreeStyleProject p = r.createFreeStyleProject();
-        p.setAssignedNode(upstreamNode);
-        FilePath upstreamWS = upstreamNode.getWorkspaceFor(p);
-        setUpWorkspace(upstreamWS, weirdCharacters);
-        ArtifactArchiver aa = new ArtifactArchiver("**");
-        aa.setDefaultExcludes(false);
-        p.getPublishersList().add(aa);
-        FreeStyleBuild b = r.buildAndAssertSuccess(p);
-        VirtualFile root = b.getArtifactManager().root();
-        TaskListener listener = StreamTaskListener.fromStderr();
-        new Verify(listener, root, weirdCharacters).run();
-        if (b.getArtifactManager() instanceof StashManager.StashAwareArtifactManager) {
-            Launcher launcher = upstreamNode.createLauncher(listener);
-            EnvVars env = upstreamNode.toComputer().getEnvironment();
-            env.putAll(upstreamNode.toComputer().buildEnvironment(listener));
-            // Make sure we can stash and then unstash within a build:
-            StashManager.stash(b, "stuff", upstreamWS, launcher, env, listener, "file", null, false, false);
-            upstreamWS.child("file").delete();
-            StashManager.unstash(b, "stuff", upstreamWS, launcher, env, listener);
-            assertEquals("content", upstreamWS.child("file").readToString());
-            upstreamWS.child("file").delete();
-            // Copy stashes and artifacts from one build to a second one:
-            p.getPublishersList().clear();
-            FreeStyleBuild b2 = r.buildAndAssertSuccess(p);
-            ExtensionList.lookupSingleton(StashManager.CopyStashesAndArtifacts.class).copy(b, b2, listener);
-            // Verify the copied stashes:
-            StashManager.unstash(b2, "stuff", upstreamWS, launcher, env, listener);
-            assertEquals("content", upstreamWS.child("file").readToString());
-            // And the copied artifacts:
-            root = b2.getArtifactManager().root();
-            new Verify(listener, root, weirdCharacters).run();
-            // Also delete the original:
-            StashManager.clearAll(b, listener);
-            // Stashes should have been deleted, but not artifacts:
-            assertTrue(b.getArtifactManager().root().child("file").isFile());
-            upstreamWS.deleteContents();
-            assertFalse(upstreamWS.child("file").exists());
-            try {
-                StashManager.unstash(b, "stuff", upstreamWS, launcher, env, listener);
-                fail("should not have succeeded in unstashing");
-            } catch (AbortException x) {
-                System.err.println("caught as expected: " + x);
+        JavaContainer runningContainer = null;
+        try {
+            DumbSlave agent;
+            Docker docker = new Docker();
+            if (docker.isAvailable()) {
+                runningContainer = docker.build(JavaContainer.class).start(JavaContainer.class).start();
+                agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(runningContainer.ipBound(22), runningContainer.port(22), "test", "test", "", ""));
+                Jenkins.get().addNode(agent);
+                r.waitOnline(agent);
+            } else {
+                System.err.println("No Docker support; falling back to running tests against an agent in a process on the same machine.");
+                agent = r.createOnlineSlave();
             }
-            assertFalse(upstreamWS.child("file").exists());
+            FreeStyleProject p = r.createFreeStyleProject();
+            p.setAssignedNode(agent);
+            FilePath ws = agent.getWorkspaceFor(p);
+            setUpWorkspace(ws, weirdCharacters);
+            ArtifactArchiver aa = new ArtifactArchiver("**");
+            aa.setDefaultExcludes(false);
+            p.getPublishersList().add(aa);
+            FreeStyleBuild b = r.buildAndAssertSuccess(p);
+            VirtualFile root = b.getArtifactManager().root();
+            new Verify(agent, root, weirdCharacters).run();
+            if (b.getArtifactManager() instanceof StashManager.StashAwareArtifactManager) {
+                TaskListener listener = StreamTaskListener.fromStderr();
+                Launcher launcher = agent.createLauncher(listener);
+                EnvVars env = agent.toComputer().getEnvironment();
+                env.putAll(agent.toComputer().buildEnvironment(listener));
+                // Make sure we can stash and then unstash within a build:
+                StashManager.stash(b, "stuff", ws, launcher, env, listener, "file", null, false, false);
+                ws.child("file").delete();
+                StashManager.unstash(b, "stuff", ws, launcher, env, listener);
+                assertEquals("content", ws.child("file").readToString());
+                ws.child("file").delete();
+                // Copy stashes and artifacts from one build to a second one:
+                p.getPublishersList().clear();
+                FreeStyleBuild b2 = r.buildAndAssertSuccess(p);
+                ExtensionList.lookupSingleton(StashManager.CopyStashesAndArtifacts.class).copy(b, b2, listener);
+                // Verify the copied stashes:
+                StashManager.unstash(b2, "stuff", ws, launcher, env, listener);
+                assertEquals("content", ws.child("file").readToString());
+                // And the copied artifacts:
+                root = b2.getArtifactManager().root();
+                new Verify(agent, root, weirdCharacters).run();
+                // Also delete the original:
+                StashManager.clearAll(b, listener);
+                // Stashes should have been deleted, but not artifacts:
+                assertTrue(b.getArtifactManager().root().child("file").isFile());
+                ws.deleteContents();
+                assertFalse(ws.child("file").exists());
+                try {
+                    StashManager.unstash(b, "stuff", ws, launcher, env, listener);
+                    fail("should not have succeeded in unstashing");
+                } catch (AbortException x) {
+                    System.err.println("caught as expected: " + x);
+                }
+                assertFalse(ws.child("file").exists());
+            }
+            // Also check deletion:
+            assertTrue(b.getArtifactManager().delete());
+            assertFalse(b.getArtifactManager().root().child("file").isFile());
+            assertFalse(b.getArtifactManager().delete());
+        } finally {
+            if (runningContainer != null) {
+                runningContainer.close();
+            }
         }
-        // Also check deletion:
-        assertTrue(b.getArtifactManager().delete());
-        assertFalse(b.getArtifactManager().root().child("file").isFile());
-        assertFalse(b.getArtifactManager().delete());
     }
 
     private static void setUpWorkspace(FilePath workspace, boolean weirdCharacters) throws Exception {
@@ -131,30 +152,36 @@ public class ArtifactManagerTest {
         workspace.child(".git/config").write("whatever", null);
         workspace.child("otherdir/somefile~").write("whatever", null);
         if (weirdCharacters) {
+            assertEquals("UTF-8 vs. UTF-8", workspace.getChannel().call(new FindEncoding()));
             workspace.child("otherdir/xxx#?:$&'\"<>čॐ").write("whatever", null);
         }
         // best to avoid scalability tests (large number of files, single large file) here—too fragile
         // also avoiding tests of file mode and symlinks: will not work on Windows, and may or may not work in various providers
     }
+    private static class FindEncoding extends MasterToSlaveCallable<String, Exception> {
+        @Override public String call() throws Exception {
+            return System.getProperty("file.encoding") + " vs. " + System.getProperty("sun.jnu.encoding");
+        }
+    }
 
     private static class Verify {
 
-        private final TaskListener listener;
+        private final DumbSlave agent;
         private final VirtualFile root;
         private final boolean weirdCharacters;
 
-        Verify(TaskListener listener, VirtualFile root, boolean weirdCharacters) {
-            this.listener = listener;
+        Verify(DumbSlave agent, VirtualFile root, boolean weirdCharacters) {
+            this.agent = agent;
             this.root = root;
             this.weirdCharacters = weirdCharacters;
         }
 
-        void run() throws IOException {
+        void run() throws Exception {
             test();
             if (Util.isOverridden(VirtualFile.class, root.getClass(), "run", Callable.class)) {
-                for (VirtualFile r : Arrays.asList(root, root.child("some"), root.child("file"), root.child("does-not-exist"))) {
-                    listener.getLogger().println("testing batch operations starting from " + r);
-                    r.run(new VerifyBatch(this));
+                for (VirtualFile f : Arrays.asList(root, root.child("some"), root.child("file"), root.child("does-not-exist"))) {
+                    System.err.println("testing batch operations starting from " + f);
+                    f.run(new VerifyBatch(this));
                 }
             }
         }
@@ -165,16 +192,22 @@ public class ArtifactManagerTest {
                 this.verification = verification;
             }
             @Override public Void call() throws IOException {
-                verification.test();
+                try {
+                    verification.test();
+                } catch (RuntimeException | IOException x) {
+                    throw x;
+                } catch (Exception x) {
+                    throw new IOException(x);
+                }
                 return null;
             }
         }
 
-        private void test() throws IOException {
+        private void test() throws Exception {
             assertThat("root name is unspecified generally", root.getName(), not(endsWith("/")));
             VirtualFile file = root.child("file");
             assertEquals("file", file.getName());
-            assertFile(file, "content", listener);
+            assertFile(file, "content");
             assertEquals(root, file.getParent());
             VirtualFile some = root.child("some");
             assertEquals("some", some.getName());
@@ -184,7 +217,7 @@ public class ArtifactManagerTest {
             assertThat(root.list("file", null, false), containsInAnyOrder("file"));
             VirtualFile subfile = root.child("some/deeply/nested/dir/subfile");
             assertEquals("subfile", subfile.getName());
-            assertFile(subfile, "content", listener);
+            assertFile(subfile, "content");
             VirtualFile someDeeplyNestedDir = some.child("deeply/nested/dir");
             assertEquals("dir", someDeeplyNestedDir.getName());
             assertDir(someDeeplyNestedDir);
@@ -195,30 +228,38 @@ public class ArtifactManagerTest {
             assertThat(some.list("**/*file", null, false), containsInAnyOrder("deeply/nested/dir/subfile"));
             assertThat(root.list("**", "**/xxx*", true), containsInAnyOrder("file", "some/deeply/nested/dir/subfile"));
             if (weirdCharacters) {
-                assertFile(root.child("otherdir/xxx#?:$&'\"<>čॐ"), "whatever", listener);
+                assertFile(root.child("otherdir/xxx#?:$&'\"<>čॐ"), "whatever");
             }
             assertNonexistent(root.child("does-not-exist"));
             assertNonexistent(root.child("some/deeply/nested/dir/does-not-exist"));
         }
 
-    }
-
-    private static void assertFile(VirtualFile f, String contents, TaskListener listener) throws IOException {
-        assertTrue(f.isFile());
-        assertFalse(f.isDirectory());
-        assertTrue(f.exists());
-        assertEquals(contents.length(), f.length());
-        assertThat(f.lastModified(), not(is(0)));
-        try (InputStream is = f.open()) {
-            assertEquals(contents, IOUtils.toString(is));
-        }
-        URL url = f.toExternalURL();
-        if (url != null) { // TODO try to do this in a docker slave, so we can be sure the environment is not affecting anything
-            listener.getLogger().println("opening " + url);
-            try (InputStream is = url.openStream()) {
+        private void assertFile(VirtualFile f, String contents) throws Exception {
+            assertTrue(f.isFile());
+            assertFalse(f.isDirectory());
+            assertTrue(f.exists());
+            assertEquals(contents.length(), f.length());
+            assertThat(f.lastModified(), not(is(0)));
+            try (InputStream is = f.open()) {
                 assertEquals(contents, IOUtils.toString(is));
             }
+            URL url = f.toExternalURL();
+            if (url != null) {
+                System.err.println("opening " + url);
+                assertEquals(contents, agent.getChannel().call(new RemoteOpenURL(url)));
+            }
         }
+
+        private static final class RemoteOpenURL extends MasterToSlaveCallable<String, IOException> {
+            private final URL u;
+            RemoteOpenURL(URL u) {
+                this.u = u;
+            }
+            @Override public String call() throws IOException {
+                return IOUtils.toString(u);
+            }
+        }
+
     }
 
     private static void assertDir(VirtualFile f) throws IOException {
