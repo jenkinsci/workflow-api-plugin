@@ -58,8 +58,10 @@ import org.apache.commons.io.IOUtils;
 import static org.hamcrest.Matchers.*;
 import org.jenkinsci.plugins.workflow.flow.StashManager;
 import org.jenkinsci.test.acceptance.docker.Docker;
+import org.jenkinsci.test.acceptance.docker.DockerImage;
 import org.jenkinsci.test.acceptance.docker.fixtures.JavaContainer;
 import static org.junit.Assert.*;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -72,22 +74,39 @@ public class ArtifactManagerTest {
 
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public LoggerRule logging = new LoggerRule();
+    
+    private static DockerImage image;
+    
+    @BeforeClass public static void doPrepareImage() throws Exception {
+        image = prepareImage();
+    }
 
-    public static void run(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters) throws Exception {
+    public static @CheckForNull DockerImage prepareImage() throws Exception {
+        Docker docker = new Docker();
+        if (docker.isAvailable()) {
+            return docker.build(JavaContainer.class);
+        } else {
+            System.err.println("No Docker support; falling back to running tests against an agent in a process on the same machine.");
+            return null;
+        }
+    }
+
+    /**
+     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     */
+    public static void run(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
         }
         JavaContainer runningContainer = null;
         try {
             DumbSlave agent;
-            Docker docker = new Docker();
-            if (docker.isAvailable()) {
-                runningContainer = docker.build(JavaContainer.class).start(JavaContainer.class).start();
+            if (image != null) {
+                runningContainer = image.start(JavaContainer.class).start();
                 agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(runningContainer.ipBound(22), runningContainer.port(22), "test", "test", "", ""));
                 Jenkins.get().addNode(agent);
                 r.waitOnline(agent);
             } else {
-                System.err.println("No Docker support; falling back to running tests against an agent in a process on the same machine.");
                 agent = r.createOnlineSlave();
             }
             FreeStyleProject p = r.createFreeStyleProject();
@@ -292,7 +311,7 @@ public class ArtifactManagerTest {
     @Test public void standard() throws Exception {
         logging.record(StandardArtifactManager.class, Level.FINE);
         // Who knows about weird characters on NTFS; also case-sensitivity could confuse things
-        run(r, null, !Functions.isWindows());
+        run(r, null, !Functions.isWindows(), image);
     }
 
 }
