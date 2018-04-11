@@ -453,7 +453,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     private void persistSafe() {
         try {
             save();
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.WARNING, "failed to save actions for FlowNode id=" + this.id, e);
         }
     }
