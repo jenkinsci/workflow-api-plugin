@@ -63,7 +63,10 @@ public abstract class ArgumentsAction implements PersistentAction {
         MASKED_VALUE,
 
         /** Denotes an object that is too big to retain, such as strings exceeding {@link #MAX_RETAINED_LENGTH} */
-        OVERSIZE_VALUE
+        OVERSIZE_VALUE,
+
+        /** For when we can't actually serialize the arguments. */
+        UNSERIALIZABLE
     }
 
     /** Largest String, Collection, or array size we'll retain -- provides a rough size limit on any single field.
