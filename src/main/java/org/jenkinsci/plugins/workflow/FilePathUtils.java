@@ -35,6 +35,7 @@ import hudson.remoting.VirtualChannel;
 import hudson.slaves.ComputerListener;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.logging.Level;
@@ -112,9 +113,8 @@ public class FilePathUtils {
     @Restricted(NoExternalUse.class)
     @Extension public static final class Listener extends ComputerListener {
 
-        private static final Map<VirtualChannel,String> channelNames = new WeakHashMap<>();
+        private static final Map<VirtualChannel,String> channelNames = Collections.synchronizedMap(new WeakHashMap<VirtualChannel,String>());
 
-        // TODO: sync access?
         static String getChannelName(@Nonnull VirtualChannel channel) {
             String channelName = channelNames.get(channel);
 

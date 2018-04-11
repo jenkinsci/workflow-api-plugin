@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.actions;
 
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Primitives;
 import hudson.PluginManager;
 import hudson.model.Describable;
@@ -162,7 +163,7 @@ public abstract class ArgumentsAction implements PersistentAction {
         if (internalArgs.size() == 0) {
             return Collections.<String,Object>emptyMap();
         }
-        HashMap<String, Object> filteredArguments = new HashMap<String, Object>();
+        HashMap<String, Object> filteredArguments = Maps.newHashMapWithExpectedSize(internalArgs.size());
         for (Map.Entry<String, Object> entry : internalArgs.entrySet()) {
             if (entry.getValue() != null && !(entry.getValue() instanceof NotStoredReason)) {
                 // TODO this is incorrect: value could be a Map/List with some nested entries that are NotStoredReason

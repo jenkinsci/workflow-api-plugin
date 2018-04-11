@@ -73,6 +73,9 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
 
     protected transient GraphLookupView internalGraphLookup = null;
 
+    @CheckForNull /** CheckForNull due to loading pre-durability runs. */
+    protected FlowDurabilityHint durabilityHint = null;
+
     /** Eventually this may be overridden if the FlowExecution has a better source of structural information, such as the {@link FlowNode} storage. */
     protected synchronized GraphLookupView getInternalGraphLookup() {
         if (internalGraphLookup == null) {
@@ -81,6 +84,16 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
             this.addListener(lookupView);
         }
         return internalGraphLookup;
+    }
+
+    /**
+     * Get the durability level we're aiming for, or a default value if none is set (defaults may change as implementation evolve).
+     * @return Durability level we are aiming for with this execution.
+     */
+    @Nonnull
+    public FlowDurabilityHint getDurabilityHint() {
+        // MAX_SURVIVABILITY is the behavior of builds before the change was introduced.
+        return (durabilityHint != null) ? durabilityHint : FlowDurabilityHint.MAX_SURVIVABILITY;
     }
 
     /**
@@ -296,5 +309,11 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
         }
         return getInternalGraphLookup().iterateEnclosingBlocks(node);
+    }
+
+    /** Perform shutdown-specific logic -- should be invoked by the {@link FlowExecutionOwner#notifyShutdown()} method
+     *  in response to {@link FlowExecutionList#saveAll()} */
+    protected void notifyShutdown() {
+        // Default is no-op
     }
 }
