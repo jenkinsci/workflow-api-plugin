@@ -292,9 +292,9 @@ public abstract class ArgumentsAction implements PersistentAction {
             StepDescriptor d = ((StepNode) n).getDescriptor();
             if (d != null) {
                 try {
-                    return resolve(new DescribableModel<>(d.clazz), args).getArguments();
+                    return resolve(DescribableModel.of(d.clazz), args).getArguments();
                 } catch (Exception x) { // all sorts of things could go wrong here
-                    LOGGER.log(Level.FINE, "coult not resolve " + args + " for " + d.clazz.getName(), x);
+                    LOGGER.log(Level.FINE, "could not resolve " + args + " for " + d.clazz.getName(), x);
                     // TODO this does not handle NotStoredReason’s well
                     // more robust to recursively traverse the tree and use e.g. DescribableModel.resolveClass to populate details
                     // (without actually attempting to instantiate any of the classes)
