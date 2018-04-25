@@ -39,6 +39,7 @@ import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.structs.describable.DescribableModel;
 import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -197,7 +198,7 @@ public abstract class ArgumentsAction implements PersistentAction {
             StepDescriptor descriptor = ((StepNode) n).getDescriptor();
             if (descriptor != null) {  // Null if plugin providing descriptor was uninstalled
                 Map<String, Object> filteredArgs = getFilteredArguments(n);
-                return descriptor.argumentsToString(filteredArgs);
+                return StringUtils.substring(descriptor.argumentsToString(filteredArgs), 0, 80);
             }
         }
         return null;  // non-StepNode nodes can't have step arguments

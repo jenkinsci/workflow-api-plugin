@@ -450,5 +450,33 @@ Action format:
         encl.addAll(node.getEnclosingBlocks());
         return encl;
     }
-}
 
+    @Test
+    public void testLongStepArguments() throws Exception {
+        rr.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                WorkflowJob job = rr.j.createProject(WorkflowJob.class, "testLongStepArguments");
+
+                job.setDefinition(new CpsFlowDefinition(
+                    "node('master') {\n" +
+                    "    stage('weird') {\n" +
+                    "        echo 'lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so,lib01.so'\n" +
+                    "    }\n" +
+                    "}\n")
+                );
+                WorkflowRun r = rr.j.buildAndAssertSuccess(job);
+
+                FlowExecution execution = r.getExecution();
+
+                DepthFirstScanner scan = new DepthFirstScanner();
+                for (FlowNode n : scan.allNodes(execution)) {
+                    String args = ArgumentsAction.getStepArgumentsAsString(n);
+                    if(args!=null) {
+                        assertTrue(args.length() <= 80);
+                    }
+                }
+            }
+        });
+    }
+}
