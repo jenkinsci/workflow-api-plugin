@@ -90,11 +90,9 @@ public class ArtifactManagerTest {
             return null;
         }
     }
-
-    /**
-     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
-     */
-    public static void run(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    
+    private static void wrapInContainer(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory,
+            boolean weirdCharacters, TestFunction f) throws Exception {
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
         }
@@ -117,35 +115,69 @@ public class ArtifactManagerTest {
             aa.setDefaultExcludes(false);
             p.getPublishersList().add(aa);
             FreeStyleBuild b = r.buildAndAssertSuccess(p);
-            VirtualFile root = b.getArtifactManager().root();
-            new Verify(agent, root, weirdCharacters).run();
-            if (b.getArtifactManager() instanceof StashManager.StashAwareArtifactManager) {
-                TaskListener listener = StreamTaskListener.fromStderr();
-                Launcher launcher = agent.createLauncher(listener);
-                EnvVars env = agent.toComputer().getEnvironment();
-                env.putAll(agent.toComputer().buildEnvironment(listener));
-                // Make sure we can stash and then unstash within a build:
-                StashManager.stash(b, "stuff", ws, launcher, env, listener, "file", null, false, false);
-                ws.child("file").delete();
-                StashManager.unstash(b, "stuff", ws, launcher, env, listener);
-                assertEquals("content", ws.child("file").readToString());
-                ws.child("file").delete();
-                // Copy stashes and artifacts from one build to a second one:
-                p.getPublishersList().clear();
-                FreeStyleBuild b2 = r.buildAndAssertSuccess(p);
-                ExtensionList.lookupSingleton(StashManager.CopyStashesAndArtifacts.class).copy(b, b2, listener);
-                // Verify the copied stashes:
-                StashManager.unstash(b2, "stuff", ws, launcher, env, listener);
-                assertEquals("content", ws.child("file").readToString());
-                // And the copied artifacts:
-                root = b2.getArtifactManager().root();
+            f.apply(agent, p, b, ws);
+        } finally {
+            if (runningContainer != null) {
+                runningContainer.close();
+            }
+        }
+    }
+
+    /**
+     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     */
+    public static void artifactArchive(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+        wrapInContainer(r, factory, weirdCharacters, new TestFunction() {
+            @Override
+            public void apply(DumbSlave agent, FreeStyleProject p, FreeStyleBuild b, FilePath ws) throws Exception {
+                VirtualFile root = b.getArtifactManager().root();
                 new Verify(agent, root, weirdCharacters).run();
-                // Also delete the original:
-                StashManager.clearAll(b, listener);
-                // Stashes should have been deleted, but not artifacts:
+                // should not delete
+                assertFalse(b.getArtifactManager().delete());
                 assertTrue(b.getArtifactManager().root().child("file").isFile());
-                ws.deleteContents();
-                assertFalse(ws.child("file").exists());
+            }
+        });
+    }
+
+    /**
+     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     */
+    public static void artifactArchiveAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+        wrapInContainer(r, factory, weirdCharacters, new TestFunction() {
+            @Override
+            public void apply(DumbSlave agent, FreeStyleProject p, FreeStyleBuild b, FilePath ws) throws Exception {
+                VirtualFile root = b.getArtifactManager().root();
+                new Verify(agent, root, weirdCharacters).run();
+                // Also check deletion:
+                assertTrue(b.getArtifactManager().delete());
+                assertFalse(b.getArtifactManager().root().child("file").isFile());
+                assertFalse(b.getArtifactManager().delete());
+            }
+        });
+    }
+
+    /**
+     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     */
+    public static void artifactStash(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+        wrapInContainer(r, factory, weirdCharacters, new StashFunction(r, weirdCharacters, new TestStashFunction() {
+            @Override
+            public void apply(FreeStyleProject p, FreeStyleBuild b, FilePath ws, Launcher launcher, EnvVars env,
+                    TaskListener listener) throws Exception {
+                // should not have deleted
+                StashManager.unstash(b, "stuff", ws, launcher, env, listener);
+                assertTrue(ws.child("file").exists());
+            }}));
+    }
+
+    /**
+     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     */
+    public static void artifactStashAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+        wrapInContainer(r, factory, weirdCharacters, new StashFunction(r, weirdCharacters, new TestStashFunction() {
+            @Override
+            public void apply(FreeStyleProject p, FreeStyleBuild b, FilePath ws, Launcher launcher, EnvVars env,
+                    TaskListener listener) throws Exception {
                 try {
                     StashManager.unstash(b, "stuff", ws, launcher, env, listener);
                     fail("should not have succeeded in unstashing");
@@ -153,16 +185,7 @@ public class ArtifactManagerTest {
                     System.err.println("caught as expected: " + x);
                 }
                 assertFalse(ws.child("file").exists());
-            }
-            // Also check deletion:
-            assertTrue(b.getArtifactManager().delete());
-            assertFalse(b.getArtifactManager().root().child("file").isFile());
-            assertFalse(b.getArtifactManager().delete());
-        } finally {
-            if (runningContainer != null) {
-                runningContainer.close();
-            }
-        }
+            }}));
     }
 
     private static void setUpWorkspace(FilePath workspace, boolean weirdCharacters) throws Exception {
@@ -180,6 +203,59 @@ public class ArtifactManagerTest {
     private static class FindEncoding extends MasterToSlaveCallable<String, Exception> {
         @Override public String call() throws Exception {
             return System.getProperty("file.encoding") + " vs. " + System.getProperty("sun.jnu.encoding");
+        }
+    }
+
+    @FunctionalInterface
+    interface TestFunction {
+        void apply(DumbSlave agent, FreeStyleProject p, FreeStyleBuild b, FilePath ws) throws Exception;
+    }
+    @FunctionalInterface
+    interface TestStashFunction {
+        void apply(FreeStyleProject p, FreeStyleBuild b, FilePath ws, Launcher launcher, EnvVars env,
+                TaskListener listener) throws Exception;
+    }
+
+    private static class StashFunction implements TestFunction {
+        private JenkinsRule r;
+        private boolean weirdCharacters;
+        private TestStashFunction f;
+
+        StashFunction(@Nonnull JenkinsRule r, boolean weirdCharacters, TestStashFunction f) {
+            this.r = r;
+            this.weirdCharacters = weirdCharacters;
+            this.f = f;
+        }
+
+        @Override
+        public void apply(DumbSlave agent, FreeStyleProject p, FreeStyleBuild b, FilePath ws) throws Exception {
+            TaskListener listener = StreamTaskListener.fromStderr();
+            Launcher launcher = agent.createLauncher(listener);
+            EnvVars env = agent.toComputer().getEnvironment();
+            env.putAll(agent.toComputer().buildEnvironment(listener));
+            // Make sure we can stash and then unstash within a build:
+            StashManager.stash(b, "stuff", ws, launcher, env, listener, "file", null, false, false);
+            ws.child("file").delete();
+            StashManager.unstash(b, "stuff", ws, launcher, env, listener);
+            assertEquals("content", ws.child("file").readToString());
+            ws.child("file").delete();
+            // Copy stashes and artifacts from one build to a second one:
+            p.getPublishersList().clear();
+            FreeStyleBuild b2 = r.buildAndAssertSuccess(p);
+            ExtensionList.lookupSingleton(StashManager.CopyStashesAndArtifacts.class).copy(b, b2, listener);
+            // Verify the copied stashes:
+            StashManager.unstash(b2, "stuff", ws, launcher, env, listener);
+            assertEquals("content", ws.child("file").readToString());
+            // And the copied artifacts:
+            VirtualFile root = b2.getArtifactManager().root();
+            new Verify(agent, root, weirdCharacters).run();
+            // Also delete the original:
+            StashManager.clearAll(b, listener);
+            // Stashes should have been deleted, but not artifacts:
+            assertTrue(b.getArtifactManager().root().child("file").isFile());
+            ws.deleteContents();
+            assertFalse(ws.child("file").exists());
+            f.apply(p, b, ws, launcher, env, listener);
         }
     }
 
@@ -311,7 +387,7 @@ public class ArtifactManagerTest {
     @Test public void standard() throws Exception {
         logging.record(StandardArtifactManager.class, Level.FINE);
         // Who knows about weird characters on NTFS; also case-sensitivity could confuse things
-        run(r, null, !Functions.isWindows(), image);
+        artifactArchive(r, null, !Functions.isWindows(), image);
     }
 
 }
