@@ -124,7 +124,10 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     * Test artifact archival
+     * 
+     * @param image
+     *            use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactArchive(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
@@ -137,7 +140,10 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     * Test artifact archival and deletion after test
+     * 
+     * @param image
+     *            use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactArchiveAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
@@ -151,7 +157,10 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     * Test artifact stashing
+     * 
+     * @param image
+     *            use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactStash(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters,
@@ -163,7 +172,10 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
+     * Test artifact stashing and deletion afterwards
+     * 
+     * @param image
+     *            use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactStashAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters,
