@@ -127,15 +127,12 @@ public class ArtifactManagerTest {
      * @param image use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactArchive(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        wrapInContainer(r, factory, weirdCharacters, new TestFunction() {
-            @Override
-            public void apply(DumbSlave agent, FreeStyleProject p, FreeStyleBuild b, FilePath ws) throws Exception {
-                VirtualFile root = b.getArtifactManager().root();
-                new Verify(agent, root, weirdCharacters).run();
-                // should not delete
-                assertFalse(b.getArtifactManager().delete());
-                assertTrue(b.getArtifactManager().root().child("file").isFile());
-            }
+        wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
+            VirtualFile root = b.getArtifactManager().root();
+            new Verify(agent, root, weirdCharacters).run();
+            // should not delete
+            assertFalse(b.getArtifactManager().delete());
+            assertTrue(b.getArtifactManager().root().child("file").isFile());
         });
     }
 
@@ -143,16 +140,13 @@ public class ArtifactManagerTest {
      * @param image use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactArchiveAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        wrapInContainer(r, factory, weirdCharacters, new TestFunction() {
-            @Override
-            public void apply(DumbSlave agent, FreeStyleProject p, FreeStyleBuild b, FilePath ws) throws Exception {
-                VirtualFile root = b.getArtifactManager().root();
-                new Verify(agent, root, weirdCharacters).run();
-                // Also check deletion:
-                assertTrue(b.getArtifactManager().delete());
-                assertFalse(b.getArtifactManager().root().child("file").isFile());
-                assertFalse(b.getArtifactManager().delete());
-            }
+        wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
+            VirtualFile root = b.getArtifactManager().root();
+            new Verify(agent, root, weirdCharacters).run();
+            // Also check deletion:
+            assertTrue(b.getArtifactManager().delete());
+            assertFalse(b.getArtifactManager().root().child("file").isFile());
+            assertFalse(b.getArtifactManager().delete());
         });
     }
 
@@ -160,32 +154,28 @@ public class ArtifactManagerTest {
      * @param image use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactStash(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        wrapInContainer(r, factory, weirdCharacters, new StashFunction(r, weirdCharacters, new TestStashFunction() {
-            @Override
-            public void apply(FreeStyleProject p, FreeStyleBuild b, FilePath ws, Launcher launcher, EnvVars env,
-                    TaskListener listener) throws Exception {
-                // should not have deleted
-                StashManager.unstash(b, "stuff", ws, launcher, env, listener);
-                assertTrue(ws.child("file").exists());
-            }}));
+        wrapInContainer(r, factory, weirdCharacters,
+                new StashFunction(r, weirdCharacters, (p, b, ws, launcher, env, listener) -> {
+                    // should not have deleted
+                    StashManager.unstash(b, "stuff", ws, launcher, env, listener);
+                    assertTrue(ws.child("file").exists());
+                }));
     }
 
     /**
      * @param image use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactStashAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        wrapInContainer(r, factory, weirdCharacters, new StashFunction(r, weirdCharacters, new TestStashFunction() {
-            @Override
-            public void apply(FreeStyleProject p, FreeStyleBuild b, FilePath ws, Launcher launcher, EnvVars env,
-                    TaskListener listener) throws Exception {
-                try {
-                    StashManager.unstash(b, "stuff", ws, launcher, env, listener);
-                    fail("should not have succeeded in unstashing");
-                } catch (AbortException x) {
-                    System.err.println("caught as expected: " + x);
-                }
-                assertFalse(ws.child("file").exists());
-            }}));
+        wrapInContainer(r, factory, weirdCharacters,
+                new StashFunction(r, weirdCharacters, (p, b, ws, launcher, env, listener) -> {
+                    try {
+                        StashManager.unstash(b, "stuff", ws, launcher, env, listener);
+                        fail("should not have succeeded in unstashing");
+                    } catch (AbortException x) {
+                        System.err.println("caught as expected: " + x);
+                    }
+                    assertFalse(ws.child("file").exists());
+                }));
     }
 
     private static void setUpWorkspace(FilePath workspace, boolean weirdCharacters) throws Exception {
