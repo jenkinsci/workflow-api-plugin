@@ -389,7 +389,7 @@ public class ArtifactManagerTest {
     @Test public void standard() throws Exception {
         logging.record(StandardArtifactManager.class, Level.FINE);
         // Who knows about weird characters on NTFS; also case-sensitivity could confuse things
-        artifactArchive(r, null, !Functions.isWindows(), image);
+        artifactArchiveAndDelete(r, null, !Functions.isWindows(), image);
     }
 
 }
