@@ -68,7 +68,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
 
 /**
- * {@link #run} allows an implementation of {@link ArtifactManager} plus {@link VirtualFile} to be run through a standard gantlet of tests.
+ * {@link #artifactArchiveAndDelete} and variants allow an implementation of {@link ArtifactManager} plus {@link VirtualFile} to be run through a standard gantlet of tests.
  */
 public class ArtifactManagerTest {
 
@@ -81,6 +81,10 @@ public class ArtifactManagerTest {
         image = prepareImage();
     }
 
+    /**
+     * Sets up a Docker image, if Docker support is available in this environment.
+     * Used by {@link #artifactArchiveAndDelete} etc.
+     */
     public static @CheckForNull DockerImage prepareImage() throws Exception {
         Docker docker = new Docker();
         if (docker.isAvailable()) {
@@ -90,7 +94,10 @@ public class ArtifactManagerTest {
             return null;
         }
     }
-    
+
+    /**
+     * Creates an agent, in a Docker container when possible, calls {@link #setUpWorkspace}, then runs some tests.
+     */
     private static void wrapInContainer(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory,
             boolean weirdCharacters, TestFunction f) throws Exception {
         if (factory != null) {
@@ -124,10 +131,9 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * Test artifact archival
-     * 
-     * @param image
-     *            use {@link #prepareImage} in a {@link BeforeClass} block
+     * Test artifact archiving with a manager that does <em>not</em> honor deletion requests.
+     * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
+     * @param image as in {@link #artifactArchiveAndDelete}
      */
     public static void artifactArchive(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
@@ -140,10 +146,9 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * Test artifact archival and deletion after test
-     * 
-     * @param image
-     *            use {@link #prepareImage} in a {@link BeforeClass} block
+     * Test artifact archiving in a plain manager.
+     * @param weirdCharacters check behavior of files with Unicode and various unusual characters in the name
+     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
      */
     public static void artifactArchiveAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
@@ -157,10 +162,9 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * Test artifact stashing
-     * 
-     * @param image
-     *            use {@link #prepareImage} in a {@link BeforeClass} block
+     * Test stashing and unstashing with a {@link StashManager.StashAwareArtifactManager} that does <em>not</em> honor deletion requests.
+     * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
+     * @param image as in {@link #artifactArchiveAndDelete}
      */
     public static void artifactStash(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters,
@@ -172,10 +176,9 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * Test artifact stashing and deletion afterwards
-     * 
-     * @param image
-     *            use {@link #prepareImage} in a {@link BeforeClass} block
+     * Test stashing and unstashing with a {@link StashManager.StashAwareArtifactManager} with standard behavior.
+     * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
+     * @param image as in {@link #artifactArchiveAndDelete}
      */
     public static void artifactStashAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters,
@@ -190,6 +193,9 @@ public class ArtifactManagerTest {
                 }));
     }
 
+    /**
+     * Creates a variety of files in a directory structure designed to exercise interesting aspects of {@link VirtualFile}.
+     */
     private static void setUpWorkspace(FilePath workspace, boolean weirdCharacters) throws Exception {
         workspace.child("file").write("content", null);
         workspace.child("some/deeply/nested/dir/subfile").write("content", null);
@@ -208,20 +214,32 @@ public class ArtifactManagerTest {
         }
     }
 
+    /**
+     * Block to run overall tests.
+     * @see #wrapInContainer
+     */
     @FunctionalInterface
-    interface TestFunction {
+    private interface TestFunction {
         void apply(DumbSlave agent, FreeStyleProject p, FreeStyleBuild b, FilePath ws) throws Exception;
     }
+
+    /**
+     * Block to run stash-specific tests.
+     * @see StashFunction
+     */
     @FunctionalInterface
-    interface TestStashFunction {
+    private interface TestStashFunction {
         void apply(FreeStyleProject p, FreeStyleBuild b, FilePath ws, Launcher launcher, EnvVars env,
                 TaskListener listener) throws Exception;
     }
 
+    /**
+     * Verfies behaviors of stash and unstash operations.
+     */
     private static class StashFunction implements TestFunction {
-        private JenkinsRule r;
-        private boolean weirdCharacters;
-        private TestStashFunction f;
+        private final JenkinsRule r;
+        private final boolean weirdCharacters;
+        private final TestStashFunction f;
 
         StashFunction(@Nonnull JenkinsRule r, boolean weirdCharacters, TestStashFunction f) {
             this.r = r;
@@ -261,6 +279,9 @@ public class ArtifactManagerTest {
         }
     }
 
+    /**
+     * Runs an assortment of verifications via {@link #test} on a remote directory.
+     */
     private static class Verify {
 
         private final DumbSlave agent;
@@ -273,6 +294,10 @@ public class ArtifactManagerTest {
             this.weirdCharacters = weirdCharacters;
         }
 
+        /**
+         * Perform verification.
+         * When {@link VirtualFile#run} is overridden, uses {@link VerifyBatch} also.
+         */
         void run() throws Exception {
             test();
             if (Util.isOverridden(VirtualFile.class, root.getClass(), "run", Callable.class)) {
@@ -283,6 +308,9 @@ public class ArtifactManagerTest {
             }
         }
 
+        /**
+         * Performs verifications against a possibly cached set of metadata.
+         */
         private static class VerifyBatch extends MasterToSlaveCallable<Void, IOException> {
             private final Verify verification;
             VerifyBatch(Verify verification) {
@@ -300,6 +328,11 @@ public class ArtifactManagerTest {
             }
         }
 
+        /**
+         * Verifies miscellaneous aspects of files in {@link root}.
+         * Checks that files are in the expected places, directories can be listed, etc.
+         * @see #setUpWorkspace
+         */
         private void test() throws Exception {
             assertThat("root name is unspecified generally", root.getName(), not(endsWith("/")));
             VirtualFile file = root.child("file");
@@ -331,6 +364,10 @@ public class ArtifactManagerTest {
             assertNonexistent(root.child("some/deeply/nested/dir/does-not-exist"));
         }
 
+        /**
+         * Checks that a given file exists, as a plain file, with the specified contents.
+         * Checks both {@link VirtualFile#open} and, if implemented, {@link VirtualFile#toExternalURL}.
+         */
         private void assertFile(VirtualFile f, String contents) throws Exception {
             System.err.println("Asserting file: " + f);
             assertTrue("Not a file: " + f, f.isFile());
@@ -360,6 +397,9 @@ public class ArtifactManagerTest {
 
     }
 
+    /**
+     * Checks that a given path exists as a directory.
+     */
     private static void assertDir(VirtualFile f) throws IOException {
         System.err.println("Asserting dir: " + f);
         assertFalse("Unexpected file: " + f, f.isFile());
@@ -368,6 +408,9 @@ public class ArtifactManagerTest {
         // length & lastModified may or may not be defined
     }
 
+    /**
+     * Checks that a given path does not exist as either a file or a directory.
+     */
     private static void assertNonexistent(VirtualFile f) throws IOException {
         System.err.println("Asserting nonexistent: " + f);
         assertFalse("Unexpected file: " + f, f.isFile());
