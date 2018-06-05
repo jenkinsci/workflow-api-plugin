@@ -37,17 +37,29 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.net.URLStreamHandler;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.ArtifactManager;
 import jenkins.model.ArtifactManagerFactory;
 import jenkins.model.ArtifactManagerFactoryDescriptor;
 import jenkins.model.Jenkins;
 import jenkins.util.VirtualFile;
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.ConnectionClosedException;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.bootstrap.HttpServer;
+import org.apache.http.impl.bootstrap.ServerBootstrap;
+import org.apache.http.protocol.HttpContext;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
@@ -58,10 +70,44 @@ import org.jvnet.hudson.test.JenkinsRule;
  */
 public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
 
+    private static final Logger LOGGER = Logger.getLogger(DirectArtifactManagerFactory.class.getName());
     private static final AtomicInteger blockOpen = new AtomicInteger();
 
+    private final transient URL baseURL;
+
+    public DirectArtifactManagerFactory() throws Exception {
+        HttpServer server = ServerBootstrap.bootstrap().
+            registerHandler("*", (HttpRequest request, HttpResponse response, HttpContext _context) -> {
+                String method = request.getRequestLine().getMethod();
+                String contents = URLDecoder.decode(request.getRequestLine().getUri().substring(1), "UTF-8");
+                switch (method) {
+                    case "GET": {
+                        response.setStatusCode(200);
+                        response.setEntity(new StringEntity(contents));
+                        LOGGER.log(Level.INFO, "Serving ‘{0}’", contents);
+                        return;
+                    }
+                    default: {
+                        throw new IllegalStateException();
+                    }
+                }
+            }).
+            setExceptionLogger(x -> {
+                if (x instanceof ConnectionClosedException) {
+                    LOGGER.info(x.toString());
+                } else {
+                    LOGGER.log(Level.INFO, "error thrown in HTTP service", x);
+                }
+            }).
+            create();
+        server.start();
+        baseURL = new URL("http://" + server.getInetAddress().getHostName() + ":" + server.getLocalPort() + "/");
+        LOGGER.log(Level.INFO, "Mock server running at {0}", baseURL);
+
+    }
+
     @Override public ArtifactManager managerFor(Run<?, ?> build) {
-        return new DirectArtifactManager(build);
+        return new DirectArtifactManager(build, baseURL);
     }
 
     /**
@@ -83,8 +129,10 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
     private static final class DirectArtifactManager extends ArtifactManager {
 
         private transient File dir;
+        private transient final URL baseURL;
 
-        DirectArtifactManager(Run<?, ?> build) {
+        DirectArtifactManager(Run<?, ?> build, URL baseURL) {
+            this.baseURL = baseURL;
             onLoad(build);
         }
 
@@ -93,7 +141,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         }
 
         @Override public VirtualFile root() {
-            return new NoOpenVF(VirtualFile.forFile(dir));
+            return new NoOpenVF(VirtualFile.forFile(dir), baseURL);
         }
 
         @Override public void onLoad(Run<?, ?> build) {
@@ -113,9 +161,11 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
     private static final class NoOpenVF extends VirtualFile {
 
         private final VirtualFile delegate;
+        private final URL baseURL;
 
-        NoOpenVF(VirtualFile delegate) {
+        NoOpenVF(VirtualFile delegate, URL baseURL) {
             this.delegate = delegate;
+            this.baseURL = baseURL;
         }
 
         @Override public InputStream open() throws IOException {
@@ -128,13 +178,11 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
 
         @Override public URL toExternalURL() throws IOException {
             if (blockOpen.get() > 0) {
-                File copy = File.createTempFile("external", getName(), Jenkins.get().root);
-                copy.deleteOnExit();
+                String contents;
                 try (InputStream is = delegate.open()) {
-                    FileUtils.copyInputStreamToFile(is, copy);
+                    contents = IOUtils.toString(is, StandardCharsets.UTF_8);
                 }
-                URI u = copy.toURI();
-                return new URL(null, u.toString(), new URLStreamHandler() {
+                return new URL(null, baseURL + URLEncoder.encode(contents, "UTF-8"), new URLStreamHandler() {
                     @Override protected URLConnection openConnection(URL u) throws IOException {
                         throw new IOException("not allowed to open " + u + " from this JVM");
                     }
@@ -153,7 +201,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         }
 
         @Override public VirtualFile getParent() {
-            return new NoOpenVF(delegate.getParent());
+            return new NoOpenVF(delegate.getParent(), baseURL);
         }
 
         @Override public boolean isDirectory() throws IOException {
@@ -173,7 +221,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         }
 
         @Override public VirtualFile[] list() throws IOException {
-            return Arrays.stream(delegate.list()).map(NoOpenVF::new).toArray(VirtualFile[]::new);
+            return Arrays.stream(delegate.list()).map(vf -> new NoOpenVF(vf, baseURL)).toArray(VirtualFile[]::new);
         }
 
         @Override public Collection<String> list(String includes, String excludes, boolean useDefaultExcludes) throws IOException {
@@ -181,7 +229,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         }
 
         @Override public VirtualFile child(String string) {
-            return new NoOpenVF(delegate.child(string));
+            return new NoOpenVF(delegate.child(string), baseURL);
         }
 
         @Override public long length() throws IOException {
