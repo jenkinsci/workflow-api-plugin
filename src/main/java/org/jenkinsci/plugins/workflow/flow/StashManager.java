@@ -291,6 +291,9 @@ public class StashManager {
 
     /**
      * Mixin interface for an {@link ArtifactManager} which supports specialized stash behavior as well.
+     * The recommended standard implementation is in the plugin currently named {@code artifact-manager-s3},
+     * which in turn supports extensibility to various cloud providers.
+     * @see <a href="https://github.com/jenkinsci/jep/blob/master/jep/202/README.adoc">JEP-202</a>
      */
     @Restricted(Beta.class)
     public interface StashAwareArtifactManager /* extends ArtifactManager */ {
