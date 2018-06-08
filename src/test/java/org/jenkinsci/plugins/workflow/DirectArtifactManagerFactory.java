@@ -63,7 +63,7 @@ import org.apache.http.protocol.HttpContext;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
- * Exercises direct download of artifacts.
+ * A mock artifact manager which allows tests to exercise direct download of artifacts via HTTP URLs.
  * Whereas {@link ArtifactManagerTest} allows you to test an implementation, this allows you to test a caller.
  * Use {@link #whileBlockingOpen} to exercise the behavior.
  * @see <a href="https://issues.jenkins-ci.org/browse/JENKINS-49635">JENKINS-49635</a>

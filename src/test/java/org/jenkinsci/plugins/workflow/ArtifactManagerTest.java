@@ -234,7 +234,7 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * Verfies behaviors of stash and unstash operations.
+     * Verifies behaviors of stash and unstash operations.
      */
     private static class StashFunction implements TestFunction {
         private final JenkinsRule r;
