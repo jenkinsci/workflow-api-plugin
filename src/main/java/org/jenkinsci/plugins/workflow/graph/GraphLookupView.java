@@ -45,14 +45,14 @@ public interface GraphLookupView {
      * <p><strong>Usage note:</strong>Prefer this to {@link #findAllEnclosingBlockStarts(FlowNode)} in most cases since it can evaluate lazily, unless you know
      *  you need all enclosing blocks.
      * @param node Node to find enclosing blocks for
-     * @return Iterable over enclosing blocks.
+     * @return Iterable over enclosing blocks, from the nearest-enclosing outward ("inside-out" order)
      */
     public Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node);
 
     /** Return all enclosing block start nodes, as with {@link #findEnclosingBlockStart(FlowNode)}.
      *  <p><strong>Usage note:</strong>Prefer using {@link #iterateEnclosingBlocks(FlowNode)} unless you know you need ALL blocks, since that can lazy-load.
      *  @param node Node to find enclosing blocks for
-     *  @return All enclosing block starts in no particular sort order, or EMPTY_LIST if this is a start or end node
+     *  @return All enclosing block starts from the nearest-enclosing outward ("inside-out" order), or EMPTY_LIST if this is a start or end node
      */
     @Nonnull
     public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node);

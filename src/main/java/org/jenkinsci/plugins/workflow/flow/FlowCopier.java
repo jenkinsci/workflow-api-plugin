@@ -35,7 +35,7 @@ import hudson.model.TaskListener;
 import java.io.IOException;
 import jenkins.scm.api.SCMRevisionAction;
 import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * A way for plugins to copy metadata and associated files from one flow execution to another.
@@ -71,7 +71,7 @@ public abstract class FlowCopier implements ExtensionPoint {
 
     }
 
-    @Restricted(DoNotUse.class) // impl
+    @Restricted(NoExternalUse.class) // impl
     @Extension public static class StandardActions extends FlowCopier.ByRun {
 
         // TODO cloned from ReplayAction; consider whether it is appropriate to share these (related but not identical case)

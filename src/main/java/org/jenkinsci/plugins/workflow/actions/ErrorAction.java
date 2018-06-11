@@ -31,6 +31,8 @@ import javax.annotation.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.graph.AtomNode;
 import javax.annotation.Nonnull;
+import jenkins.model.Jenkins;
+import org.apache.commons.io.output.NullOutputStream;
 
 /**
  * Attached to {@link AtomNode} that caused an error.
@@ -44,6 +46,13 @@ public class ErrorAction implements PersistentAction {
     public ErrorAction(@Nonnull Throwable error) {
         if (isUnserializableException(error)) {
             error = new ProxyException(error);
+        } else if (error != null) {
+            try {
+                Jenkins.XSTREAM2.toXMLUTF8(error, new NullOutputStream());
+            } catch (Exception x) {
+                // Typically SecurityException from ClassFilter.
+                error = new ProxyException(error);
+            }
         }
         this.error = error;
     }
@@ -55,15 +64,6 @@ public class ErrorAction implements PersistentAction {
     private boolean isUnserializableException(@CheckForNull Throwable error) {
         if (error == null) {
             return false;
-        }
-        try {
-            // Some exceptions are refused to be serialized for security reasons.
-            // (E.g. PowerAssertionError thrown by "assert false")
-            // See also hudson.util.XStream2
-            ClassFilter.DEFAULT.check(error.getClass());
-            ClassFilter.DEFAULT.check(error.getClass().getName());
-        } catch (SecurityException x) {
-            return true;
         }
         if (error instanceof MultipleCompilationErrorsException || error instanceof MissingMethodException) {
             return true;
