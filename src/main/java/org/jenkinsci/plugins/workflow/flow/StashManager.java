@@ -291,8 +291,12 @@ public class StashManager {
 
     /**
      * Mixin interface for an {@link ArtifactManager} which supports specialized stash behavior as well.
-     * The recommended standard implementation is in the plugin currently named {@code artifact-manager-s3},
-     * which in turn supports extensibility to various cloud providers.
+     * <p>The recommended standard implementation is {@code JCloudsArtifactManager}
+     * in the plugin currently named {@code artifact-manager-s3}.
+     * This in turn supports extensibility to various cloud providers,
+     * and handles all aspects of making cloud artifact storage work smoothly in Jenkins
+     * including the {@link VirtualFile} implementation, robust network error handling,
+     * overall configuration UI, and more.
      * @see <a href="https://github.com/jenkinsci/jep/blob/master/jep/202/README.adoc">JEP-202</a>
      */
     @Restricted(Beta.class)
