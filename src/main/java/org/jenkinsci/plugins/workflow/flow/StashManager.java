@@ -58,6 +58,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.tools.tar.TarEntry;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * Manages per-build stashes of files.
@@ -228,7 +229,7 @@ public class StashManager {
 
     }
 
-    @Restricted(DoNotUse.class)
+    @Restricted(NoExternalUse.class)
     @Extension public static class CopyStashesAndArtifacts extends FlowCopier.ByRun {
 
         @Override public void copy(Run<?,?> original, Run<?,?> copy, TaskListener listener) throws IOException, InterruptedException {
