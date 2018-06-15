@@ -297,6 +297,7 @@ public class StashManager {
      * and handles all aspects of making cloud artifact storage work smoothly in Jenkins
      * including the {@link VirtualFile} implementation, robust network error handling,
      * overall configuration UI, and more.
+     * Implement this interface directly at your own risk.
      * @see <a href="https://github.com/jenkinsci/jep/blob/master/jep/202/README.adoc">JEP-202</a>
      */
     @Restricted(Beta.class)
