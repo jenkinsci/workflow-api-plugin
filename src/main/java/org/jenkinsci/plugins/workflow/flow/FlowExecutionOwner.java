@@ -140,10 +140,12 @@ public abstract class FlowExecutionOwner implements Serializable {
      * The encoding is assumed to be UTF-8.
      * The caller should perform buffering if desired.
      * @param start the start position to begin reading from (normally 0)
+     * @param complete if true, we claim to be serving the complete log for a build or step,
+     *                  so implementations should be sure to retrieve final log lines
      * @throws EOFException if the start position is larger than the log size (or you may simply return EOF immediately when read)
      */
     @Restricted(Beta.class)
-    public @Nonnull InputStream getLog(long start) throws IOException {
+    public @Nonnull InputStream getLog(long start, boolean complete) throws IOException {
         throw new IOException("getLog not implemented in " + getClass());
     }
 
