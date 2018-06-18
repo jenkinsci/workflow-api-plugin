@@ -28,7 +28,6 @@ import hudson.console.ConsoleNote;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
@@ -40,6 +39,8 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.TransientActionFactory;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 
 /**
  * We need something that's serializable in small moniker that helps us find THE instance
@@ -141,8 +142,9 @@ public abstract class FlowExecutionOwner implements Serializable {
      * @param start the start position to begin reading from (normally 0)
      * @throws EOFException if the start position is larger than the log size (or you may simply return EOF immediately when read)
      */
+    @Restricted(Beta.class)
     public @Nonnull InputStream getLog(long start) throws IOException {
-        return new ByteArrayInputStream(new byte[0]);
+        throw new IOException("getLog not implemented in " + getClass());
     }
 
     /**
