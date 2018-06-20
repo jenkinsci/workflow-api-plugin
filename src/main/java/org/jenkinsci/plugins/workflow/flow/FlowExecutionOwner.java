@@ -24,23 +24,19 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
-import hudson.console.ConsoleNote;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.TransientActionFactory;
+import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.Beta;
 
 /**
  * We need something that's serializable in small moniker that helps us find THE instance
@@ -130,23 +126,11 @@ public abstract class FlowExecutionOwner implements Serializable {
      * The same will then apply to calls to {@link StepContext#get} on {@link TaskListener}.
      */
     public @Nonnull TaskListener getListener() throws IOException {
-        return TaskListener.NULL;
-    }
-
-    /**
-     * Gets the current log stream.
-     * May receive EOF even while a build is in progress.
-     * This is the raw log which may contain encoded {@link ConsoleNote}s.
-     * The encoding is assumed to be UTF-8.
-     * The caller should perform buffering if desired.
-     * @param start the start position to begin reading from (normally 0)
-     * @param complete if true, we claim to be serving the complete log for a build or step,
-     *                  so implementations should be sure to retrieve final log lines
-     * @throws EOFException if the start position is larger than the log size (or you may simply return EOF immediately when read)
-     */
-    @Restricted(Beta.class)
-    public @Nonnull InputStream getLog(long start, boolean complete) throws IOException {
-        throw new IOException("getLog not implemented in " + getClass());
+        try {
+            return LogStorage.of(this).overallListener();
+        } catch (InterruptedException x) {
+            throw new IOException(x);
+        }
     }
 
     /**

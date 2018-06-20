@@ -1,0 +1,128 @@
+/*
+ * The MIT License
+ *
+ * Copyright 2018 CloudBees, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package org.jenkinsci.plugins.workflow.log;
+
+import hudson.ExtensionList;
+import hudson.console.AnnotatedLargeText;
+import hudson.console.ConsoleAnnotationOutputStream;
+import hudson.model.BuildListener;
+import hudson.model.TaskListener;
+import java.io.File;
+import java.io.IOException;
+import javax.annotation.Nonnull;
+import org.jenkinsci.plugins.workflow.actions.LogAction;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
+
+/**
+ * Means of replacing how logs are stored for a Pipeline build as a whole or for one step.
+ * UTF-8 encoding is assumed throughout.
+ */
+@Restricted(Beta.class)
+public interface LogStorage {
+
+
+    /**
+     * Provides an alternate way of emitting output from a build.
+     * May implement {@link AutoCloseable} to clean up at the end of a build.
+     * @return a (remotable) build listener; do not bother overriding anything except {@link TaskListener#getLogger}
+     * @see FlowExecutionOwner#getListener
+     */
+    @Nonnull BuildListener overallListener() throws IOException, InterruptedException;
+
+    /**
+     * Provides an alternate way of emitting output from a node (such as a step).
+     * Currently not closed at the end of a step (TBD if this would be useful).
+     * @param node a running node
+     * @return a (remotable) task listener; do not bother overriding anything except {@link TaskListener#getLogger}
+     * @see StepContext#get
+     */
+    @Nonnull TaskListener nodeListener(@Nonnull FlowNode node) throws IOException, InterruptedException;
+
+    /**
+     * Provides an alternate way of retrieving output from a build.
+     * <p>In an {@link AnnotatedLargeText#writeHtmlTo} override, {@link ConsoleAnnotationOutputStream#eol}
+     * should apply {@link #startStep} and {@link #endStep} to delineate blocks contributed by steps.
+     * (Also see {@link ConsoleAnnotators}.)
+     * @param complete if true, we claim to be serving the complete log for a build,
+     *                  so implementations should be sure to retrieve final log lines
+     * @return a log
+     */
+    @Nonnull AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(@Nonnull FlowExecutionOwner.Executable build, boolean complete);
+
+    /**
+     * Introduces an HTML block with a {@code pipeline-node-<ID>} CSS class based on {@link FlowNode#getId}.
+     * @see #endStep
+     * @see #overallLog
+     */
+    static @Nonnull String startStep(@Nonnull String id) {
+        return "<span class=\"pipeline-node-" + id + "\">";
+    }
+
+    /**
+     * Closes an HTML step block.
+     * @see #startStep
+     * @see #overallLog
+     */
+    static @Nonnull String endStep() {
+        return "</span>";
+    }
+
+    /**
+     * Provides an alternate way of retrieving output from a build.
+     * @param node a running node
+     * @param complete if true, we claim to be serving the complete log for a node,
+     *                  so implementations should be sure to retrieve final log lines
+     * @return a log for this just this node
+     * @see LogAction
+     */
+     @Nonnull AnnotatedLargeText<FlowNode> stepLog(@Nonnull FlowNode node, boolean complete);
+
+    /**
+     * Gets the available log storage method for a given build.
+     * @param b a build about to start
+     * @return the mechanism for handling this build, including any necessary fallback
+     * @see LogStorageFactory
+     */
+    static @Nonnull LogStorage of(@Nonnull FlowExecutionOwner b) {
+        try {
+            for (LogStorageFactory factory : ExtensionList.lookup(LogStorageFactory.class)) {
+                LogStorage storage = factory.forBuild(b);
+                if (storage != null) {
+                    // TODO consider saving this decision
+                    return storage;
+                }
+            }
+            // Similar to Run.getLogFile, but not supporting gzip:
+            return StreamLogStorage.forFile(new File(b.getRootDir(), "log"), b);
+        } catch (Exception x) {
+            return new BrokenLogStorage(x);
+        }
+    }
+
+}
