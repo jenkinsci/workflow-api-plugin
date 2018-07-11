@@ -255,10 +255,18 @@ public class ArtifactManagerTest {
             env.putAll(agent.toComputer().buildEnvironment(listener));
             // Make sure we can stash and then unstash within a build:
             StashManager.stash(b, "stuff", ws, launcher, env, listener, "file", null, false, false);
+            StashManager.stash(b, "empty", ws, launcher, env, listener, "nada", null, false, true);
+            try {
+                StashManager.stash(b, "empty", ws, launcher, env, listener, "nada", null, false, false);
+            } catch (AbortException x) {
+                System.err.println("good, allowEmpty is being enforced: " + x.getMessage());
+            }
             ws.child("file").delete();
             StashManager.unstash(b, "stuff", ws, launcher, env, listener);
             assertEquals("content", ws.child("file").readToString());
             ws.child("file").delete();
+            // Should have an empty stash somewhere:
+            StashManager.unstash(b, "empty", ws, launcher, env, listener);
             // Copy stashes and artifacts from one build to a second one:
             p.getPublishersList().clear();
             FreeStyleBuild b2 = r.buildAndAssertSuccess(p);
@@ -266,6 +274,7 @@ public class ArtifactManagerTest {
             // Verify the copied stashes:
             StashManager.unstash(b2, "stuff", ws, launcher, env, listener);
             assertEquals("content", ws.child("file").readToString());
+            StashManager.unstash(b2, "empty", ws, launcher, env, listener);
             // And the copied artifacts:
             VirtualFile root = b2.getArtifactManager().root();
             new Verify(agent, root, weirdCharacters).run();
