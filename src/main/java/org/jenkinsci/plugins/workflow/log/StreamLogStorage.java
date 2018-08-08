@@ -85,8 +85,8 @@ public abstract class StreamLogStorage implements LogStorage {
         return (id + NODE_ID_SEP).getBytes(StandardCharsets.UTF_8);
     }
 
-    public static LogStorage forFile(File file, FlowExecutionOwner b) {
-        return new StreamLogStorage(b) {
+    public static LogStorage forFile(File file) {
+        return new StreamLogStorage() {
             @Override protected OutputStream write() throws IOException, InterruptedException {
                 return new FileOutputStream(file, true);
             }
@@ -98,13 +98,9 @@ public abstract class StreamLogStorage implements LogStorage {
         };
     }
 
-    private final FlowExecutionOwner b;
-
     private BuildListener listener;
 
-    protected StreamLogStorage(FlowExecutionOwner b) {
-        this.b = b;
-    }
+    protected StreamLogStorage() {}
 
     protected abstract OutputStream write() throws IOException, InterruptedException;
 
