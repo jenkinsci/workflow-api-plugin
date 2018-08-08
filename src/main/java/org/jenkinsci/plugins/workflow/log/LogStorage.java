@@ -42,6 +42,7 @@ import org.kohsuke.accmod.restrictions.Beta;
 /**
  * Means of replacing how logs are stored for a Pipeline build as a whole or for one step.
  * UTF-8 encoding is assumed throughout.
+ * @see <a href="https://github.com/jenkinsci/jep/blob/master/jep/210/README.adoc#pluggable-log-storage">JEP-210: Pluggable log storage</a>
  */
 @Restricted(Beta.class)
 public interface LogStorage {
