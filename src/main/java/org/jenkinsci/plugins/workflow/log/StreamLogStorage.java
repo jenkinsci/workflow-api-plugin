@@ -195,8 +195,6 @@ public abstract class StreamLogStorage implements LogStorage {
         @Override public long writeHtmlTo(long start, Writer w) throws IOException {
             ConsoleAnnotationOutputStream<FlowExecutionOwner.Executable> caw = annotateHtml(
                     w, ConsoleAnnotators.createAnnotator(context), context);
-            FlowExecutionOwner owner = context.asFlowExecutionOwner();
-            assert owner != null;
             long r;
             // Yes this calls read() twice; for the current implementation we assume that this is less expensive than caching in heap.
             try (InputStream log = read()) {

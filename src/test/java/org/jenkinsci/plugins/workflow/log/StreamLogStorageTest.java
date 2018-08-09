@@ -29,17 +29,37 @@ import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.IOUtils;
 import static org.junit.Assert.*;
+import org.junit.Before;
 import org.junit.Test;
 
-public class StreamLogStorageTest {
+public class StreamLogStorageTest extends LogStorageTestBase {
+
+    private ByteArrayOutputStream baos;
+
+    @Before public void initialize() {
+        baos = new ByteArrayOutputStream();
+    }
+
+    @Override protected LogStorage createStorage() throws Exception {
+        return new StreamLogStorage() {
+            @Override protected OutputStream write() throws IOException, InterruptedException {
+                return baos;
+            }
+            @Override protected InputStream read() throws IOException {
+                return new ByteArrayInputStream(baos.toByteArray());
+            }
+        };
+    }
 
     @Test public void coalescing() throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         TaskListener raw = new StreamTaskListener(baos);
         raw.getLogger().println("General output.");
         TaskListener output1 = StreamLogStorage.decorate(raw, "1");
