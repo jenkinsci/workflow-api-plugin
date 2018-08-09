@@ -28,9 +28,16 @@ import hudson.console.AnnotatedLargeText;
 import hudson.console.HyperlinkNote;
 import hudson.model.TaskListener;
 import java.io.EOFException;
+import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.function.BiFunction;
 import jenkins.security.ConfidentialStore;
+import org.apache.commons.io.output.NullOutputStream;
+import org.apache.commons.io.output.NullWriter;
 import org.apache.commons.io.output.WriterOutputStream;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import static org.junit.Assert.assertEquals;
@@ -109,6 +116,58 @@ public abstract class LogStorageTestBase {
         long step4Pos = assertStepLog("4", 0, "<a href='http://nowhere.net/'>nikde</a>\n", true);
         assertLength("4", step4Pos);
     }
+
+    /**
+     * Checks what happens when code using {@link TaskListener#getLogger} prints a line with inadequate synchronization.
+     * Normally you use something like {@link PrintWriter#println(String)} which synchronizes and so delivers a complete line.
+     * Failures to do this can cause output from different steps (or general build output) to be interleaved at a sub-line level.
+     * This might not render well (depending on the implementation), but we need to ensure that the entire build log is not broken as a result.
+     */
+    @Test public void mangledLines() throws Exception {
+        Random r = new Random();
+        BiFunction<Character, TaskListener, Thread> thread = (c, l) -> new Thread(() -> {
+            for (int i = 0; i < 1000; i++) {
+                l.getLogger().print(c);
+                if (r.nextDouble() < 0.1) {
+                    l.getLogger().println();
+                }
+                if (r.nextDouble() < 0.1) {
+                    try {
+                        Thread.sleep(r.nextInt(10));
+                    } catch (InterruptedException x) {
+                        x.printStackTrace();
+                    }
+                }
+            }
+        });
+        List<Thread> threads = new ArrayList<>();
+        LogStorage ls = createStorage();
+        threads.add(thread.apply('.', ls.overallListener()));
+        threads.add(thread.apply('1', ls.nodeListener(new MockNode("1"))));
+        threads.add(thread.apply('2', ls.nodeListener(new MockNode("2"))));
+        threads.forEach(Thread::start);
+        threads.forEach(t -> {
+            try {
+                t.join();
+            } catch (InterruptedException x) {
+                x.printStackTrace();
+            }
+        });
+        long pos = text().writeHtmlTo(0, new NullWriter());
+        assertLength(pos);
+        assertOverallLog(pos, "", true);
+        text().writeRawLogTo(0, new NullOutputStream());
+        pos = text("1").writeHtmlTo(0, new NullWriter());
+        assertLength("1", pos);
+        assertStepLog("1", pos, "", true);
+        text("1").writeRawLogTo(0, new NullOutputStream());
+        pos = text("2").writeHtmlTo(0, new NullWriter());
+        assertLength("2", pos);
+        assertStepLog("2", pos, "", true);
+        text("2").writeRawLogTo(0, new NullOutputStream());
+    }
+
+    // TODO test missing final newline
 
     private long assertOverallLog(long start, String expected, boolean html) throws Exception {
         return assertLog(text(), start, expected, html);
