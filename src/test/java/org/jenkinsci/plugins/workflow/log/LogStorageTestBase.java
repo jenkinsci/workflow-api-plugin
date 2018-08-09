@@ -115,6 +115,12 @@ public abstract class LogStorageTestBase {
         ((AutoCloseable) overall).close();
         long step4Pos = assertStepLog("4", 0, "<a href='http://nowhere.net/'>nikde</a>\n", true);
         assertLength("4", step4Pos);
+        overall = ls.overallListener();
+        overall.getLogger().println("really ending");
+        ((AutoCloseable) overall).close();
+        overallHtmlPos = assertOverallLog(overallHtmlPos, "<span class=\"pipeline-node-4\"><a href='http://nowhere.net/'>nikde</a>\n</span>really ending\n", true);
+        assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
+        assertLength(overallHtmlPos);
     }
 
     /**
