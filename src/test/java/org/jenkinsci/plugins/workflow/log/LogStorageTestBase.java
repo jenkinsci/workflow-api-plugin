@@ -66,6 +66,7 @@ public abstract class LogStorageTestBase {
         overall.getLogger().println("interrupting");
         long overallHtmlPos = assertOverallLog(0, "starting\n<span class=\"pipeline-node-1\">one #1\n</span><span class=\"pipeline-node-2\">two #1\ntwo #2\n</span>interrupting\n", true);
         assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
+        assertLength(overallHtmlPos);
         try { // either tolerate OOB, or not
             assertOverallLog(999, "", true);
             assertOverallLog(999, "", false);
@@ -77,6 +78,7 @@ public abstract class LogStorageTestBase {
         overall.getLogger().println("pausing");
         overallHtmlPos = assertOverallLog(overallHtmlPos, "<span class=\"pipeline-node-1\">one #2\none #3\n</span>pausing\n", true);
         step1Pos = assertStepLog("1", step1Pos, "one #2\none #3\n", true);
+        assertLength("1", step1Pos);
         try { // as above
             assertStepLog("1", 999, "", true);
             assertStepLog("1", 999, "", false);
@@ -94,7 +96,9 @@ public abstract class LogStorageTestBase {
         ((AutoCloseable) overall).close();
         overallHtmlPos = assertOverallLog(overallHtmlPos, "resuming\n<span class=\"pipeline-node-1\">one #4\n</span><span class=\"pipeline-node-3\">three #1\n</span>ending\n", true);
         assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
+        assertLength(overallHtmlPos);
         step1Pos = assertStepLog("1", step1Pos, "one #4\n", true);
+        assertLength("1", step1Pos);
         assertStepLog("1", 0, "one #1\none #2\none #3\none #4\n", false);
         step2Pos = assertStepLog("2", step2Pos, "", true);
         assertStepLog("3", 0, "three #1\n", true);
@@ -102,15 +106,16 @@ public abstract class LogStorageTestBase {
         TaskListener step4 = ls.nodeListener(new MockNode("4"));
         step4.getLogger().println(HyperlinkNote.encodeTo("http://nowhere.net/", "nikde"));
         ((AutoCloseable) overall).close();
-        assertStepLog("4", 0, "<a href='http://nowhere.net/'>nikde</a>\n", true);
+        long step4Pos = assertStepLog("4", 0, "<a href='http://nowhere.net/'>nikde</a>\n", true);
+        assertLength("4", step4Pos);
     }
 
     private long assertOverallLog(long start, String expected, boolean html) throws Exception {
-        return assertLog(createStorage().overallLog(null, true), start, expected, html);
+        return assertLog(text(), start, expected, html);
     }
 
     private long assertStepLog(String id, long start, String expected, boolean html) throws Exception {
-        return assertLog(createStorage().stepLog(new MockNode(id), true), start, expected, html);
+        return assertLog(text(id), start, expected, html);
     }
 
     private long assertLog(AnnotatedLargeText<?> text, long start, String expected, boolean html) throws Exception {
@@ -123,6 +128,26 @@ public abstract class LogStorageTestBase {
         }
         assertEquals(expected, sw.toString());
         return r;
+    }
+
+    private void assertLength(long length) throws Exception {
+        assertLength(text(), length);
+    }
+
+    private void assertLength(String id, long length) throws Exception {
+        assertLength(text(id), length);
+    }
+
+    private void assertLength(AnnotatedLargeText<?> text, long length) throws Exception {
+        assertEquals(length, text.length());
+    }
+
+    private AnnotatedLargeText<?> text() throws Exception {
+        return createStorage().overallLog(null, true);
+    }
+
+    private AnnotatedLargeText<?> text(String id) throws Exception {
+        return createStorage().stepLog(new MockNode(id), true);
     }
 
     private static class MockNode extends FlowNode {
