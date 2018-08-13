@@ -69,8 +69,12 @@ public abstract class LogStorageTestBase {
         step1.getLogger().println("one #1");
         TaskListener step2 = ls.nodeListener(new MockNode("2"));
         step2.getLogger().println("two #1");
+        long betweenStep2Lines = text().writeHtmlTo(0, new NullWriter());
         step2.getLogger().println("two #2");
         overall.getLogger().println("interrupting");
+        /* We do not really care much whether nodes are annotated when we start display in the middle; the UI will not do anything with it anyway:
+        assertOverallLog(betweenStep2Lines, "<span class=\"pipeline-node-2\">two #2\n</span>interrupting\n", true);
+        */
         long overallHtmlPos = assertOverallLog(0, "starting\n<span class=\"pipeline-node-1\">one #1\n</span><span class=\"pipeline-node-2\">two #1\ntwo #2\n</span>interrupting\n", true);
         assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
         assertLength(overallHtmlPos);

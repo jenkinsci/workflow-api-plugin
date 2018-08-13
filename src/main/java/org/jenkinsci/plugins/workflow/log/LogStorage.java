@@ -120,7 +120,7 @@ public interface LogStorage {
                 }
             }
             // Similar to Run.getLogFile, but not supporting gzip:
-            return StreamLogStorage.forFile(new File(b.getRootDir(), "log"));
+            return FileLogStorage.forFile(new File(b.getRootDir(), "log"));
         } catch (Exception x) {
             return new BrokenLogStorage(x);
         }
