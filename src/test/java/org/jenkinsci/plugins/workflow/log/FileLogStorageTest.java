@@ -38,7 +38,7 @@ public class FileLogStorageTest extends LogStorageTestBase {
         log = tmp.newFile();
     }
 
-    protected LogStorage createStorage() {
+    @Override protected LogStorage createStorage() {
         return FileLogStorage.forFile(log);
     }
 
