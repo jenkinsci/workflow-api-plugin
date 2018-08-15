@@ -115,7 +115,7 @@ public interface LogStorage {
             for (LogStorageFactory factory : ExtensionList.lookup(LogStorageFactory.class)) {
                 LogStorage storage = factory.forBuild(b);
                 if (storage != null) {
-                    // TODO consider saving this decision
+                    // Pending integration with JEP-207 / JEP-212, this choice is not persisted.
                     return storage;
                 }
             }
