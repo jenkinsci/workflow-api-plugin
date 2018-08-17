@@ -37,7 +37,6 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
@@ -46,6 +45,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Logger;
 import org.apache.commons.io.input.NullReader;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -60,6 +60,8 @@ import org.kohsuke.stapler.framework.io.ByteBuffer;
 @Restricted(Beta.class)
 public final class FileLogStorage implements LogStorage {
 
+    private static final Logger LOGGER = Logger.getLogger(FileLogStorage.class.getName());
+
     private static final Map<File, FileLogStorage> openStorages = Collections.synchronizedMap(new HashMap<>());
 
     public static synchronized LogStorage forFile(File log) {
@@ -69,7 +71,7 @@ public final class FileLogStorage implements LogStorage {
     private final File log;
     private final File index;
     private FileOutputStream os;
-    private PrintWriter indexOs;
+    private Writer indexOs;
     private String lastId;
 
     private FileLogStorage(File log) {
@@ -97,7 +99,7 @@ public final class FileLogStorage implements LogStorage {
                     }
                 }
             }
-            indexOs = new PrintWriter(new OutputStreamWriter(new FileOutputStream(index, true), StandardCharsets.UTF_8), true);
+            indexOs = new OutputStreamWriter(new FileOutputStream(index, true), StandardCharsets.UTF_8);
         }
     }
 
@@ -109,14 +111,16 @@ public final class FileLogStorage implements LogStorage {
         return new StreamTaskListener(new IndexOutputStream(node.getId()), StandardCharsets.UTF_8);
     }
 
-    private synchronized void checkId(String id) throws IOException {
+    private void checkId(String id) throws IOException {
+        assert Thread.holdsLock(this);
         if (!Objects.equals(id, lastId)) {
             long pos = os.getChannel().position();
             if (id == null) {
-                indexOs.println(pos);
+                indexOs.write(pos + "\n");
             } else {
-                indexOs.printf("%d %s%n", pos, id);
+                indexOs.write(pos + " " + id + "\n");
             }
+            indexOs.flush();
             lastId = id;
         }
     }
@@ -131,18 +135,24 @@ public final class FileLogStorage implements LogStorage {
         }
 
         @Override public void write(int b) throws IOException {
-            checkId(id);
-            os.write(b);
+            synchronized (FileLogStorage.this) {
+                checkId(id);
+                os.write(b);
+            }
         }
 
         @Override public void write(byte[] b) throws IOException {
-            checkId(id);
-            os.write(b);
+            synchronized (FileLogStorage.this) {
+                checkId(id);
+                os.write(b);
+            }
         }
 
         @Override public void write(byte[] b, int off, int len) throws IOException {
-            checkId(id);
-            os.write(b, off, len);
+            synchronized (FileLogStorage.this) {
+                checkId(id);
+                os.write(b, off, len);
+            }
         }
 
         @Override public void flush() throws IOException {
@@ -151,9 +161,12 @@ public final class FileLogStorage implements LogStorage {
 
         @Override public void close() throws IOException {
             if (id == null) {
-                os.close();
-                indexOs.close();
                 openStorages.remove(log);
+                try {
+                    os.close();
+                } finally {
+                    indexOs.close();
+                }
             }
         }
 
@@ -176,7 +189,7 @@ public final class FileLogStorage implements LogStorage {
                                 try {
                                     lastTransition = Long.parseLong(space == -1 ? line : line.substring(0, space));
                                 } catch (NumberFormatException x) {
-                                    // corrupt index file; forget it
+                                    LOGGER.warning("Ignoring corrupt index file " + index);
                                 }
                                 lastId = space == -1 ? null : line.substring(space + 1);
                             }
