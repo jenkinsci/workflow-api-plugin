@@ -154,6 +154,9 @@ public abstract class LogStorageTestBase {
         assertEquals(stepPos, assertStepLog("1", stepPos, "", true));
     }
     private static final class RemotePrint extends MasterToSlaveCallable<Void, Exception> {
+        static {
+            System.setProperty("line.separator", "\n");
+        }
         private final String message;
         private final TaskListener listener;
         RemotePrint(String message, TaskListener listener) {
