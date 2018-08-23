@@ -50,7 +50,8 @@ public interface LogStorage {
 
     /**
      * Provides an alternate way of emitting output from a build.
-     * May implement {@link AutoCloseable} to clean up at the end of a build.
+     * <p>May implement {@link AutoCloseable} to clean up at the end of a build;
+     * it may or may not be closed during Jenkins shutdown while a build is running.
      * @return a (remotable) build listener; do not bother overriding anything except {@link TaskListener#getLogger}
      * @see FlowExecutionOwner#getListener
      */
@@ -58,7 +59,8 @@ public interface LogStorage {
 
     /**
      * Provides an alternate way of emitting output from a node (such as a step).
-     * Currently not closed at the end of a step (TBD if this would be useful).
+     * <p>May implement {@link AutoCloseable} to clean up at the end of a node ({@link FlowNode#isActive});
+     * it may or may not be closed during Jenkins shutdown while a build is running.
      * @param node a running node
      * @return a (remotable) task listener; do not bother overriding anything except {@link TaskListener#getLogger}
      * @see StepContext#get

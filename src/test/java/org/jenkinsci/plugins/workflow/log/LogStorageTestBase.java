@@ -100,16 +100,18 @@ public abstract class LogStorageTestBase {
             assertStepLog("1", 999, "", false);
         } catch (EOFException x) {}
         step2Pos = assertStepLog("2", step2Pos, "", true);
-        ((AutoCloseable) overall).close();
+        close(overall);
         ls = createStorage();
         overall = ls.overallListener();
         overall.getLogger().println("resuming");
         step1 = ls.nodeListener(new MockNode("1"));
         step1.getLogger().println("one #4");
+        close(step1);
         TaskListener step3 = ls.nodeListener(new MockNode("3"));
         step3.getLogger().println("three #1");
+        close(step3);
         overall.getLogger().println("ending");
-        ((AutoCloseable) overall).close();
+        close(overall);
         overallHtmlPos = assertOverallLog(overallHtmlPos, "resuming\n<span class=\"pipeline-node-1\">one #4\n</span><span class=\"pipeline-node-3\">three #1\n</span>ending\n", true);
         assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
         assertLength(overallHtmlPos);
@@ -121,15 +123,21 @@ public abstract class LogStorageTestBase {
         ls = createStorage();
         TaskListener step4 = ls.nodeListener(new MockNode("4"));
         step4.getLogger().println(HyperlinkNote.encodeTo("http://nowhere.net/", "nikde"));
-        ((AutoCloseable) overall).close();
+        close(overall);
         long step4Pos = assertStepLog("4", 0, "<a href='http://nowhere.net/'>nikde</a>\n", true);
         assertLength("4", step4Pos);
         overall = ls.overallListener();
         overall.getLogger().println("really ending");
-        ((AutoCloseable) overall).close();
+        close(overall);
         overallHtmlPos = assertOverallLog(overallHtmlPos, "<span class=\"pipeline-node-4\"><a href='http://nowhere.net/'>nikde</a>\n</span>really ending\n", true);
         assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
         assertLength(overallHtmlPos);
+    }
+
+    private static void close(TaskListener listener) throws Exception {
+        if (listener instanceof AutoCloseable) {
+            ((AutoCloseable) listener).close();
+        }
     }
 
     @Test public void remoting() throws Exception {
