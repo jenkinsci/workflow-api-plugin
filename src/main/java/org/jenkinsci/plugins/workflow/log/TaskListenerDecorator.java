@@ -39,6 +39,7 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -158,6 +159,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         if (decorators.isEmpty()) {
             return BuildListenerAdapter.wrap(listener);
         } else {
+            Collections.reverse(decorators);
             return new DecoratedTaskListener(listener, decorators);
         }
     }
@@ -175,7 +177,12 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         }
         
         @Override public OutputStream decorate(OutputStream logger) throws IOException, InterruptedException {
-            return subsequent.decorate(original.decorate(logger));
+            // TODO BodyInvoker.MergedFilter probably has these backwards
+            return original.decorate(subsequent.decorate(logger));
+        }
+
+        @Override public String toString() {
+            return "MergedTaskListenerDecorator[" + subsequent + ", " + original + "]";
         }
 
     }
@@ -197,6 +204,10 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
             return filter.decorateLogger((AbstractBuild) null, logger);
         }
 
+        @Override public String toString() {
+            return "ConsoleLogFilter[" + filter + "]";
+        }
+
     }
 
     private static final class DecoratedTaskListener implements BuildListener {
@@ -211,7 +222,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
         /**
          * A (nonempty) list of decorators we delegate to.
-         * They are applied in order, so the last one “wins”.
+         * They are applied in reverse order, so the first one has the final say in what gets printed.
          */
         private final @Nonnull List<TaskListenerDecorator> decorators;
 
@@ -241,6 +252,10 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
                 }
             }
             return logger;
+        }
+
+        @Override public String toString() {
+            return "DecoratedTaskListener[" + delegate + decorators + "]";
         }
 
     }
