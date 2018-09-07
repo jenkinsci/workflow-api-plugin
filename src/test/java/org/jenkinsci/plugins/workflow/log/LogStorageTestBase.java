@@ -230,11 +230,11 @@ public abstract class LogStorageTestBase {
 
     // TODO test missing final newline
 
-    private long assertOverallLog(long start, String expected, boolean html) throws Exception {
+    protected final long assertOverallLog(long start, String expected, boolean html) throws Exception {
         return assertLog(() -> text(), start, expected, html, html);
     }
 
-    private long assertStepLog(String id, long start, String expected, boolean html) throws Exception {
+    protected final long assertStepLog(String id, long start, String expected, boolean html) throws Exception {
         return assertLog(() -> text(id), start, expected, html, false);
     }
 
@@ -258,11 +258,11 @@ public abstract class LogStorageTestBase {
         return pos;
     }
 
-    private void assertLength(long length) throws Exception {
+    protected final void assertLength(long length) throws Exception {
         assertLength(text(), length);
     }
 
-    private void assertLength(String id, long length) throws Exception {
+    protected final void assertLength(String id, long length) throws Exception {
         assertLength(text(id), length);
     }
 

@@ -181,12 +181,17 @@ public final class FileLogStorage implements LogStorage {
                     ConsoleAnnotationOutputStream<FlowExecutionOwner.Executable> caos = new ConsoleAnnotationOutputStream<>(w, ConsoleAnnotators.createAnnotator(build), build, StandardCharsets.UTF_8);
                     long r = this.writeRawLogTo(start, new FilterOutputStream(caos) {
                         long lastTransition = -1;
+                        boolean eof;
                         String lastId;
                         long pos = start;
                         boolean hadLastId;
                         @Override public void write(int b) throws IOException {
-                            String line;
-                            while (lastTransition < pos && (line = indexBR.readLine()) != null) {
+                            while (lastTransition < pos && !eof) {
+                                String line = indexBR.readLine();
+                                if (line == null) {
+                                    eof = true;
+                                    break;
+                                }
                                 int space = line.indexOf(' ');
                                 try {
                                     lastTransition = Long.parseLong(space == -1 ? line : line.substring(0, space));

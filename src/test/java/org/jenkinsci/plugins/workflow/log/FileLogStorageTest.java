@@ -24,9 +24,12 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
+import hudson.model.TaskListener;
 import java.io.File;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 public class FileLogStorageTest extends LogStorageTestBase {
@@ -40,6 +43,14 @@ public class FileLogStorageTest extends LogStorageTestBase {
 
     @Override protected LogStorage createStorage() {
         return FileLogStorage.forFile(log);
+    }
+
+    @Test public void oldFormat() throws Exception {
+        LogStorage ls = createStorage();
+        TaskListener overall = ls.overallListener();
+        overall.getLogger().println("stuff");
+        assertTrue(new File(log + "-index").delete());
+        assertOverallLog(0, "stuff\n", true);
     }
 
 }
