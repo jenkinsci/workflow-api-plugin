@@ -134,7 +134,7 @@ public abstract class LogStorageTestBase {
         assertLength(overallHtmlPos);
     }
 
-    private static void close(TaskListener listener) throws Exception {
+    protected static void close(TaskListener listener) throws Exception {
         if (listener instanceof AutoCloseable) {
             ((AutoCloseable) listener).close();
         }

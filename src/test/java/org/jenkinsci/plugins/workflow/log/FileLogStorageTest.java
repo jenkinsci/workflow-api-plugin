@@ -49,6 +49,7 @@ public class FileLogStorageTest extends LogStorageTestBase {
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("stuff");
+        close(overall);
         assertTrue(new File(log + "-index").delete());
         assertOverallLog(0, "stuff\n", true);
     }
