@@ -24,6 +24,9 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
+import hudson.model.BallColor;
+import hudson.model.Result;
+
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -38,22 +41,26 @@ import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
+import org.jenkinsci.plugins.workflow.graphanalysis.NodeStepTypePredicate;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 
 public class FlowNodeTest {
 
     @Rule public RestartableJenkinsRule rr = new RestartableJenkinsRule();
+    @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public LoggerRule logging = new LoggerRule().record(FlowNode.class, Level.FINER);
 
     @Issue("JENKINS-38223")
@@ -406,6 +413,27 @@ Action format:
                 assertExpectedEnclosing(execution, "35", null);
             }
         });
+    }
+
+    @Test public void useAbortedStatusWhenFailFast() throws Exception {
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
+        job.setDefinition(new CpsFlowDefinition(
+            "jobs = [failFast:true]\n" +
+            "jobs['one'] = {\n" +
+            "  sleep 5\n" +
+            "}\n" +
+            "jobs['two'] = {\n" +
+            "  error 'failing'\n" +
+            "}\n" +
+            "parallel jobs", true));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get());
+
+        List<FlowNode> coreStepNodes = new DepthFirstScanner().filteredNodes(b.getExecution(), new NodeStepTypePredicate("sleep"));
+        assertThat(coreStepNodes, hasSize(1));
+        assertEquals("sleep", coreStepNodes.get(0).getDisplayFunctionName());
+        assertNotNull(coreStepNodes.get(0).getError());
+        assertNotNull(coreStepNodes.get(0).getError().getError());
+        assertEquals(BallColor.ABORTED, coreStepNodes.get(0).getIconColor());
     }
 
     private void assertExpectedEnclosing(FlowExecution execution, String nodeId, String enclosingId) throws Exception {

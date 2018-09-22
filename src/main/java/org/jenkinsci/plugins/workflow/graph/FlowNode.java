@@ -51,6 +51,7 @@ import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.graphanalysis.NodeStepTypePredicate;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -279,7 +280,17 @@ public abstract class FlowNode extends Actionable implements Saveable {
      */
     @Exported
     public BallColor getIconColor() {
-        BallColor c = getError()!=null ? BallColor.RED : BallColor.BLUE;
+        ErrorAction error = getError();
+        BallColor c = null;
+        if(error != null) {
+            if(error.getError() instanceof FlowInterruptedException) {
+                c = BallColor.ABORTED;
+            } else {
+                c = BallColor.RED;
+            }
+        } else {
+            c = BallColor.BLUE;
+        }
         if (isActive()) {
             c = c.anime();
         }
