@@ -268,7 +268,7 @@ public final class FileLogStorage implements LogStorage {
                     if (space != -1 && line.substring(space + 1).equals(id)) {
                         pos = lastTransition;
                     }
-                } else {
+                } else if (lastTransition > pos) {
                     raf.seek(pos);
                     if (lastTransition > pos + Integer.MAX_VALUE) {
                         throw new IOException("Cannot read more than 2Gib at a time"); // ByteBuffer does not support it anyway
@@ -287,9 +287,9 @@ public final class FileLogStorage implements LogStorage {
                     raf.readFully(data);
                     buf.write(data);
                     pos = -1;
-                }
+                } // else some sort of mismatch
             }
-            if (pos != -1) {
+            if (pos != -1 && /* otherwise race condition? */ end > pos) {
                 // In case the build is ongoing and we are still actively writing content for this step,
                 // we will hit EOF before any other transition. Otherwise identical to normal case above.
                 raf.seek(pos);
