@@ -86,8 +86,12 @@ public final class FileLogStorage implements LogStorage {
             os = new FileOutputStream(log, true);
             if (index.isFile()) {
                 try (BufferedReader r = Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8)) {
+                    // TODO would be faster to scan the file backwards for the penultimate \n, then convert the byte sequence from there to EOF to UTF-8 and set lastId accordingly
                     String lastLine = null;
                     while (true) {
+                        // Note that BufferedReader tolerates final lines without a line separator, so if for some reason the last write has been truncated this result could be incorrect.
+                        // In practice this seems unlikely since we explicitly flush after the newline, so we should be sending a single small block to the filesystem to persist.
+                        // Anyway at worst the result would be a (perhaps temporarily) incorrect line → step mapping, which is tolerable for one step of one build, and barely affects the overall build log.
                         String line = r.readLine();
                         if (line == null) {
                             break;
@@ -122,6 +126,9 @@ public final class FileLogStorage implements LogStorage {
             } else {
                 indexOs.write(pos + " " + id + "\n");
             }
+            // Could call FileChannel.force(true) like hudson.util.FileChannelWriter does for AtomicFileWriter,
+            // though making index-log writes slower is likely a poor tradeoff for slightly more reliable log display,
+            // since logs are often never read and this is transient data rather than configuration or valuable state.
             indexOs.flush();
             lastId = id;
         }
@@ -180,13 +187,23 @@ public final class FileLogStorage implements LogStorage {
                 try (BufferedReader indexBR = index.isFile() ? Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8) : new BufferedReader(new NullReader(0))) {
                     ConsoleAnnotationOutputStream<FlowExecutionOwner.Executable> caos = new ConsoleAnnotationOutputStream<>(w, ConsoleAnnotators.createAnnotator(build), build, StandardCharsets.UTF_8);
                     long r = this.writeRawLogTo(start, new FilterOutputStream(caos) {
+                        // To insert startStep/endStep annotations into the overall log, we need to simultaneously read index-log.
+                        // We use the standard LargeText.FileSession to get the raw log text (we need not think about ConsoleNote here), having seeked to the start position.
+                        // Then we read index-log in order, looking for transitions from one step to the next (or to or from non-step overall output).
+                        // Whenever we are about to write a byte which is at a boundary, or if there is a boundary at EOF, the HTML annotations are injected into the output;
+                        // the read of index-log is advanced lazily (it is not necessary to have the whole mapping in memory).
                         long lastTransition = -1;
+                        boolean eof; // NullReader is strict and throws IOException (not EOFException) if you read() again after having already gotten -1
                         String lastId;
                         long pos = start;
                         boolean hadLastId;
                         @Override public void write(int b) throws IOException {
-                            String line;
-                            while (lastTransition < pos && (line = indexBR.readLine()) != null) {
+                            while (lastTransition < pos && !eof) {
+                                String line = indexBR.readLine();
+                                if (line == null) {
+                                    eof = true;
+                                    break;
+                                }
                                 int space = line.indexOf(' ');
                                 try {
                                     lastTransition = Long.parseLong(space == -1 ? line : line.substring(0, space));
@@ -226,6 +243,12 @@ public final class FileLogStorage implements LogStorage {
         try (ByteBuffer buf = new ByteBuffer();
              RandomAccessFile raf = new RandomAccessFile(log, "r");
              BufferedReader indexBR = index.isFile() ? Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8) : new BufferedReader(new NullReader(0))) {
+            // Check this _before_ reading index-log to reduce the chance of a race condition resulting in recent content being associated with the wrong step:
+            long end = raf.length();
+            // To produce just the output for a single step (again we do not need to pay attention to ConsoleNote here since AnnotatedLargeText handles it),
+            // index-log is read looking for transitions that pertain to this step: beginning or ending its content, including at EOF if applicable.
+            // (Other transitions, such as to or from unrelated steps, are irrelevant).
+            // Once a start and end position have been identified, that block is copied to a memory buffer.
             String line;
             long pos = -1; // -1 if not currently in this node, start position if we are
             while ((line = indexBR.readLine()) != null) {
@@ -234,27 +257,42 @@ public final class FileLogStorage implements LogStorage {
                 try {
                     lastTransition = Long.parseLong(space == -1 ? line : line.substring(0, space));
                 } catch (NumberFormatException x) {
+                    // If index-log is corrupt for whatever reason, we given up on this step in this build;
+                    // there is no way we would be able to produce accurate output anyway.
+                    // Note that NumberFormatException is already logged separately for the overall build log,
+                    // which is in that case nonfatal: the whole-build HTML output always includes exactly what is in the main log file,
+                    // at worst with some missing or inaccurate startStep/endStep annotations.
                     break; // corrupt index file; forget it
                 }
                 if (pos == -1) {
                     if (space != -1 && line.substring(space + 1).equals(id)) {
                         pos = lastTransition;
                     }
-                } else {
+                } else if (lastTransition > pos) {
                     raf.seek(pos);
                     if (lastTransition > pos + Integer.MAX_VALUE) {
                         throw new IOException("Cannot read more than 2Gib at a time"); // ByteBuffer does not support it anyway
                     }
-                    // TODO can probably be done a bit more efficiently with FileChannel methods
+                    // Could perhaps be done a bit more efficiently with FileChannel methods,
+                    // at least if org.kohsuke.stapler.framework.io.ByteBuffer were replaced by java.nio.[Heap]ByteBuffer.
+                    // The overall bottleneck here is however the need to use a memory buffer to begin with:
+                    // LargeText.Source/Session are not public so, pending improvements to Stapler,
+                    // we cannot lazily stream per-step content the way we do for the overall log.
+                    // (Except perhaps by extending ByteBuffer and then overriding every public method!)
+                    // LargeText also needs to be improved to support opaque (non-long) cursors
+                    // (and callers such as progressiveText.jelly and Blue Ocean updated accordingly),
+                    // which is a hard requirement for efficient rendering of cloud-backed logs,
+                    // though for this implementation we do not need it since we can work with byte offsets.
                     byte[] data = new byte[(int) (lastTransition - pos)];
                     raf.readFully(data);
                     buf.write(data);
                     pos = -1;
-                }
+                } // else some sort of mismatch
             }
-            if (pos != -1) {
+            if (pos != -1 && /* otherwise race condition? */ end > pos) {
+                // In case the build is ongoing and we are still actively writing content for this step,
+                // we will hit EOF before any other transition. Otherwise identical to normal case above.
                 raf.seek(pos);
-                long end = raf.length();
                 if (end > pos + Integer.MAX_VALUE) {
                     throw new IOException("Cannot read more than 2Gib at a time");
                 }
