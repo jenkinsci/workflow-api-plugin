@@ -257,12 +257,13 @@ public final class FileLogStorage implements LogStorage {
                 try {
                     lastTransition = Long.parseLong(space == -1 ? line : line.substring(0, space));
                 } catch (NumberFormatException x) {
+                    LOGGER.warning("Ignoring corrupt index file " + index);
                     // If index-log is corrupt for whatever reason, we given up on this step in this build;
                     // there is no way we would be able to produce accurate output anyway.
-                    // Note that NumberFormatException is already logged separately for the overall build log,
-                    // which is in that case nonfatal: the whole-build HTML output always includes exactly what is in the main log file,
+                    // Note that NumberFormatException is nonfatal in the case of the overall build log:
+                    // the whole-build HTML output always includes exactly what is in the main log file,
                     // at worst with some missing or inaccurate startStep/endStep annotations.
-                    break; // corrupt index file; forget it
+                    continue;
                 }
                 if (pos == -1) {
                     if (space != -1 && line.substring(space + 1).equals(id)) {
