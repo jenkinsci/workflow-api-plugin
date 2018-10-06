@@ -91,9 +91,8 @@ public class FilePathUtils {
      * @param path a path as returned by {@link FilePath#getRemote}
      * @return a corresponding file handle, if a node with that name is online, else null
      */
-    @SuppressFBWarnings(value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE", justification="TODO 1.653+ switch to Jenkins.getInstanceOrNull")
     public static @CheckForNull FilePath find(@Nonnull String node, @Nonnull String path) {
-        Jenkins j = Jenkins.getInstance();
+        Jenkins j = Jenkins.getInstanceOrNull();
         if (j == null) {
             return null;
         }
@@ -121,7 +120,7 @@ public class FilePathUtils {
             if (channelName == null) {
                 // We don't have a cache entry for the name of the Computer associated with the supplied Channel
                 // instance. Lets fallback and search the list of Computers on Jenkins.
-                Jenkins jenkins = Jenkins.getInstance();
+                Jenkins jenkins = Jenkins.getInstanceOrNull();
                 if (jenkins != null) {
                     for (Computer computer : jenkins.getComputers()) {
                         VirtualChannel computerChannel = computer.getChannel();

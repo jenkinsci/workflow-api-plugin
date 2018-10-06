@@ -80,7 +80,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
     private synchronized @CheckForNull XmlFile configFile() {
         if (configFile == null) {
-            Jenkins j = Jenkins.getInstance();
+            Jenkins j = Jenkins.getInstanceOrNull();
             if (j != null) {
                 configFile = new XmlFile(new File(j.getRootDir(), FlowExecutionList.class.getName() + ".xml"));
             }
