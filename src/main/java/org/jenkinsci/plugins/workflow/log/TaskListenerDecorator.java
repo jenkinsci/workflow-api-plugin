@@ -48,6 +48,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import jenkins.util.BuildListenerAdapter;
 import jenkins.util.JenkinsJVM;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -87,7 +88,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
      * @param subsequent an overriding decorator, if any
      * @return null, or {@code original} or {@code subsequent}, or a merged result applying one then the other
      */
-    public static @CheckForNull TaskListenerDecorator merge(@CheckForNull TaskListenerDecorator original, @CheckForNull TaskListenerDecorator subsequent) {
+    public static @Nullable TaskListenerDecorator merge(@CheckForNull TaskListenerDecorator original, @CheckForNull TaskListenerDecorator subsequent) {
         if (original == null) {
             if (subsequent == null) {
                 return null;
