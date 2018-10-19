@@ -47,6 +47,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.input.NullReader;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -185,7 +186,18 @@ public final class FileLogStorage implements LogStorage {
 
     }
 
+    private void maybeFlush() {
+        if (bos != null) {
+            try {
+                bos.flush();
+            } catch (IOException x) {
+                LOGGER.log(Level.WARNING, "failed to flush " + log, x);
+            }
+        }
+    }
+
     @Override public AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(FlowExecutionOwner.Executable build, boolean complete) {
+        maybeFlush();
         return new AnnotatedLargeText<FlowExecutionOwner.Executable>(log, StandardCharsets.UTF_8, complete, build) {
             @Override public long writeHtmlTo(long start, Writer w) throws IOException {
                 try (BufferedReader indexBR = index.isFile() ? Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8) : new BufferedReader(new NullReader(0))) {
@@ -243,6 +255,7 @@ public final class FileLogStorage implements LogStorage {
     }
 
     @Override public AnnotatedLargeText<FlowNode> stepLog(FlowNode node, boolean complete) {
+        maybeFlush();
         String id = node.getId();
         try (ByteBuffer buf = new ByteBuffer();
              RandomAccessFile raf = new RandomAccessFile(log, "r");
