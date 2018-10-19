@@ -31,6 +31,7 @@ import hudson.model.BuildListener;
 import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -73,6 +74,7 @@ public final class FileLogStorage implements LogStorage {
     private final File index;
     @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "FB apparently gets confused by what the lock is, and anyway we only care about synchronizing writes")
     private FileOutputStream os;
+    private OutputStream bos;
     private Writer indexOs;
     private String lastId;
 
@@ -84,6 +86,7 @@ public final class FileLogStorage implements LogStorage {
     private synchronized void open() throws IOException {
         if (os == null) {
             os = new FileOutputStream(log, true);
+            bos = new BufferedOutputStream(os);
             if (index.isFile()) {
                 try (BufferedReader r = Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8)) {
                     // TODO would be faster to scan the file backwards for the penultimate \n, then convert the byte sequence from there to EOF to UTF-8 and set lastId accordingly
@@ -120,6 +123,7 @@ public final class FileLogStorage implements LogStorage {
     private void checkId(String id) throws IOException {
         assert Thread.holdsLock(this);
         if (!Objects.equals(id, lastId)) {
+            bos.flush();
             long pos = os.getChannel().position();
             if (id == null) {
                 indexOs.write(pos + "\n");
@@ -146,33 +150,33 @@ public final class FileLogStorage implements LogStorage {
         @Override public void write(int b) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
-                os.write(b);
+                bos.write(b);
             }
         }
 
         @Override public void write(byte[] b) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
-                os.write(b);
+                bos.write(b);
             }
         }
 
         @Override public void write(byte[] b, int off, int len) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
-                os.write(b, off, len);
+                bos.write(b, off, len);
             }
         }
 
         @Override public void flush() throws IOException {
-            os.flush();
+            bos.flush();
         }
 
         @Override public void close() throws IOException {
             if (id == null) {
                 openStorages.remove(log);
                 try {
-                    os.close();
+                    bos.close();
                 } finally {
                     indexOs.close();
                 }
