@@ -73,8 +73,9 @@ public final class FileLogStorage implements LogStorage {
 
     private final File log;
     private final File index;
-    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "FB apparently gets confused by what the lock is, and anyway we only care about synchronizing writes")
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
     private FileOutputStream os;
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "we only care about synchronizing writes")
     private OutputStream bos;
     private Writer indexOs;
     private String lastId;
