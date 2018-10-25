@@ -29,7 +29,6 @@ import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.model.BuildListener;
 import hudson.model.TaskListener;
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -86,7 +85,7 @@ public final class FileLogStorage implements LogStorage {
     private synchronized void open() throws IOException {
         if (os == null) {
             os = new FileOutputStream(log, true);
-            bos = new BufferedOutputStream(os);
+            bos = new DelayBufferedOutputStream(os);
             if (index.isFile()) {
                 try (BufferedReader r = Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8)) {
                     // TODO would be faster to scan the file backwards for the penultimate \n, then convert the byte sequence from there to EOF to UTF-8 and set lastId accordingly
