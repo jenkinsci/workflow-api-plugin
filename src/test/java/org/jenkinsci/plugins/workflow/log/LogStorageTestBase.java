@@ -93,6 +93,7 @@ public abstract class LogStorageTestBase {
         step1.getLogger().println("one #3");
         overall.getLogger().println("pausing");
         overallHtmlPos = assertOverallLog(overallHtmlPos, "<span class=\"pipeline-node-1\">one #2\none #3\n</span>pausing\n", true);
+        // TODO if we produce output from the middle of a step, we need new span blocks
         step1Pos = assertStepLog("1", step1Pos, "one #2\none #3\n", true);
         assertLength("1", step1Pos);
         try { // as above
@@ -173,6 +174,7 @@ public abstract class LogStorageTestBase {
         }
         @Override public Void call() throws Exception {
             listener.getLogger().println(message);
+            listener.getLogger().flush();
             return null;
         }
     }

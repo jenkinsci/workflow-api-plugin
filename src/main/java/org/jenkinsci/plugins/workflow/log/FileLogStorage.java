@@ -28,9 +28,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.model.BuildListener;
-import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
-import hudson.util.StreamTaskListener;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
@@ -115,11 +113,11 @@ public final class FileLogStorage implements LogStorage {
     }
 
     @Override public BuildListener overallListener() throws IOException, InterruptedException {
-        return new StreamBuildListener(new IndexOutputStream(null), StandardCharsets.UTF_8);
+        return new BufferedBuildListener(new IndexOutputStream(null));
     }
 
     @Override public TaskListener nodeListener(FlowNode node) throws IOException, InterruptedException {
-        return new StreamTaskListener(new IndexOutputStream(node.getId()), StandardCharsets.UTF_8);
+        return new BufferedBuildListener(new IndexOutputStream(node.getId()));
     }
 
     private void checkId(String id) throws IOException {
