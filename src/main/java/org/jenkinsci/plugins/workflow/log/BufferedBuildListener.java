@@ -97,7 +97,7 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
         private long recurrencePeriod = MIN_RECURRENCE_PERIOD;
 
         DelayBufferedOutputStream(OutputStream out) {
-            super(new FlushProofOutputStream(out)); // default buffer size: 8Kib
+            super(new FlushControlledOutputStream(out)); // default buffer size: 8Kib
             reschedule();
         }
 
@@ -108,13 +108,13 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
 
         /** We can only call {@link BufferedOutputStream#flushBuffer} via {@link #flush}, but we do not wish to flush the underlying stream, only write out the buffer. */
         private void flushBuffer() throws IOException {
-            ThreadLocal<Boolean> fauxFlushing = ((FlushProofOutputStream) out).fauxFlushing;
-            boolean orig = fauxFlushing.get();
-            fauxFlushing.set(true);
+            ThreadLocal<Boolean> enableFlush = ((FlushControlledOutputStream) out).enableFlush;
+            boolean orig = enableFlush.get();
+            enableFlush.set(false);
             try {
                 flush();
             } finally {
-                fauxFlushing.set(orig);
+                enableFlush.set(orig);
             }
         }
         
@@ -151,15 +151,16 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
         
     }
 
-    private static final class FlushProofOutputStream extends FilterOutputStream {
+    /** @see DelayBufferedOutputStream#flushBuffer */
+    private static final class FlushControlledOutputStream extends FilterOutputStream {
 
-        private final ThreadLocal<Boolean> fauxFlushing = new ThreadLocal<Boolean>() {
+        private final ThreadLocal<Boolean> enableFlush = new ThreadLocal<Boolean>() {
             @Override protected Boolean initialValue() {
-                return false;
+                return true;
             }
         };
 
-        FlushProofOutputStream(OutputStream out) {
+        FlushControlledOutputStream(OutputStream out) {
             super(out);
         }
 
@@ -168,7 +169,7 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
         }
         
         @Override public void flush() throws IOException {
-            if (!fauxFlushing.get()) {
+            if (enableFlush.get()) {
                 super.flush();
             }
         }
