@@ -149,10 +149,15 @@ public abstract class LogStorageTestBase {
         long stepPos = assertStepLog("1", 0, "step from master\n", true);
         VirtualChannel channel = r.createOnlineSlave().getChannel();
         channel.call(new RemotePrint("overall from agent", overall));
+        while (!IOUtils.toString(text().readAll()).contains("overall from agent")) {
+            // Implementations may be unable to honor the completed flag on remotely printed messages, pending some way to have all affected loggers confirm they have flushed
+            Logger.getLogger(LogStorageTestBase.class.getName()).info("waiting for remote overall content to appear");
+            Thread.sleep(1000);
+        }
+        // Note that we cannot guarantee ordering of messages if the remote printed declines to flush.
         channel.call(new RemotePrint("step from agent", step));
-        while (!IOUtils.toString(text().readAll()).contains("overall from agent") || !IOUtils.toString(text().readAll()).contains("step from agent")) {
-            // TODO current cloud implementations may be unable to honor the completed flag on remotely printed messages, pending some way to have all affected loggers confirm they have flushed
-            Logger.getLogger(LogStorageTestBase.class.getName()).info("waiting for remote content to appear");
+        while (!IOUtils.toString(text().readAll()).contains("step from agent")) {
+            Logger.getLogger(LogStorageTestBase.class.getName()).info("waiting for remote step content to appear");
             Thread.sleep(1000);
         }
         overallPos = assertOverallLog(overallPos, "overall from agent\n<span class=\"pipeline-node-1\">step from agent\n</span>", true);
@@ -172,7 +177,6 @@ public abstract class LogStorageTestBase {
         }
         @Override public Void call() throws Exception {
             listener.getLogger().println(message);
-            listener.getLogger().flush();
             return null;
         }
     }

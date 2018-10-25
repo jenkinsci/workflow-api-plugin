@@ -81,6 +81,13 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
         reschedule();
     }
 
+    @SuppressWarnings("FinalizeDeclaration") // not ideal, but PhantomReference is more of a hassle
+    @Override protected void finalize() throws Throwable {
+        super.finalize();
+        // Odd that this is not the default behavior for BufferedOutputStream.
+        flush();
+    }
+
     private static final class Flush implements Runnable {
 
         /** Since there is no explicit close event, just keep flushing periodically until the stream is collected. */
