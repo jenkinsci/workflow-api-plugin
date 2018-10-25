@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.BuildListener;
 import hudson.remoting.RemoteOutputStream;
 import hudson.util.StreamTaskListener;
@@ -50,6 +51,7 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
     private static final Logger LOGGER = Logger.getLogger(BufferedBuildListener.class.getName());
 
     private final OutputStream out;
+    @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "using Replacement anyway, fields here are irrelevant")
     private final PrintStream ps;
 
     BufferedBuildListener(OutputStream out) throws IOException {
