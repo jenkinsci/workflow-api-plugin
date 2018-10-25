@@ -37,9 +37,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
-import java.util.logging.Logger;
 import jenkins.security.MasterToSlaveCallable;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.io.output.NullWriter;
 import org.apache.commons.io.output.WriterOutputStream;
@@ -149,17 +147,7 @@ public abstract class LogStorageTestBase {
         long stepPos = assertStepLog("1", 0, "step from master\n", true);
         VirtualChannel channel = r.createOnlineSlave().getChannel();
         channel.call(new RemotePrint("overall from agent", overall));
-        while (!IOUtils.toString(text().readAll()).contains("overall from agent")) {
-            // Implementations may be unable to honor the completed flag on remotely printed messages, pending some way to have all affected loggers confirm they have flushed
-            Logger.getLogger(LogStorageTestBase.class.getName()).info("waiting for remote overall content to appear");
-            Thread.sleep(1000);
-        }
-        // Note that we cannot guarantee ordering of messages if the remote printed declines to flush.
         channel.call(new RemotePrint("step from agent", step));
-        while (!IOUtils.toString(text().readAll()).contains("step from agent")) {
-            Logger.getLogger(LogStorageTestBase.class.getName()).info("waiting for remote step content to appear");
-            Thread.sleep(1000);
-        }
         overallPos = assertOverallLog(overallPos, "overall from agent\n<span class=\"pipeline-node-1\">step from agent\n</span>", true);
         stepPos = assertStepLog("1", stepPos, "step from agent\n", true);
         assertEquals(overallPos, assertOverallLog(overallPos, "", true));
@@ -177,6 +165,7 @@ public abstract class LogStorageTestBase {
         }
         @Override public Void call() throws Exception {
             listener.getLogger().println(message);
+            listener.getLogger().flush();
             return null;
         }
     }
