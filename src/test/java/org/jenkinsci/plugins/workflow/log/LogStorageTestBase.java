@@ -38,7 +38,6 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.logging.Logger;
-import jenkins.security.ConfidentialStore;
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
@@ -60,7 +59,6 @@ public abstract class LogStorageTestBase {
         System.setProperty("line.separator", "\n");
     }
 
-    /** Needed since {@link ConsoleAnnotators} will not work without encryption, and currently {@link ConfidentialStore#get} has no fallback mode for unit tests accessible except via package-local. */
     @ClassRule public static JenkinsRule r = new JenkinsRule();
 
     /** Create a new storage implementation, but potentially reusing any data initialized in the last {@link Before} setup. */
