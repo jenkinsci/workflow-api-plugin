@@ -67,13 +67,14 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
         private static final long serialVersionUID = 1;
 
         private final RemoteOutputStream ros;
+        private final DelayBufferedOutputStream.Tuning tuning = DelayBufferedOutputStream.Tuning.DEFAULT; // load defaults on master
 
         Replacement(BufferedBuildListener cbl) {
             this.ros = new RemoteOutputStream(new CloseProofOutputStream(cbl.out));
         }
 
         private Object readResolve() throws IOException {
-            return new BufferedBuildListener(new DelayBufferedOutputStream(ros));
+            return new BufferedBuildListener(new DelayBufferedOutputStream(ros, tuning));
         }
 
     }

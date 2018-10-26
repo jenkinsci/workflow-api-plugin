@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.util.Timer;
+import org.jenkinsci.remoting.SerializableOnlyOverRemoting;
 
 /**
  * Buffered output stream which is guaranteed to deliver content after some time even if idle and the buffer does not fill up.
@@ -43,21 +44,33 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
 
     private static final Logger LOGGER = Logger.getLogger(DelayBufferedOutputStream.class.getName());
 
-    // TODO make these customizable (not trivial since this system properties would need to be loaded on the master side and then remoted)
-    private static final long MIN_RECURRENCE_PERIOD = 250; // ¼s
-    private static final long MAX_RECURRENCE_PERIOD = 10_000; // 10s
-    private static final float RECURRENCE_PERIOD_BACKOFF = 1.05f;
+    static final class Tuning implements SerializableOnlyOverRemoting {
+        private Tuning() {}
+        // nonfinal for Groovy scripting:
+        long minRecurrencePeriod = Long.getLong(DelayBufferedOutputStream.class.getName() + ".minRecurrencePeriod", 250); // ¼s
+        long maxRecurrencePeriod = Long.getLong(DelayBufferedOutputStream.class.getName() + ".maxRecurrencePeriod", 10_000); // 10s
+        float recurrencePeriodBackoff = Float.parseFloat(System.getProperty(DelayBufferedOutputStream.class.getName() + ".recurrencePeriodBackoff", "1.05"));
+        int bufferSize = Integer.getInteger(DelayBufferedOutputStream.class.getName() + ".bufferSize", 1 << 16); // 64Kib
+        static final Tuning DEFAULT = new Tuning();
+    }
 
-    private long recurrencePeriod = MIN_RECURRENCE_PERIOD;
+    private final Tuning tuning;
+    private long recurrencePeriod;
 
     DelayBufferedOutputStream(OutputStream out) {
-        super(new FlushControlledOutputStream(out)); // default buffer size: 8Kib
+        this(out, Tuning.DEFAULT);
+    }
+
+    DelayBufferedOutputStream(OutputStream out, Tuning tuning) {
+        super(new FlushControlledOutputStream(out), tuning.bufferSize);
+        this.tuning = tuning;
+        recurrencePeriod = tuning.minRecurrencePeriod;
         reschedule();
     }
 
     private void reschedule() {
         Timer.get().schedule(new Flush(this), recurrencePeriod, TimeUnit.MILLISECONDS);
-        recurrencePeriod = Math.min((long) (recurrencePeriod * RECURRENCE_PERIOD_BACKOFF), MAX_RECURRENCE_PERIOD);
+        recurrencePeriod = Math.min((long) (recurrencePeriod * tuning.recurrencePeriodBackoff), tuning.maxRecurrencePeriod);
     }
 
     /** We can only call {@link BufferedOutputStream#flushBuffer} via {@link #flush}, but we do not wish to flush the underlying stream, only write out the buffer. */
@@ -72,7 +85,8 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
         }
     }
 
-    void run() {
+    void flushAndReschedule() {
+        // TODO as an optimization, avoid flushing the buffer if it was recently flushed anyway due to filling up
         try {
             flushBuffer();
         } catch (IOException x) {
@@ -100,7 +114,7 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
         @Override public void run() {
             DelayBufferedOutputStream os = osr.get();
             if (os != null) {
-                os.run();
+                os.flushAndReschedule();
             }
         }
 
