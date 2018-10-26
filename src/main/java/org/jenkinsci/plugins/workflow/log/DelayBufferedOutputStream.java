@@ -47,7 +47,7 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
     static final class Tuning implements SerializableOnlyOverRemoting {
         private Tuning() {}
         // nonfinal for Groovy scripting:
-        long minRecurrencePeriod = Long.getLong(DelayBufferedOutputStream.class.getName() + ".minRecurrencePeriod", 250); // ¼s
+        long minRecurrencePeriod = Long.getLong(DelayBufferedOutputStream.class.getName() + ".minRecurrencePeriod", 1_000); // 1s
         long maxRecurrencePeriod = Long.getLong(DelayBufferedOutputStream.class.getName() + ".maxRecurrencePeriod", 10_000); // 10s
         float recurrencePeriodBackoff = Float.parseFloat(System.getProperty(DelayBufferedOutputStream.class.getName() + ".recurrencePeriodBackoff", "1.05"));
         int bufferSize = Integer.getInteger(DelayBufferedOutputStream.class.getName() + ".bufferSize", 1 << 16); // 64Kib
