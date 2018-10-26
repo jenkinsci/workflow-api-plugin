@@ -37,9 +37,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
-import java.util.logging.Logger;
 import jenkins.security.MasterToSlaveCallable;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.io.output.NullWriter;
 import org.apache.commons.io.output.WriterOutputStream;
@@ -91,6 +89,7 @@ public abstract class LogStorageTestBase {
         step1.getLogger().println("one #3");
         overall.getLogger().println("pausing");
         overallHtmlPos = assertOverallLog(overallHtmlPos, "<span class=\"pipeline-node-1\">one #2\none #3\n</span>pausing\n", true);
+        // TODO if we produce output from the middle of a step, we need new span blocks
         step1Pos = assertStepLog("1", step1Pos, "one #2\none #3\n", true);
         assertLength("1", step1Pos);
         try { // as above
@@ -149,11 +148,6 @@ public abstract class LogStorageTestBase {
         VirtualChannel channel = r.createOnlineSlave().getChannel();
         channel.call(new RemotePrint("overall from agent", overall));
         channel.call(new RemotePrint("step from agent", step));
-        while (!IOUtils.toString(text().readAll()).contains("overall from agent") || !IOUtils.toString(text().readAll()).contains("step from agent")) {
-            // TODO current cloud implementations may be unable to honor the completed flag on remotely printed messages, pending some way to have all affected loggers confirm they have flushed
-            Logger.getLogger(LogStorageTestBase.class.getName()).info("waiting for remote content to appear");
-            Thread.sleep(1000);
-        }
         overallPos = assertOverallLog(overallPos, "overall from agent\n<span class=\"pipeline-node-1\">step from agent\n</span>", true);
         stepPos = assertStepLog("1", stepPos, "step from agent\n", true);
         assertEquals(overallPos, assertOverallLog(overallPos, "", true));
@@ -171,6 +165,7 @@ public abstract class LogStorageTestBase {
         }
         @Override public Void call() throws Exception {
             listener.getLogger().println(message);
+            listener.getLogger().flush();
             return null;
         }
     }

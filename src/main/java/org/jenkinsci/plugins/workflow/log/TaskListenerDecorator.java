@@ -158,10 +158,10 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
             filter(Objects::nonNull).
             collect(Collectors.toCollection(ArrayList::new));
         if (decorators.isEmpty()) {
-            return BuildListenerAdapter.wrap(listener);
+            return CloseableTaskListener.of(BuildListenerAdapter.wrap(listener), listener);
         } else {
             Collections.reverse(decorators);
-            return new DecoratedTaskListener(listener, decorators);
+            return CloseableTaskListener.of(new DecoratedTaskListener(listener, decorators), listener);
         }
     }
 
@@ -257,6 +257,41 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
         @Override public String toString() {
             return "DecoratedTaskListener[" + delegate + decorators + "]";
+        }
+
+    }
+
+    private static final class CloseableTaskListener implements BuildListener, AutoCloseable {
+
+        static BuildListener of(BuildListener mainDelegate, TaskListener closeDelegate) {
+            if (closeDelegate instanceof AutoCloseable) {
+                return new CloseableTaskListener(mainDelegate, closeDelegate);
+            } else {
+                return mainDelegate;
+            }
+        }
+
+        private static final long serialVersionUID = 1;
+
+        private final @Nonnull TaskListener mainDelegate;
+        private final @Nonnull TaskListener closeDelegate;
+
+        private CloseableTaskListener(TaskListener mainDelegate, TaskListener closeDelegate) {
+            this.mainDelegate = mainDelegate;
+            this.closeDelegate = closeDelegate;
+            assert closeDelegate instanceof AutoCloseable;
+        }
+
+        @Override public PrintStream getLogger() {
+            return mainDelegate.getLogger();
+        }
+
+        @Override public void close() throws Exception {
+            ((AutoCloseable) closeDelegate).close();
+        }
+
+        @Override public String toString() {
+            return "CloseableTaskListener[" + mainDelegate + " / " + closeDelegate + "]";
         }
 
     }

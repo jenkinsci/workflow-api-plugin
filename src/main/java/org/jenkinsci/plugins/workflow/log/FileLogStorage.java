@@ -28,9 +28,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.model.BuildListener;
-import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
-import hudson.util.StreamTaskListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -46,6 +44,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.input.NullReader;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -71,8 +70,10 @@ public final class FileLogStorage implements LogStorage {
 
     private final File log;
     private final File index;
-    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "FB apparently gets confused by what the lock is, and anyway we only care about synchronizing writes")
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
     private FileOutputStream os;
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "we only care about synchronizing writes")
+    private OutputStream bos;
     private Writer indexOs;
     private String lastId;
 
@@ -84,6 +85,7 @@ public final class FileLogStorage implements LogStorage {
     private synchronized void open() throws IOException {
         if (os == null) {
             os = new FileOutputStream(log, true);
+            bos = new DelayBufferedOutputStream(os);
             if (index.isFile()) {
                 try (BufferedReader r = Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8)) {
                     // TODO would be faster to scan the file backwards for the penultimate \n, then convert the byte sequence from there to EOF to UTF-8 and set lastId accordingly
@@ -110,16 +112,17 @@ public final class FileLogStorage implements LogStorage {
     }
 
     @Override public BuildListener overallListener() throws IOException, InterruptedException {
-        return new StreamBuildListener(new IndexOutputStream(null), StandardCharsets.UTF_8);
+        return new BufferedBuildListener(new IndexOutputStream(null));
     }
 
     @Override public TaskListener nodeListener(FlowNode node) throws IOException, InterruptedException {
-        return new StreamTaskListener(new IndexOutputStream(node.getId()), StandardCharsets.UTF_8);
+        return new BufferedBuildListener(new IndexOutputStream(node.getId()));
     }
 
     private void checkId(String id) throws IOException {
         assert Thread.holdsLock(this);
         if (!Objects.equals(id, lastId)) {
+            bos.flush();
             long pos = os.getChannel().position();
             if (id == null) {
                 indexOs.write(pos + "\n");
@@ -146,33 +149,33 @@ public final class FileLogStorage implements LogStorage {
         @Override public void write(int b) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
-                os.write(b);
+                bos.write(b);
             }
         }
 
         @Override public void write(byte[] b) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
-                os.write(b);
+                bos.write(b);
             }
         }
 
         @Override public void write(byte[] b, int off, int len) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
-                os.write(b, off, len);
+                bos.write(b, off, len);
             }
         }
 
         @Override public void flush() throws IOException {
-            os.flush();
+            bos.flush();
         }
 
         @Override public void close() throws IOException {
             if (id == null) {
                 openStorages.remove(log);
                 try {
-                    os.close();
+                    bos.close();
                 } finally {
                     indexOs.close();
                 }
@@ -181,7 +184,18 @@ public final class FileLogStorage implements LogStorage {
 
     }
 
+    private void maybeFlush() {
+        if (bos != null) {
+            try {
+                bos.flush();
+            } catch (IOException x) {
+                LOGGER.log(Level.WARNING, "failed to flush " + log, x);
+            }
+        }
+    }
+
     @Override public AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(FlowExecutionOwner.Executable build, boolean complete) {
+        maybeFlush();
         return new AnnotatedLargeText<FlowExecutionOwner.Executable>(log, StandardCharsets.UTF_8, complete, build) {
             @Override public long writeHtmlTo(long start, Writer w) throws IOException {
                 try (BufferedReader indexBR = index.isFile() ? Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8) : new BufferedReader(new NullReader(0))) {
@@ -239,6 +253,7 @@ public final class FileLogStorage implements LogStorage {
     }
 
     @Override public AnnotatedLargeText<FlowNode> stepLog(FlowNode node, boolean complete) {
+        maybeFlush();
         String id = node.getId();
         try (ByteBuffer buf = new ByteBuffer();
              RandomAccessFile raf = new RandomAccessFile(log, "r");
