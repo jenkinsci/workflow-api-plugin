@@ -290,6 +290,10 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
             ((AutoCloseable) closeDelegate).close();
         }
 
+        @Override public String toString() {
+            return "CloseableTaskListener[" + mainDelegate + " / " + closeDelegate + "]";
+        }
+
     }
 
 }
