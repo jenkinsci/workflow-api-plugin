@@ -322,4 +322,9 @@ public final class FileLogStorage implements LogStorage {
         }
     }
 
+    @Deprecated
+    @Override public File getLogFile(FlowExecutionOwner.Executable build, boolean complete) {
+        return log;
+    }
+
 }

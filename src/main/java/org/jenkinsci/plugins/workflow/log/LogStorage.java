@@ -24,13 +24,19 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.ExtensionList;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.model.BuildListener;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -107,6 +113,44 @@ public interface LogStorage {
      * @see LogAction
      */
      @Nonnull AnnotatedLargeText<FlowNode> stepLog(@Nonnull FlowNode node, boolean complete);
+
+     /**
+      * Provide a file containing the log text.
+      * The default implementation creates a temporary file based on the current contents of {@link #overallLog}.
+      * @param build as in {@link #overallLog}
+      * @param complete as in {@link #overallLog}
+      * @return a possibly temporary file
+      * @deprecated Only used for compatibility with {@link Run#getLogFile}.
+      */
+     @SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "silly rule")
+     @Deprecated
+     default @Nonnull File getLogFile(@Nonnull FlowExecutionOwner.Executable build, boolean complete) {
+         try {
+             AnnotatedLargeText<FlowExecutionOwner.Executable> logText = overallLog(build, complete);
+             FlowExecutionOwner owner = build.asFlowExecutionOwner();
+             File f = File.createTempFile("deprecated", ".log", owner != null ? owner.getRootDir() : null);
+             f.deleteOnExit();
+             try (OutputStream os = new FileOutputStream(f)) {
+                 // Similar to Run#writeWholeLogTo but terminates even if !complete:
+                 long pos = 0;
+                 while (true) {
+                     long pos2 = logText.writeRawLogTo(pos, os);
+                     if (pos2 <= pos) {
+                         break;
+                     }
+                     pos = pos2;
+                 }
+             }
+             return f;
+         } catch (Exception x) {
+             Logger.getLogger(LogStorage.class.getName()).log(Level.WARNING, null, x);
+             if (build instanceof Run) {
+                 return new File(((Run) build).getRootDir(), "log");
+             } else {
+                 return new File("broken.log"); // not much we can do
+             }
+         }
+     }
 
     /**
      * Gets the available log storage method for a given build.
