@@ -114,8 +114,8 @@ public interface LogStorage {
      /**
       * Provide a file containing the log text.
       * The default implementation creates a temporary file based on the current contents of {@link #overallLog}.
-      * @param build as in {@link #overallLog
-      * @param complete as in {@link #overallLog
+      * @param build as in {@link #overallLog}
+      * @param complete as in {@link #overallLog}
       * @return a possibly temporary file
       * @deprecated Only used for compatibility with {@link Run#getLogFile}.
       */
