@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.ExtensionList;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
@@ -119,6 +120,7 @@ public interface LogStorage {
       * @return a possibly temporary file
       * @deprecated Only used for compatibility with {@link Run#getLogFile}.
       */
+     @SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "silly rule")
      @Deprecated
      default @Nonnull File getLogFile(@Nonnull FlowExecutionOwner.Executable build, boolean complete) {
          try {
