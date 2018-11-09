@@ -38,10 +38,14 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import jenkins.security.MasterToSlaveCallable;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.io.output.NullWriter;
 import org.apache.commons.io.output.WriterOutputStream;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -219,6 +223,26 @@ public abstract class LogStorageTestBase {
         // assertLength("2", pos);
         // assertStepLog("2", pos, "", true);
         text("2").writeRawLogTo(0, new NullOutputStream());
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test public void getLogFile() throws Exception {
+        LogStorage ls = createStorage();
+        TaskListener overall = ls.overallListener();
+        overall.getLogger().println("starting");
+        TaskListener step1 = ls.nodeListener(new MockNode("1"));
+        step1.getLogger().println("from step");
+        step1.getLogger().flush();
+        overall.getLogger().println("finishing");
+        overall.getLogger().flush();
+        WorkflowJob fakeProject = r.createProject(WorkflowJob.class, "fake");
+        fakeProject.setDefinition(new CpsFlowDefinition("", true));
+        WorkflowRun fakeBuild = r.buildAndAssertSuccess(fakeProject);
+        assertOverallLog(0, FileUtils.readFileToString(ls.getLogFile(fakeBuild, false)), false);
+        close(overall);
+        ls = createStorage();
+        assertOverallLog(0, FileUtils.readFileToString(ls.getLogFile(fakeBuild, true)), false);
+        close(overall);
     }
 
     // TODO test missing final newline
