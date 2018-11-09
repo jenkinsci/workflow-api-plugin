@@ -35,6 +35,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -141,6 +143,7 @@ public interface LogStorage {
              }
              return f;
          } catch (Exception x) {
+             Logger.getLogger(LogStorage.class.getName()).log(Level.WARNING, null, x);
              if (build instanceof Run) {
                  return new File(((Run) build).getRootDir(), "log");
              } else {
