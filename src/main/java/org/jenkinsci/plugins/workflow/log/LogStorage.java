@@ -125,7 +125,8 @@ public interface LogStorage {
      default @Nonnull File getLogFile(@Nonnull FlowExecutionOwner.Executable build, boolean complete) {
          try {
              AnnotatedLargeText<FlowExecutionOwner.Executable> logText = overallLog(build, complete);
-             File f = File.createTempFile("deprecated", ".log", build instanceof Run ? ((Run) build).getRootDir() : null);
+             FlowExecutionOwner owner = build.asFlowExecutionOwner();
+             File f = File.createTempFile("deprecated", ".log", owner != null ? owner.getRootDir() : null);
              f.deleteOnExit();
              try (OutputStream os = new FileOutputStream(f)) {
                  // Similar to Run#writeWholeLogTo but terminates even if !complete:
