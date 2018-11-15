@@ -152,6 +152,7 @@ public abstract class LogStorageTestBase {
         VirtualChannel channel = r.createOnlineSlave().getChannel();
         channel.call(new RemotePrint("overall from agent", overall));
         channel.call(new RemotePrint("step from agent", step));
+        channel.call(new GC());
         overallPos = assertOverallLog(overallPos, "overall from agent\n<span class=\"pipeline-node-1\">step from agent\n</span>", true);
         stepPos = assertStepLog("1", stepPos, "step from agent\n", true);
         assertEquals(overallPos, assertOverallLog(overallPos, "", true));
@@ -170,6 +171,13 @@ public abstract class LogStorageTestBase {
         @Override public Void call() throws Exception {
             listener.getLogger().println(message);
             listener.getLogger().flush();
+            return null;
+        }
+    }
+    private static final class GC extends MasterToSlaveCallable<Void, Exception> {
+        @Override public Void call() throws Exception {
+            System.gc();
+            System.runFinalization();
             return null;
         }
     }
