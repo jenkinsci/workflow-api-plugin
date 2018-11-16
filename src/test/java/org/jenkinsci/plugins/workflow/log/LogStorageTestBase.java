@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.log;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.HyperlinkNote;
 import hudson.model.TaskListener;
+import hudson.remoting.Channel;
 import hudson.remoting.VirtualChannel;
 import java.io.EOFException;
 import java.io.PrintWriter;
@@ -37,11 +38,13 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
+import java.util.logging.Level;
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.io.output.NullWriter;
 import org.apache.commons.io.output.WriterOutputStream;
+import static org.hamcrest.Matchers.*;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -51,6 +54,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LoggerRule;
 
 /**
  * Foundation for compliance tests of {@link LogStorage} implementations.
@@ -62,6 +66,8 @@ public abstract class LogStorageTestBase {
     }
 
     @ClassRule public static JenkinsRule r = new JenkinsRule();
+
+    @ClassRule public static LoggerRule logging = new LoggerRule();
 
     /** Create a new storage implementation, but potentially reusing any data initialized in the last {@link Before} setup. */
     protected abstract LogStorage createStorage() throws Exception;
@@ -142,6 +148,7 @@ public abstract class LogStorageTestBase {
     }
 
     @Test public void remoting() throws Exception {
+        logging.capture(100).record(Channel.class, Level.WARNING);
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("overall from master");
@@ -157,6 +164,7 @@ public abstract class LogStorageTestBase {
         stepPos = assertStepLog("1", stepPos, "step from agent\n", true);
         assertEquals(overallPos, assertOverallLog(overallPos, "", true));
         assertEquals(stepPos, assertStepLog("1", stepPos, "", true));
+        assertThat(logging.getMessages(), empty());
     }
     private static final class RemotePrint extends MasterToSlaveCallable<Void, Exception> {
         static {

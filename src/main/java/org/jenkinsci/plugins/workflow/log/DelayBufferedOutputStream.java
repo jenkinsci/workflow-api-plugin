@@ -98,6 +98,7 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
     @SuppressWarnings("FinalizeDeclaration") // not ideal, but PhantomReference is more of a hassle
     @Override protected void finalize() throws Throwable {
         super.finalize();
+        Thread.sleep(100); // TODO for FileLogStorageTest#remoting
         // Odd that this is not the default behavior for BufferedOutputStream.
         flush();
     }
