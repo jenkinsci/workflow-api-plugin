@@ -28,7 +28,9 @@ import java.io.BufferedOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.ref.PhantomReference;
 import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -65,6 +67,7 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
         super(new FlushControlledOutputStream(out), tuning.bufferSize);
         this.tuning = tuning;
         recurrencePeriod = tuning.minRecurrencePeriod;
+        FlushRef.register(this, out);
         reschedule();
     }
 
@@ -95,14 +98,6 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
         reschedule();
     }
 
-    @SuppressWarnings("FinalizeDeclaration") // not ideal, but PhantomReference is more of a hassle
-    @Override protected void finalize() throws Throwable {
-        super.finalize();
-        Thread.sleep(100); // TODO for FileLogStorageTest#remoting
-        // Odd that this is not the default behavior for BufferedOutputStream.
-        flush();
-    }
-
     private static final class Flush implements Runnable {
 
         /** Since there is no explicit close event, just keep flushing periodically until the stream is collected. */
@@ -117,6 +112,46 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
             if (os != null) {
                 os.flushAndReschedule();
             }
+        }
+
+    }
+
+    //
+    /**
+     * Flushes streams prior to garbage collection.
+     * TODO Java 9+ could use java.util.Cleaner
+     */
+    private static final class FlushRef extends PhantomReference<DelayBufferedOutputStream> {
+
+        private static final ReferenceQueue<DelayBufferedOutputStream> rq = new ReferenceQueue<>();
+
+        static {
+            Timer.get().scheduleWithFixedDelay(() -> {
+                while (true) {
+                    FlushRef ref = (FlushRef) rq.poll();
+                    if (ref == null) {
+                        break;
+                    }
+                    LOGGER.log(Level.FINE, "cleaning up phantom {0}", ref.out);
+                    try {
+                        // Odd that this is not the default behavior for BufferedOutputStream.
+                        ref.out.flush();
+                    } catch (IOException x) {
+                        LOGGER.log(Level.WARNING, null, x);
+                    }
+                }
+            }, 0, 10, TimeUnit.SECONDS);
+        }
+
+        static void register(DelayBufferedOutputStream dbos, OutputStream out) {
+            new FlushRef(dbos, out, rq).enqueue();
+        }
+
+        private final OutputStream out;
+
+        private FlushRef(DelayBufferedOutputStream dbos, OutputStream out, ReferenceQueue<DelayBufferedOutputStream> rq) {
+            super(dbos, rq);
+            this.out = out;
         }
 
     }
