@@ -116,9 +116,9 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
 
     }
 
-    //
     /**
      * Flushes streams prior to garbage collection.
+     * ({@link BufferedOutputStream} does not do this automatically.)
      * TODO Java 9+ could use java.util.Cleaner
      */
     private static final class FlushRef extends PhantomReference<DelayBufferedOutputStream> {
@@ -134,7 +134,6 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
                     }
                     LOGGER.log(Level.FINE, "cleaning up phantom {0}", ref.out);
                     try {
-                        // Odd that this is not the default behavior for BufferedOutputStream.
                         ref.out.flush();
                     } catch (IOException x) {
                         LOGGER.log(Level.WARNING, null, x);

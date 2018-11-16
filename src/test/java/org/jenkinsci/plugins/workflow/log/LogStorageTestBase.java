@@ -189,6 +189,7 @@ public abstract class LogStorageTestBase {
             return null;
         }
     }
+    /** Checking behavior of {@link DelayBufferedOutputStream} garbage collection. */
     private static final class GC extends MasterToSlaveCallable<Void, Exception> {
         @Override public Void call() throws Exception {
             System.gc();
