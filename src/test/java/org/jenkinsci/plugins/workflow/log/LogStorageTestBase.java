@@ -29,6 +29,7 @@ import hudson.console.HyperlinkNote;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.remoting.VirtualChannel;
+import hudson.util.StreamTaskListener;
 import java.io.EOFException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -38,7 +39,12 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
@@ -157,6 +163,7 @@ public abstract class LogStorageTestBase {
         long overallPos = assertOverallLog(0, "overall from master\n<span class=\"pipeline-node-1\">step from master\n</span>", true);
         long stepPos = assertStepLog("1", 0, "step from master\n", true);
         VirtualChannel channel = r.createOnlineSlave().getChannel();
+        channel.call(new RemoteLogDumper("agent"));
         channel.call(new RemotePrint("overall from agent", overall));
         channel.call(new RemotePrint("step from agent", step));
         channel.call(new GC());
@@ -186,6 +193,31 @@ public abstract class LogStorageTestBase {
         @Override public Void call() throws Exception {
             System.gc();
             System.runFinalization();
+            return null;
+        }
+    }
+    // TODO copied from pipeline-log-cloudwatch; consider whether this should be moved into LoggerRule
+    private static final class RemoteLogDumper extends MasterToSlaveCallable<Void, RuntimeException> {
+        private final String name;
+        private final TaskListener stderr = StreamTaskListener.fromStderr();
+        RemoteLogDumper(String name) {
+            this.name = name;
+        }
+        @Override public Void call() throws RuntimeException {
+            Handler handler = new Handler() {
+                final Formatter formatter = new SimpleFormatter();
+                @Override public void publish(LogRecord record) {
+                    if (isLoggable(record)) {
+                        stderr.getLogger().print(formatter.format(record).replaceAll("(?m)^", "[" + name + "] "));
+                    }
+                }
+                @Override public void flush() {}
+                @Override public void close() throws SecurityException {}
+            };
+            handler.setLevel(Level.ALL);
+            Logger logger = Logger.getLogger(LogStorageTestBase.class.getPackage().getName());
+            logger.setLevel(Level.FINER);
+            logger.addHandler(handler);
             return null;
         }
     }
