@@ -38,7 +38,6 @@ import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.org.apache.tools.tar.TarInputStream;
 import hudson.util.DirScanner;
 import hudson.util.io.ArchiverFactory;
 import java.io.ByteArrayOutputStream;
@@ -57,9 +56,10 @@ import jenkins.model.ArtifactManager;
 import jenkins.model.Jenkins;
 import jenkins.util.BuildListenerAdapter;
 import jenkins.util.VirtualFile;
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.tools.tar.TarEntry;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -236,18 +236,15 @@ public class StashManager {
                 if (n.endsWith(SUFFIX)) {
                     Map<String,String> unpacked = new TreeMap<String,String>();
                     result.put(n.substring(0, n.length() - SUFFIX.length()), unpacked);
-                    InputStream is = new FileInputStream(kid);
-                    try {
+                    try (InputStream is = new FileInputStream(kid)) {
                         InputStream wrapped = FilePath.TarCompression.GZIP.extract(is);
-                        TarInputStream tis = new TarInputStream(wrapped);
-                        TarEntry te;
-                        while ((te = tis.getNextEntry()) != null) {
+                        TarArchiveInputStream archiveStream = new TarArchiveInputStream(wrapped);
+                        ArchiveEntry archiveEntry;
+                        while ((archiveEntry = archiveStream.getNextEntry()) != null) {
                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                            IOUtils.copy(tis, baos);
-                            unpacked.put(te.getName(), baos.toString());
+                            IOUtils.copy(archiveStream, baos);
+                            unpacked.put(archiveEntry.getName(), baos.toString());
                         }
-                    } finally {
-                        is.close();
                     }
                 }
             }
