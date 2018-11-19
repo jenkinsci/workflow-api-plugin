@@ -27,7 +27,9 @@ package org.jenkinsci.plugins.workflow.log;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.HyperlinkNote;
 import hudson.model.TaskListener;
+import hudson.remoting.Channel;
 import hudson.remoting.VirtualChannel;
+import hudson.util.StreamTaskListener;
 import java.io.EOFException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -37,11 +39,18 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import jenkins.security.MasterToSlaveCallable;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.io.output.NullWriter;
 import org.apache.commons.io.output.WriterOutputStream;
+import static org.hamcrest.Matchers.*;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -51,6 +60,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LoggerRule;
 
 /**
  * Foundation for compliance tests of {@link LogStorage} implementations.
@@ -62,6 +72,8 @@ public abstract class LogStorageTestBase {
     }
 
     @ClassRule public static JenkinsRule r = new JenkinsRule();
+
+    @ClassRule public static LoggerRule logging = new LoggerRule();
 
     /** Create a new storage implementation, but potentially reusing any data initialized in the last {@link Before} setup. */
     protected abstract LogStorage createStorage() throws Exception;
@@ -142,6 +154,7 @@ public abstract class LogStorageTestBase {
     }
 
     @Test public void remoting() throws Exception {
+        logging.capture(100).record(Channel.class, Level.WARNING);
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("overall from master");
@@ -150,12 +163,15 @@ public abstract class LogStorageTestBase {
         long overallPos = assertOverallLog(0, "overall from master\n<span class=\"pipeline-node-1\">step from master\n</span>", true);
         long stepPos = assertStepLog("1", 0, "step from master\n", true);
         VirtualChannel channel = r.createOnlineSlave().getChannel();
+        channel.call(new RemoteLogDumper("agent"));
         channel.call(new RemotePrint("overall from agent", overall));
         channel.call(new RemotePrint("step from agent", step));
+        channel.call(new GC());
         overallPos = assertOverallLog(overallPos, "overall from agent\n<span class=\"pipeline-node-1\">step from agent\n</span>", true);
         stepPos = assertStepLog("1", stepPos, "step from agent\n", true);
         assertEquals(overallPos, assertOverallLog(overallPos, "", true));
         assertEquals(stepPos, assertStepLog("1", stepPos, "", true));
+        assertThat(logging.getMessages(), empty());
     }
     private static final class RemotePrint extends MasterToSlaveCallable<Void, Exception> {
         static {
@@ -170,6 +186,39 @@ public abstract class LogStorageTestBase {
         @Override public Void call() throws Exception {
             listener.getLogger().println(message);
             listener.getLogger().flush();
+            return null;
+        }
+    }
+    /** Checking behavior of {@link DelayBufferedOutputStream} garbage collection. */
+    private static final class GC extends MasterToSlaveCallable<Void, Exception> {
+        @Override public Void call() throws Exception {
+            System.gc();
+            System.runFinalization();
+            return null;
+        }
+    }
+    // TODO copied from pipeline-log-cloudwatch; consider whether this should be moved into LoggerRule
+    private static final class RemoteLogDumper extends MasterToSlaveCallable<Void, RuntimeException> {
+        private final String name;
+        private final TaskListener stderr = StreamTaskListener.fromStderr();
+        RemoteLogDumper(String name) {
+            this.name = name;
+        }
+        @Override public Void call() throws RuntimeException {
+            Handler handler = new Handler() {
+                final Formatter formatter = new SimpleFormatter();
+                @Override public void publish(LogRecord record) {
+                    if (isLoggable(record)) {
+                        stderr.getLogger().print(formatter.format(record).replaceAll("(?m)^", "[" + name + "] "));
+                    }
+                }
+                @Override public void flush() {}
+                @Override public void close() throws SecurityException {}
+            };
+            handler.setLevel(Level.ALL);
+            Logger logger = Logger.getLogger(LogStorageTestBase.class.getPackage().getName());
+            logger.setLevel(Level.FINER);
+            logger.addHandler(handler);
             return null;
         }
     }

@@ -95,11 +95,8 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
         reschedule();
     }
 
-    @SuppressWarnings("FinalizeDeclaration") // not ideal, but PhantomReference is more of a hassle
-    @Override protected void finalize() throws Throwable {
-        super.finalize();
-        // Odd that this is not the default behavior for BufferedOutputStream.
-        flush();
+    @Override public String toString() {
+        return "DelayBufferedOutputStream[" + out + "]";
     }
 
     private static final class Flush implements Runnable {
@@ -141,6 +138,10 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
             if (enableFlush.get()) {
                 super.flush();
             }
+        }
+
+        @Override public String toString() {
+            return "FlushControlledOutputStream[" + out + "]";
         }
 
     }
