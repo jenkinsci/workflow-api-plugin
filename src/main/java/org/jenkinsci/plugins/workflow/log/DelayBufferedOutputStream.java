@@ -28,9 +28,7 @@ import java.io.BufferedOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.ref.PhantomReference;
 import java.lang.ref.Reference;
-import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -41,10 +39,8 @@ import org.jenkinsci.remoting.SerializableOnlyOverRemoting;
 /**
  * Buffered output stream which is guaranteed to deliver content after some time even if idle and the buffer does not fill up.
  * The automatic “flushing” does <em>not</em> flush the underlying stream, for example via {@code ProxyOutputStream.Flush}.
- * Also the stream will be flushed before garbage collection.
- * Otherwise it is similar to {@link BufferedOutputStream}.
  */
-final class DelayBufferedOutputStream extends FilterOutputStream {
+final class DelayBufferedOutputStream extends BufferedOutputStream {
 
     private static final Logger LOGGER = Logger.getLogger(DelayBufferedOutputStream.class.getName());
 
@@ -58,45 +54,6 @@ final class DelayBufferedOutputStream extends FilterOutputStream {
         static final Tuning DEFAULT = new Tuning();
     }
 
-    /**
-     * The interesting state of the buffered stream, kept as a separate object so that {@link FlushRef} can hold on to it.
-     */
-    private static final class Buffer {
-
-        final OutputStream out;
-        private final byte[] dat;
-        private int pos;
-
-        Buffer(OutputStream out, int size) {
-            this.out = out;
-            dat = new byte[size];
-        }
-
-        synchronized void drain() throws IOException {
-            if (pos == 0) {
-                return;
-            }
-            out.write(dat, 0, pos);
-            pos = 0;
-        }
-
-        void write(int b) throws IOException {
-            assert Thread.holdsLock(this);
-            if (pos == dat.length) {
-                drain();
-            }
-            dat[pos++] = (byte) b;
-        }
-
-        synchronized void write(byte[] b, int off, int len) throws IOException {
-            for (int i = 0; i < len; i++) {
-                write(b[off + i]);
-            }
-        }
-
-    }
-
-    private final Buffer buf;
     private final Tuning tuning;
     private long recurrencePeriod;
 
@@ -105,97 +62,86 @@ final class DelayBufferedOutputStream extends FilterOutputStream {
     }
 
     DelayBufferedOutputStream(OutputStream out, Tuning tuning) {
-        super(out);
-        buf = new Buffer(out, tuning.bufferSize);
+        super(new FlushControlledOutputStream(out), tuning.bufferSize);
         this.tuning = tuning;
         recurrencePeriod = tuning.minRecurrencePeriod;
-        FlushRef.register(this);
         reschedule();
     }
 
-    @Override public void write(int b) throws IOException {
-        synchronized (buf) {
-            buf.write(b);
-        }
-    }
-
-    @Override public void write(byte[] b, int off, int len) throws IOException {
-        buf.write(b, off, len);
-    }
-
-    @Override public void flush() throws IOException {
-        buf.drain();
-        super.flush();
-    }
-
     private void reschedule() {
-        Timer.get().schedule(new Drain(this), recurrencePeriod, TimeUnit.MILLISECONDS);
+        Timer.get().schedule(new Flush(this), recurrencePeriod, TimeUnit.MILLISECONDS);
         recurrencePeriod = Math.min((long) (recurrencePeriod * tuning.recurrencePeriodBackoff), tuning.maxRecurrencePeriod);
     }
 
-    void drainAndReschedule() {
+    /** We can only call {@link BufferedOutputStream#flushBuffer} via {@link #flush}, but we do not wish to flush the underlying stream, only write out the buffer. */
+    private void flushBuffer() throws IOException {
+        ThreadLocal<Boolean> enableFlush = ((FlushControlledOutputStream) out).enableFlush;
+        boolean orig = enableFlush.get();
+        enableFlush.set(false);
+        try {
+            flush();
+        } finally {
+            enableFlush.set(orig);
+        }
+    }
+
+    void flushAndReschedule() {
         // TODO as an optimization, avoid flushing the buffer if it was recently flushed anyway due to filling up
         try {
-            buf.drain();
+            flushBuffer();
         } catch (IOException x) {
             LOGGER.log(Level.FINE, null, x);
         }
         reschedule();
     }
 
-    private static final class Drain implements Runnable {
+    @Override public String toString() {
+        return "DelayBufferedOutputStream[" + out + "]";
+    }
+
+    private static final class Flush implements Runnable {
 
         /** Since there is no explicit close event, just keep flushing periodically until the stream is collected. */
         private final Reference<DelayBufferedOutputStream> osr;
 
-        Drain(DelayBufferedOutputStream os) {
+        Flush(DelayBufferedOutputStream os) {
             osr = new WeakReference<>(os);
         }
 
         @Override public void run() {
             DelayBufferedOutputStream os = osr.get();
             if (os != null) {
-                os.drainAndReschedule();
+                os.flushAndReschedule();
             }
         }
 
     }
 
-    /**
-     * Flushes streams prior to garbage collection.
-     * In Java 9+ could use {@code java.util.Cleaner} instead.
-     */
-    private static final class FlushRef extends PhantomReference<DelayBufferedOutputStream> {
+    /** @see DelayBufferedOutputStream#flushBuffer */
+    private static final class FlushControlledOutputStream extends FilterOutputStream {
 
-        private static final ReferenceQueue<DelayBufferedOutputStream> rq = new ReferenceQueue<>();
+        private final ThreadLocal<Boolean> enableFlush = new ThreadLocal<Boolean>() {
+            @Override protected Boolean initialValue() {
+                return true;
+            }
+        };
 
-        static {
-            Timer.get().scheduleWithFixedDelay(() -> {
-                while (true) {
-                    FlushRef ref = (FlushRef) rq.poll();
-                    if (ref == null) {
-                        break;
-                    }
-                    LOGGER.log(Level.FINE, "flushing {0} from a DelayBufferedOutputStream", ref.buf.out);
-                    try {
-                        ref.buf.drain();
-                        ref.buf.out.flush();
-                    } catch (IOException x) {
-                        LOGGER.log(Level.WARNING, null, x);
-                    }
-                }
-            }, 0, 10, TimeUnit.SECONDS);
+        FlushControlledOutputStream(OutputStream out) {
+            super(out);
         }
 
-        static void register(DelayBufferedOutputStream dbos) {
-            new FlushRef(dbos, rq).enqueue();
+        @Override public void write(byte[] b, int off, int len) throws IOException {
+            out.write(b, off, len); // super method writes one byte at a time!
         }
 
-        private final Buffer buf;
+        @Override public void flush() throws IOException {
+            if (enableFlush.get()) {
+                super.flush();
+            }
+        }
 
-        private FlushRef(DelayBufferedOutputStream dbos, ReferenceQueue<DelayBufferedOutputStream> rq) {
-            super(dbos, rq);
-            this.buf = dbos.buf;
+        @Override public String toString() {
+            return "FlushControlledOutputStream[" + out + "]";
         }
 
     }

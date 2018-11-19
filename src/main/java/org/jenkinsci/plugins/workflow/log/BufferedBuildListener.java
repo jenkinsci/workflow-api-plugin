@@ -74,7 +74,7 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
         }
 
         private Object readResolve() throws IOException {
-            return new BufferedBuildListener(new DelayBufferedOutputStream(ros, tuning));
+            return new BufferedBuildListener(new GCFlushedOutputStream(new DelayBufferedOutputStream(ros, tuning)));
         }
 
     }
