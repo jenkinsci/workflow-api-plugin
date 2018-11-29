@@ -96,6 +96,9 @@ public class FlowGraphWalker implements Iterable<FlowNode> {
             checkForComodification();
             while (!q.isEmpty()) {
                 FlowNode n = q.pop();
+                if (n == null) {
+                    continue;
+                }
                 if (!visited.add(n)) {
                     continue;
                 }
