@@ -10,9 +10,10 @@ The FlowGraph is a directed acyclic graph, but we should think of it as being ba
 
 This may seem backwards, but it enables us to freely append to the Flow Graph as the Pipeline executes and we provide some helpful caching. 
 
-Key information is stored in a couple ways:
+**Key information is stored in a couple ways:**
 
-* The specific subclass of the `FlowNode` used for a particular node is structurally imporant - for example `BlockStartNode` represents the start of a block, and anything that implements `StepNode` has a `Step` type (and `StepDescriptor`) associated with it.
+* The specific subclass of the `FlowNode` used for a particular node is structurally imporant - for example `BlockStartNode` represents the start of a block
+* `StepDescriptor`: most `FlowNode`s come from running `Steps` and implement `StepNode`. This means they you can get the `StepDescriptor` to determine their `Step` that produced them.
 * Parent relationships allow us to so split into parallel branches and track them independently.  We may have multiple nodes with a given parent (at the start of a parallel) or one node with multiple parents (the end of a parallel)
 * `Action`s give us all the key attributes of the FlowNode, see the section below for a quick reference
 
@@ -25,13 +26,23 @@ Key information is stored in a couple ways:
     - The `BlockEndNode` stores the id of the `BlockStartNode` and you can retrieve the start via `#getStartNode()`
     - Every flow is enclosed in a `FlowStartNode` and `FlowEndNode` block -- these are special `BlockStartNode` and `BlockEndNode` types with no corresponding steps. 
     - Most commonly blocks are created by a step that takes a closure and can contain other steps.  I.E. `node` and `withEnv`, etc
+    - Block steps will generate at least 2 blocks, an outer block for running the step itself, and one or more inner blocks for the contents of the block (the "body"). The inner blocks will be marked with a BodyInvocationAction, and multiple inner blocks can be created if the body is evaluated multiple times (ex: retry steps).
 
-# Actions that attach key information
+# Key Actions And Where They're Used
+
 * `ErrorAction` - stores an error that occurred within a `FlowNode`, or for `BlockEndNodes`, happened within the block and was not caught by a try/catch block
 * `TimingAction` gives the timestamp when a `FlowNode` was created ()
 * `LabelAction` - attaches a name to a FlowNode. Common examples: stage and checkpoint. Parallel branches have a `ParallelLabelAction` which extends `LabelAction` and `ThreadNameAction` to tell us the name of each branch
-* `BodyInvocationAction` - marks the "inner" block of 
+* `StageAction` - identifies a stage, in practice you'll have both a `StageAction` and a `LabelAction` for stages
+* `BodyInvocationAction` - attached to the start and end of the "inner" block where the contents of a block-scoped step is evaluated
+* `LogAction` - subclasses provide a way to fetch the build log sections associated with a `FlowNode`
+* `ArgumentsAction`, implemented via `ArgumentsActionImpl` - provides information about the user-supplied arguments given to run a step, for example so you can see the actual shell command executed (secrets will be masked)
+* `NotExecutedNodeAction` - attached when we start a Pipeline by resuming from a checkpoint, used to mark the `FlowNodes` preceding the checkpoint, which were not actually executed this time 
+* `WorkspaceAction` - used where we are obtaining a workspace on an executor to run some part of the Pipeline
 
+# Key Domain Knowledge
+* Parallels create a block for each branch, plus an enclosing block
+* Stages have a legacy atom step syntax (rarer), plus a more modern block-scoped syntax and flow graphs may technically include both
 
 # Working with the FlowGraph
 
@@ -47,6 +58,8 @@ Key information is stored in a couple ways:
         - The different Flow Scanner implementations have different iteration orders, and may skip some nodes (such as LinearBlockHoppingScanner) - see the package-info.java file for details
         - In general you want the DepthFirstFlowScanner if you want to visit all the nodes
         - Use a `LinearFlowScanner` if you want to just want along one branch to get to the start of the Flow Graph
+        - The scanners are also `Iterable` and can be used to create filterators by supplying a Guava predicate
+    - The class `FlowScanningUtils`, and the `NodeStepNamePredicate` can be really helpful to filter the flow graph for specific pieces of information
 * Storage: in the workflow-support plugin, see the 'FlowNodeStorage' class and the `SimpleXStreamFlowNodeStorage` and `BulkFlowNodeStorage` implementations
     - **`FlowNodeStorage` uses in-memory caching to consolidate disk writes. Automatic flushing is implemented at execution time. Generally you won't need to worry about this, but be aware that saving a `FlowNode` does not guarantee it is immediately persisted to disk.**
     - The `SimpleXStreamFlowNodeStorage` uses a single small XML file for every `FlowNode` -- although we use a soft-reference in-memory cache for the nodes, this generates much worse performance the first time we iterate through the `FlowNodes` (or when)
@@ -57,15 +70,18 @@ Key information is stored in a couple ways:
 * For running Pipelines you will have `BlockStartNode`s for the blocks that are currently unfinished but WILL NOT have a BlockEndNode, since the current heads of the Flow Graph will be inside the block
 * It is completely legal to have stages inside parallels inside stages and parallels inside parallels, or any recursive combination of the same.  Complex combinations (especially parallels inside parallels) are less common but some actual users are doing this in the wild.  We know because we get bug reports related to parallels in parallels.
 * `FlowNode` datafiles can be corrupted or unreadable on disk in some rare circumstances.  This may prevent iteration.  Be aware that it can happen, and provide defined error handling (don't just swallow exceptions).
-* Not all `FlowNodes` are `StepNodes`, the `FlowStartNode` and `FlowEndNode` that start and end execution do not have a corresponding step.  They may not have a `TimingAction` either. 
-* When using parallels, IDs will skip some numbers
+* Not all `FlowNodes` are `StepNodes`: the `FlowStartNode` and `FlowEndNode` that start and end execution do not have a corresponding step.  They may not have a `TimingAction` either (early bug)
+* There are gaps in the ID numbers for `FlowNodes`: when using parallels, IDs will skip some numbers.  This means 2, 3, 4, 9, 10, 11, etc is a completely legal sequence and will really occur.
 * There may be multiple **head** flownodes, if we are currently running parallel branches
 * **There are no bounds on the size of the flow graph, it may have thousands of nodes in it.**  Real users with complex Pipelines will really generate graphs this size.  Yes, really.  
-* **Repeat: there are no bounds on the size of the flow graph.  This means if you use recursive function calls to iterate over the Flow Graph you will get a `StackOverFlowError`!!!**  Use the `AbstractFlowScanner` implementations - they're free of stack overflows.
+* **Repeat: there are no bounds on the size of the flow graph.  This means if you use recursive function calls to iterate over the Flow Graph you will get a `StackOverFlowError`!!!**  Use the `AbstractFlowScanner` implementations - they're free of stack overflows and well-tested.
 * As a back of napkin estimate, most Flow Graphs fall in the 200-700 `FlowNode` range
 * `GraphListener` gotcha: because the listener is invoked for each new `FlowNode`, if you implement some operation that iterates over a lot of the Flow Graph then you've just done an O(n^2) operation and it can result in very high CPU use.  This can bog down a Jenkins master if not done carefully.
+    - Careful use of the methods above to iterate/find enclosing flownodes can make this much safer
 
 
-# Anti-gotcha
+# Anti-gotchas
 
-* The Flow Graph has a ton of useful information in it ripe for analysis and visualization.  Don't let the above gotchas scare you -- the graph analysis APIs make it easier and safer to work with. 
+* It may seem intimidating but the Flow Graph has a TON of useful information ripe for analysis and visualization!
+* The gotchas above are mostly a problem for plugins that try to manipulate the Flow Graph or do automated analysis while Pipelines are running -- if you use the utilities and wait for Pipelines to complete then most of the problems go away.
+* The actual data model is quite simple.
