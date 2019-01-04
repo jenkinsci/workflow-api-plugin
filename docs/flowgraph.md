@@ -31,9 +31,8 @@ This may seem backwards, but it enables us to freely append to the Flow Graph as
 # Key Actions And Where They're Used
 
 * `ErrorAction` - stores an error that occurred within a `FlowNode`, or for `BlockEndNodes`, happened within the block and was not caught by a try/catch block
-* `TimingAction` gives the timestamp when a `FlowNode` was created ()
+* `TimingAction` gives the timestamp when a `FlowNode` was created - we don't store duration because this can be calculated by subtracting from the timestamp for the next `FlowNode`
 * `LabelAction` - attaches a name to a FlowNode. Common examples: stage and checkpoint. Parallel branches have a `ParallelLabelAction` which extends `LabelAction` and `ThreadNameAction` to tell us the name of each branch
-* `StageAction` - identifies a stage, in practice you'll have both a `StageAction` and a `LabelAction` for stages
 * `BodyInvocationAction` - attached to the start and end of the "inner" block where the contents of a block-scoped step is evaluated
 * `LogAction` - subclasses provide a way to fetch the build log sections associated with a `FlowNode`
 * `ArgumentsAction`, implemented via `ArgumentsActionImpl` - provides information about the user-supplied arguments given to run a step, for example so you can see the actual shell command executed (secrets will be masked)
