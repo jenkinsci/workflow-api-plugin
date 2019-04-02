@@ -160,7 +160,7 @@ public abstract class LogStorageTestBase {
         long overallPos = assertOverallLog(0, "overall from master\n<span class=\"pipeline-node-1\">step from master\n</span>", true);
         long stepPos = assertStepLog("1", 0, "step from master\n", true);
         DumbSlave s = r.createOnlineSlave();
-        r.showSlaveLogs(s, slaveLoggers());
+        r.showAgentLogs(s, agentLoggers());
         VirtualChannel channel = s.getChannel();
         channel.call(new RemotePrint("overall from agent", overall));
         channel.call(new RemotePrint("step from agent", step));
@@ -171,7 +171,7 @@ public abstract class LogStorageTestBase {
         assertEquals(stepPos, assertStepLog("1", stepPos, "", true));
         assertThat(logging.getMessages(), empty());
     }
-    protected Map<String, Level> slaveLoggers() {
+    protected Map<String, Level> agentLoggers() {
         return Collections.singletonMap(LogStorageTestBase.class.getPackage().getName(), Level.FINER);
     }
     private static final class RemotePrint extends MasterToSlaveCallable<Void, Exception> {
