@@ -45,7 +45,7 @@ public class MemoryFlowChunk implements FlowChunkWithContext {
         this.setNodeBefore(before);
         this.setFirstNode(firstNode);
         this.setLastNode(lastNode);
-        this.setNodeAfter(lastNode);
+        this.setNodeAfter(nodeAfter);
     }
 
     public MemoryFlowChunk() {
