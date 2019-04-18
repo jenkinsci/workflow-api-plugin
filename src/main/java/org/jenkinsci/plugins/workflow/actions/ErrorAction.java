@@ -35,7 +35,7 @@ import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
 
 /**
- * Attached to {@link AtomNode} that caused an error.
+ * Attached to {@link FlowNode} that caused an error.
  *
  * This has to be Action because it's added after a node is created.
  */
