@@ -29,7 +29,7 @@ import hudson.remoting.ClassFilter;
 import hudson.remoting.ProxyException;
 import javax.annotation.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
-import org.jenkinsci.plugins.workflow.graph.AtomNode;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
