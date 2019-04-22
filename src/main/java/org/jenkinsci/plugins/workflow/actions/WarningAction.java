@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.workflow.actions;
 
 import hudson.model.Result;
 import javax.annotation.Nonnull;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 /**
  * This action can be attached to a {@link FlowNode} to signify that some non-fatal
