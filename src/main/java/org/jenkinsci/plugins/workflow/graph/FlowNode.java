@@ -48,6 +48,7 @@ import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
+import org.jenkinsci.plugins.workflow.actions.WarningAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.graphanalysis.NodeStepTypePredicate;
@@ -274,9 +275,6 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     /**
      * Returns colored orb that represents the current state of this node.
-     *
-     * TODO: this makes me wonder if we should support other colored states,
-     * like unstable and aborted --- seems useful.
      */
     @Exported
     public BallColor getIconColor() {
@@ -284,10 +282,13 @@ public abstract class FlowNode extends Actionable implements Saveable {
         BallColor c = null;
         if(error != null) {
             if(error.getError() instanceof FlowInterruptedException) {
+                // TODO: Use FlowInterruptedException.getResult() to determine ball color.
                 c = BallColor.ABORTED;
             } else {
                 c = BallColor.RED;
             }
+        } else if (getPersistentAction(WarningAction.class) != null) {
+            c = BallColor.YELLOW;
         } else {
             c = BallColor.BLUE;
         }
