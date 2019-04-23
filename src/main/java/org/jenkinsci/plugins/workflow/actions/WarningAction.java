@@ -5,9 +5,11 @@ import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 /**
- * This action can be attached to a {@link FlowNode} to signify that some non-fatal
- * warning occurred during execution. Visualizations should treat FlowNodes with this
- * action as if the FlowNode's result was {@link Result#UNSTABLE}.
+ * Action to be attached to a {@link FlowNode} to signify that some non-fatal warning occurred
+ * during execution of a {@code Step}.
+ *
+ * Visualizations should treat FlowNodes with this action as if the FlowNode's result was
+ * {@link Result#UNSTABLE}.
  */
 public final class WarningAction implements PersistentAction {
     private final @Nonnull String message;
