@@ -1,30 +1,41 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import hudson.model.Result;
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 /**
- * Action to be attached to a {@link FlowNode} to signify that some non-fatal warning occurred
- * during execution of a {@code Step}.
+ * Action to be attached to a {@link FlowNode} to signify that some non-fatal event occurred
+ * during execution of a {@code Step} but execution continued normally.
  *
- * Visualizations should treat FlowNodes with this action as if the FlowNode's result was
- * {@link Result#UNSTABLE}.
+ * {@link #withMessage} should be used whenever possible to give context to the warning.
+ * Visualizations should treat FlowNodes with this action as if the FlowNode's result was {@link #result}.
  */
-public final class WarningAction implements PersistentAction {
-    private final @Nonnull String message;
+public class WarningAction implements PersistentAction {
+    private @Nonnull Result result;
+    private @CheckForNull String message;
 
-    public WarningAction(@Nonnull String message) {
-        this.message = message;
+    public WarningAction(@Nonnull Result result) {
+        this.result = result;
     }
 
-    public @Nonnull String getMessage() {
+    public WarningAction withMessage(String message) {
+        this.message = message;
+        return this;
+    }
+
+    public @CheckForNull String getMessage() {
         return message;
+    }
+
+    public @Nonnull Result getResult() {
+        return result;
     }
 
     @Override
     public String getDisplayName() {
-        return "Warning: " + message;
+        return "Warning" + (message != null ? ": " + message : "");
     }
 
     @Override
