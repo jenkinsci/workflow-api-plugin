@@ -29,6 +29,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
+import hudson.model.Result;
 import hudson.model.Saveable;
 import hudson.search.SearchItem;
 import java.io.IOException;
@@ -276,16 +277,16 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Exported
     public BallColor getIconColor() {
         ErrorAction error = getError();
+        WarningAction warning = getPersistentAction(WarningAction.class);
         BallColor c = null;
         if(error != null) {
-            if(error.getError() instanceof FlowInterruptedException) {
-                // TODO: Use FlowInterruptedException.getResult() to determine ball color.
-                c = BallColor.ABORTED;
+            if (error.getError() instanceof FlowInterruptedException) {
+                c = resultToBallColor(((FlowInterruptedException) error.getError()).getResult());
             } else {
                 c = BallColor.RED;
             }
-        } else if (getPersistentAction(WarningAction.class) != null) {
-            c = BallColor.YELLOW;
+        } else if (warning != null) {
+            c = resultToBallColor(warning.getResult());
         } else {
             c = BallColor.BLUE;
         }
@@ -293,6 +294,22 @@ public abstract class FlowNode extends Actionable implements Saveable {
             c = c.anime();
         }
         return c;
+    }
+
+    private static BallColor resultToBallColor(@Nonnull Result result) {
+        if (result == Result.SUCCESS) {
+            return BallColor.BLUE;
+        } else if (result == Result.UNSTABLE) {
+            return BallColor.YELLOW;
+        } else if (result == Result.FAILURE) {
+            return BallColor.RED;
+        } else if (result == Result.NOT_BUILT) {
+            return BallColor.NOTBUILT;
+        } else if (result == Result.ABORTED) {
+            return BallColor.ABORTED;
+        } else {
+            return BallColor.GREY;
+        }
     }
 
     /**

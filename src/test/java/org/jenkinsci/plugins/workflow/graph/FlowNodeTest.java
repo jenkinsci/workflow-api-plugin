@@ -35,8 +35,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 
-import com.google.common.collect.Lists;
+import java.util.Set;
 import org.jenkinsci.plugins.workflow.actions.ArgumentsAction;
+import org.jenkinsci.plugins.workflow.actions.WarningAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
@@ -44,18 +45,25 @@ import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.graphanalysis.NodeStepTypePredicate;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
+
 import org.junit.Rule;
 import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
 
 public class FlowNodeTest {
 
@@ -436,6 +444,25 @@ Action format:
         assertEquals(BallColor.ABORTED, coreStepNodes.get(0).getIconColor());
     }
 
+    @Test public void iconColorUsesWarningActionResult() throws Exception {
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
+        job.setDefinition(new CpsFlowDefinition(
+                "warning('UNSTABLE')\n" +
+                "warning('FAILURE')\n", true));
+        WorkflowRun b = r.assertBuildStatus(Result.SUCCESS, job.scheduleBuild2(0).get());
+        List<FlowNode> nodes = new DepthFirstScanner().filteredNodes(b.getExecution(), new NodeStepTypePredicate("warning"));
+        assertThat(nodes, hasSize(2));
+        assertWarning(nodes.get(0), Result.FAILURE, BallColor.RED);
+        assertWarning(nodes.get(1), Result.UNSTABLE, BallColor.YELLOW);
+    }
+
+    private void assertWarning(FlowNode node, Result expectedResult, BallColor expectedColor) {
+        WarningAction warningAction = node.getPersistentAction(WarningAction.class);
+        assertNotNull(warningAction);
+        assertEquals(expectedResult, warningAction.getResult());
+        assertEquals(expectedColor, node.getIconColor());
+    }
+
     private void assertExpectedEnclosing(FlowExecution execution, String nodeId, String enclosingId) throws Exception {
         FlowNode node = execution.getNode(nodeId);
         assertNotNull(node);
@@ -477,6 +504,43 @@ Action format:
         encl.add(node);
         encl.addAll(node.getEnclosingBlocks());
         return encl;
+    }
+
+    // TODO: Delete and replace with UnstableStep once workflow-basic-steps dependency has it available.
+    public static class WarningStep extends Step {
+        private final Result result;
+        @DataBoundConstructor
+        public WarningStep(String result) {
+            this.result = Result.fromString(result);
+        }
+        @Override
+        public StepExecution start(StepContext sc) throws Exception {
+            class Execution extends StepExecution {
+                private final Result result;
+                public Execution(StepContext sc, Result result) {
+                    super(sc);
+                    this.result = result;
+                }
+                @Override
+                public boolean start() throws Exception {
+                    getContext().get(FlowNode.class).addAction(new WarningAction(result));
+                    getContext().onSuccess(null);
+                    return true;
+                }
+            }
+            return new Execution(sc, this.result);
+        }
+        @TestExtension("iconColorUsesWarningActionResult")
+        public static class DescriptorImpl extends StepDescriptor {
+            @Override
+            public String getFunctionName() {
+                return "warning";
+            }
+            @Override
+            public Set<? extends Class<?>> getRequiredContext() {
+                return Collections.singleton(FlowNode.class);
+            }
+        }
     }
 }
 
