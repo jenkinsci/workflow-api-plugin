@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.graph;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Actionable;
@@ -50,8 +49,6 @@ import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
 import org.jenkinsci.plugins.workflow.actions.WarningAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
-import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
-import org.jenkinsci.plugins.workflow.graphanalysis.NodeStepTypePredicate;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.kohsuke.accmod.Restricted;
@@ -486,7 +483,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Override
     public String toString() {
-        return getClass().getName() + "[id=" + id + "]";
+        return getClass().getSimpleName() + "[id=" + id + ", exec=" + exec + "]";
     }
 
     private static final Logger LOGGER = Logger.getLogger(FlowNode.class.getName());
