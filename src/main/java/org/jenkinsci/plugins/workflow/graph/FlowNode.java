@@ -29,6 +29,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
+import hudson.model.Result;
 import hudson.model.Saveable;
 import hudson.search.SearchItem;
 import java.io.IOException;
@@ -47,6 +48,7 @@ import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
 import org.jenkinsci.plugins.workflow.actions.PersistentAction;
+import org.jenkinsci.plugins.workflow.actions.WarningAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -271,20 +273,20 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     /**
      * Returns colored orb that represents the current state of this node.
-     *
-     * TODO: this makes me wonder if we should support other colored states,
-     * like unstable and aborted --- seems useful.
      */
     @Exported
     public BallColor getIconColor() {
         ErrorAction error = getError();
+        WarningAction warning = getPersistentAction(WarningAction.class);
         BallColor c = null;
         if(error != null) {
-            if(error.getError() instanceof FlowInterruptedException) {
-                c = BallColor.ABORTED;
+            if (error.getError() instanceof FlowInterruptedException) {
+                c = resultToBallColor(((FlowInterruptedException) error.getError()).getResult());
             } else {
                 c = BallColor.RED;
             }
+        } else if (warning != null) {
+            c = resultToBallColor(warning.getResult());
         } else {
             c = BallColor.BLUE;
         }
@@ -292,6 +294,22 @@ public abstract class FlowNode extends Actionable implements Saveable {
             c = c.anime();
         }
         return c;
+    }
+
+    private static BallColor resultToBallColor(@Nonnull Result result) {
+        if (result == Result.SUCCESS) {
+            return BallColor.BLUE;
+        } else if (result == Result.UNSTABLE) {
+            return BallColor.YELLOW;
+        } else if (result == Result.FAILURE) {
+            return BallColor.RED;
+        } else if (result == Result.NOT_BUILT) {
+            return BallColor.NOTBUILT;
+        } else if (result == Result.ABORTED) {
+            return BallColor.ABORTED;
+        } else {
+            return BallColor.GREY;
+        }
     }
 
     /**

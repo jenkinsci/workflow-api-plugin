@@ -29,13 +29,13 @@ import hudson.remoting.ClassFilter;
 import hudson.remoting.ProxyException;
 import javax.annotation.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
-import org.jenkinsci.plugins.workflow.graph.AtomNode;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
 
 /**
- * Attached to {@link AtomNode} that caused an error.
+ * Attached to {@link FlowNode} that caused an error.
  *
  * This has to be Action because it's added after a node is created.
  */
