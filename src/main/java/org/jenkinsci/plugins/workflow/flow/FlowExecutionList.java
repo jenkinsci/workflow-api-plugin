@@ -68,7 +68,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                         } else {
                             return e;
                         }
-                    } catch (IOException e) {
+                    } catch (Throwable e) {
                         LOGGER.log(WARNING, "Failed to load " + o + ". Unregistering", e);
                         unregister(o);
                     }
