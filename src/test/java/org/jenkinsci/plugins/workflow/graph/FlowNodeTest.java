@@ -26,8 +26,9 @@ package org.jenkinsci.plugins.workflow.graph;
 
 import hudson.model.BallColor;
 import hudson.model.Result;
-
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,9 +40,9 @@ import java.util.Set;
 import org.jenkinsci.plugins.workflow.actions.ArgumentsAction;
 import org.jenkinsci.plugins.workflow.actions.WarningAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
-import org.jenkinsci.plugins.workflow.graphanalysis.FlowScanningUtils;
 import org.jenkinsci.plugins.workflow.graphanalysis.NodeStepTypePredicate;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -54,6 +55,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 
@@ -61,14 +63,12 @@ import org.junit.Rule;
 import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
-import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
 public class FlowNodeTest {
 
     @Rule public RestartableJenkinsRule rr = new RestartableJenkinsRule();
-    @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public LoggerRule logging = new LoggerRule().record(FlowNode.class, Level.FINER);
 
     @Issue("JENKINS-38223")
@@ -424,6 +424,7 @@ Action format:
     }
 
     @Test public void useAbortedStatusWhenFailFast() throws Exception {
+        rr.then(r -> {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
         job.setDefinition(new CpsFlowDefinition(
             "jobs = [failFast:true]\n" +
@@ -442,9 +443,11 @@ Action format:
         assertNotNull(coreStepNodes.get(0).getError());
         assertNotNull(coreStepNodes.get(0).getError().getError());
         assertEquals(BallColor.ABORTED, coreStepNodes.get(0).getIconColor());
+        });
     }
 
     @Test public void iconColorUsesWarningActionResult() throws Exception {
+        rr.then(r -> {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
         job.setDefinition(new CpsFlowDefinition(
                 "warning('UNSTABLE')\n" +
@@ -454,6 +457,34 @@ Action format:
         assertThat(nodes, hasSize(2));
         assertWarning(nodes.get(0), Result.FAILURE, BallColor.RED);
         assertWarning(nodes.get(1), Result.UNSTABLE, BallColor.YELLOW);
+        });
+    }
+
+    @Issue("JENKINS-57805")
+    @Test
+    public void nodeWithNoParentsInBruteForceScanForEnclosingBlock() throws Exception {
+        logging.capture(10);
+        rr.thenWithHardShutdown(j -> {
+            WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "p");
+            job.setDefinition(new CpsFlowDefinition(
+                    "echo 'to-corrupt'\n" +
+                    "sleep 1\n" + // Trigger a save
+                    "semaphore 'marker'", true));
+            WorkflowRun run = job.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("marker/1", run);
+            CpsFlowExecution cpsExec = (CpsFlowExecution)run.getExecution();
+            // Corrupt a flow node so that we get an error when trying to load it.
+            Files.write(cpsExec.getStorageDir().toPath().resolve("3.xml"), "garbage".getBytes(StandardCharsets.UTF_8));
+        });
+        rr.then(j -> {
+            WorkflowJob job = j.jenkins.getItemByFullName("p", WorkflowJob.class);
+            WorkflowRun run = job.getBuildByNumber(1);
+            CpsFlowExecution cpsExec = (CpsFlowExecution)run.getExecution();
+            // We expect to see a warning in the logs, but we want to make sure that an IndexOutOfBoundsException
+            // is not thrown out of StandardGraphLookupView.bruteForceScanForEnclosingBlockSafety
+            assertThat(cpsExec.getCurrentHeads().get(0).getEnclosingBlocks(), hasSize(0));
+            assertThat(logging.getMessages(), hasItem("failed to load parents of 4"));
+        });
     }
 
     private void assertWarning(FlowNode node, Result expectedResult, BallColor expectedColor) {

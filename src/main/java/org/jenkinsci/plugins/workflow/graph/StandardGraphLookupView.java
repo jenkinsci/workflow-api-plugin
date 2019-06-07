@@ -147,6 +147,9 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             }
 
             // Now see if we have a winner among parents
+            if (current.getParents().isEmpty()) {
+                return null;
+            }
             FlowNode parent = current.getParents().get(0);
             if (parent instanceof BlockStartNode) {
                 nearestEnclosingBlock.put(current.getId(), parent.getId());
