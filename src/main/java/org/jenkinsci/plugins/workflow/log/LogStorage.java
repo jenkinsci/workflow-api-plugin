@@ -167,8 +167,17 @@ public interface LogStorage {
                     return storage;
                 }
             }
-            // Similar to Run.getLogFile, but not supporting gzip:
-            return FileLogStorage.forFile(new File(b.getRootDir(), "log"));
+
+            File rawFile = new File(b.getRootDir(), "log");
+            if(rawFile.isFile()) {
+                return FileLogStorage.forFile(rawFile);
+            }
+
+            File gzFile = new File(b.getRootDir(), "log.gz");
+            if (gzFile.isFile()) {
+                return FileLogStorage.forFile(gzFile);
+            }
+            return FileLogStorage.forFile(rawFile);
         } catch (Exception x) {
             return new BrokenLogStorage(x);
         }
