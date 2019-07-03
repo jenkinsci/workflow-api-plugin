@@ -54,8 +54,6 @@ import jenkins.util.JenkinsJVM;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.steps.BodyInvoker;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.Beta;
 
 /**
  * A way of decorating output from a {@link TaskListener}.
@@ -67,7 +65,6 @@ import org.kohsuke.accmod.restrictions.Beta;
  * Any master-side configuration should thus be saved into instance fields when the decorator is constructed.
  * @see <a href="https://issues.jenkins-ci.org/browse/JENKINS-45693">JENKINS-45693</a>
  */
-@Restricted(Beta.class)
 public abstract class TaskListenerDecorator implements /* TODO Remotable */ Serializable {
 
     private static final long serialVersionUID = 1;
