@@ -80,7 +80,7 @@ public class ErrorActionTest {
                         + "throw new Exception('%s');\n"
                 + "}"
                 , EXPECTED
-        )));
+        ), true));
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get());
         List<ErrorAction> errorActionList = extractErrorActions(b.asFlowExecutionOwner().get());
         assertThat(errorActionList, Matchers.not(Matchers.empty()));
@@ -102,7 +102,7 @@ public class ErrorActionTest {
                         + "assert %s;\n"
                 + "}",
                 FAILING_EXPRESSION
-        )));
+        ), true));
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get());
         r.assertLogContains(FAILING_EXPRESSION, b); // ensure that failed with the assertion.
         List<ErrorAction> errorActionList = extractErrorActions(b.asFlowExecutionOwner().get());
@@ -127,7 +127,7 @@ public class ErrorActionTest {
             "    throw new IllegalArgumentException(e)\n" +
             "  }\n" +
             "}\n" +
-            "echo 'got to the end'", false));
+            "echo 'got to the end'", false /* for the three types of exceptions thrown in the pipeline */));
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
         r.assertLogContains("got to the end", b);
         r.assertLogContains("java.lang.NullPointerException: oops", b);
@@ -140,7 +140,7 @@ public class ErrorActionTest {
             "catchError {\n" +
             "  throw new " + X.class.getCanonicalName() + "()\n" +
             "}\n" +
-            "echo 'got to the end'", false));
+            "echo 'got to the end'", false /* for "new org.jenkinsci.plugins.workflow.actions.ErrorActionTest$X" */));
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
         r.assertLogContains("got to the end", b);
         r.assertLogContains(X.class.getName(), b);

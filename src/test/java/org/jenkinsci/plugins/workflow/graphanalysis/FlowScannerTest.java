@@ -72,8 +72,8 @@ public class FlowScannerTest {
         job.setDefinition(new CpsFlowDefinition(
                 "sleep 2 \n" +
                         "echo 'donothing'\n" +
-                        "echo 'doitagain'"
-        ));
+                        "echo 'doitagain'",
+                true));
 
         /** Flow structure (ID - type)
          2 - FlowStartNode
@@ -214,8 +214,8 @@ public class FlowScannerTest {
         job.setDefinition(new CpsFlowDefinition(
                 "sleep 2 \n" +
                 "echo 'donothing'\n" +
-                "echo 'doitagain'"
-        ));
+                "echo 'doitagain'",
+                true));
 
         /** Flow structure (ID - type)
          2 - FlowStartNode
@@ -259,8 +259,8 @@ public class FlowScannerTest {
             "    echo 'second'\n" +
             "    echo 'third'\n" +
             "}\n" +
-            "sleep 1"
-        ));
+            "sleep 1",
+            true));
         /** Flow structure (ID - type)
          2 - FlowStartNode
          3 - EchoStep
@@ -324,8 +324,8 @@ public class FlowScannerTest {
             "    echo '2b'\n" +
             "}\n" +
             "parallel steps\n" +
-            "echo 'final'"
-        ));
+            "echo 'final'",
+            true));
 
         /** Flow structure (ID - type)
          2 - FlowStartNode (BlockStartNode)
@@ -431,8 +431,8 @@ public class FlowScannerTest {
                 "    parallel nested\n" +
                 "}\n" +
                 "parallel steps\n" +
-                "echo 'final'"
-        ));
+                "echo 'final'",
+                true));
 
         /** Parallel nested in parallel (ID-type)
          * 2 - FlowStartNode (BlockStartNode)
