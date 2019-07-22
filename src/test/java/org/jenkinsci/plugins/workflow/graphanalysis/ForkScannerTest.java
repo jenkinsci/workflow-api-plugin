@@ -142,8 +142,8 @@ public class ForkScannerTest {
                         "    echo '2b'\n" +
                         "}\n" +
                         "parallel steps\n" +
-                        "echo 'final'"
-        ));
+                        "echo 'final'",
+                true));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         this.SIMPLE_PARALLEL_RUN = b;
 
@@ -168,8 +168,8 @@ public class ForkScannerTest {
                         "    parallel nested\n" +
                         "}\n" +
                         "parallel steps\n" +
-                        "echo 'final'"
-        ));
+                        "echo 'final'",
+                true));
         b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         this.NESTED_PARALLEL_RUN = b;
     }
@@ -425,8 +425,8 @@ public class ForkScannerTest {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "EmptyParallel");
         job.setDefinition(new CpsFlowDefinition(
                 "parallel 'empty1': {}, 'empty2':{} \n" +
-                        "echo 'done' "
-        ));
+                        "echo 'done' ",
+                true));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         ForkScanner scan = new ForkScanner();
 
@@ -520,7 +520,7 @@ public class ForkScannerTest {
                 "     }, failFast: false\n" +
                 "}";
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "SingleNestedParallelBranch");
-        job.setDefinition(new CpsFlowDefinition(script));
+        job.setDefinition(new CpsFlowDefinition(script, true));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         FlowNode echoNode = new DepthFirstScanner().findFirstMatch(b.getExecution(), new NodeStepTypePredicate(EchoStep.DescriptorImpl.byFunctionName("echo")));
         Assert.assertNotNull(echoNode);
@@ -612,8 +612,8 @@ public class ForkScannerTest {
             "              sleep 5; \n" +
             "              echo 'goodbye'   \n" +
             "            }\n" +
-            "        }"
-        ));
+            "        }",
+            true));
         /*Node dump follows, format:
         [ID]{parent,ids}(millisSinceStartOfRun) flowNodeClassName stepDisplayName [st=startId if a block end node]
         Action format:
@@ -682,7 +682,7 @@ public class ForkScannerTest {
                 "    def steps = [:]\n" +
                 "    // Empty map\n" +
                 "    parallel steps\n" +
-                "}\n"));
+                "}\n", true));
         WorkflowRun run = r.buildAndAssertSuccess(job);
         FlowExecution exec = run.getExecution();
         sanityTestIterationAndVisiter(exec.getCurrentHeads());
@@ -791,8 +791,8 @@ public class ForkScannerTest {
                 "    echo \"Integration testing...\"\n" + // Id 12
                 "}, 'ui':{\n" +  // Id 13 in integration branch end, Id 9 is branch start for UI branch
                 "    echo \"UI testing...\"\n" + // Id 14
-                "}" // Node 15 is UI branch end node, Node 16 is Parallel End node, Node 17 is FlowWendNode
-        ));
+                "}", // Node 15 is UI branch end node, Node 16 is Parallel End node, Node 17 is FlowWendNode
+                true));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         FlowExecution exec = b.getExecution();
         ForkScanner f = new ForkScanner();
@@ -892,8 +892,8 @@ public class ForkScannerTest {
                 "  semaphore 'wait2'\n" +
                 "}\n" +
                 "stage \"last\"\n" +
-                "echo \"last done\"\n"
-        ));
+                "echo \"last done\"\n",
+                true));
         ForkScanner scan = new ForkScanner();
         ChunkFinder labelFinder = new NoOpChunkFinder();
         WorkflowRun run  = job.scheduleBuild2(0).getStartCondition().get();
@@ -950,7 +950,7 @@ public class ForkScannerTest {
         ForkScanner scan = new ForkScanner();
         TestVisitor tv = new TestVisitor();
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "parallelTimes");
-        job.setDefinition(new CpsFlowDefinition(jobScript));
+        job.setDefinition(new CpsFlowDefinition(jobScript, true));
         WorkflowRun run = job.scheduleBuild2(0).getStartCondition().get();
         Thread.sleep(4000);  // Allows enough time for the shorter branch to finish and write its BlockEndNode
         FlowExecution exec = run.getExecution();
@@ -972,23 +972,23 @@ public class ForkScannerTest {
         jobPauseFirst.setDefinition(new CpsFlowDefinition("" +
                 "stage 'primero'\n" +
                 "parallel 'wait' : {sleep 1; semaphore 'wait1';}, \n" +
-                " 'final': { echo 'succeed';} "
-        ));
+                " 'final': { echo 'succeed';} ",
+                true));
 
         WorkflowJob jobPauseSecond = r.jenkins.createProject(WorkflowJob.class, "PauseSecond");
         jobPauseSecond.setDefinition(new CpsFlowDefinition("" +
                 "stage 'primero'\n" +
                 "parallel 'success' : {echo 'succeed'}, \n" +
-                " 'pause':{ sleep 1; semaphore 'wait2'; }\n"
-                ));
+                " 'pause':{ sleep 1; semaphore 'wait2'; }\n",
+                true));
 
         WorkflowJob jobPauseMiddle = r.jenkins.createProject(WorkflowJob.class, "PauseMiddle");
         jobPauseMiddle.setDefinition(new CpsFlowDefinition("" +
                 "stage 'primero'\n" +
                 "parallel 'success' : {echo 'succeed'}, \n" +
                 " 'pause':{ sleep 1; semaphore 'wait3'; }, \n" +
-                " 'final': { echo 'succeed-final';} "
-        ));
+                " 'final': { echo 'succeed-final';} ",
+                true));
         testParallelFindsLast(jobPauseFirst, "wait1");
         testParallelFindsLast(jobPauseSecond, "wait2");
         testParallelFindsLast(jobPauseMiddle, "wait3");
