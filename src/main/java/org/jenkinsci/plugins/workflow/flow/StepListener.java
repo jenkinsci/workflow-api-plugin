@@ -34,7 +34,7 @@ import javax.annotation.Nonnull;
 /**
  * {@link StepListener}s are fired before invoking a step but after the {@link FlowNode} has been created and the
  * {@link StepContext} has been populated. A {@link StepListener} can perform actions before the {@link Step} is
- * executed, including throwing an exception to cause the step to fail.
+ * executed, such as calling {@link StepContext#onFailure} to make the step fail before it starts.
  */
 public interface StepListener extends ExtensionPoint {
     void notifyOfNewStep(@Nonnull Step step, @Nonnull StepContext context) throws Exception;
