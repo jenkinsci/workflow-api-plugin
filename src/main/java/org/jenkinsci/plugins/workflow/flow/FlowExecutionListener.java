@@ -16,6 +16,18 @@ import javax.annotation.Nonnull;
 public abstract class FlowExecutionListener implements ExtensionPoint {
 
     /**
+     * Called when a {@link FlowExecution} has been created, but before it starts running.
+     *
+     * The {@link FlowExecution} will already have been added to the {@link FlowExecutionList} by this point.
+     * Methods relating to in-progress execution state such as {@link FlowExecution#getCurrentHeads}
+     * will not work as intended and should not be used.
+     *
+     * @param execution The {@link FlowExecution} that has been created.
+     */
+    public void onCreated(@Nonnull FlowExecution execution) {
+    }
+
+    /**
      * Called when a {@link FlowExecution} has started running.
      *
      * The {@link FlowExecution} will already have been added to the {@link FlowExecutionList} by this point.
@@ -44,6 +56,15 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      * @param execution The {@link FlowExecution} that has completed.
      */
     public void onCompleted(@Nonnull FlowExecution execution) {
+    }
+
+    /**
+     * Fires the {@link #onCreated(FlowExecution)} event.
+     */
+    public static void fireCreated(@Nonnull FlowExecution execution) {
+        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
+            listener.onCreated(execution);
+        }
     }
 
     /**
