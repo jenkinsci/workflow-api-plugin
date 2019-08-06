@@ -26,6 +26,8 @@ package org.jenkinsci.plugins.workflow.log;
 
 import hudson.console.AnnotatedLargeText;
 import hudson.console.HyperlinkNote;
+import hudson.model.Action;
+import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.remoting.VirtualChannel;
@@ -42,13 +44,18 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
+import jenkins.model.CauseOfInterruption;
 import jenkins.security.MasterToSlaveCallable;
+import org.acegisecurity.Authentication;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.io.output.NullWriter;
 import org.apache.commons.io.output.WriterOutputStream;
 import static org.hamcrest.Matchers.*;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
+import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -321,8 +328,59 @@ public abstract class LogStorageTestBase {
     }
 
     private static class MockNode extends FlowNode {
-        MockNode(String id) {super(null, id);}
+        MockNode(String id) {super(new MockFlowExecution(), id);}
         @Override protected String getTypeDisplayName() {return null;}
     }
 
+    private static class MockFlowExecution extends FlowExecution {
+        @Override
+        public void start() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FlowExecutionOwner getOwner() {
+            return null;
+        }
+
+        @Override
+        public List<FlowNode> getCurrentHeads() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isCurrentHead(FlowNode n) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void interrupt(Result r, CauseOfInterruption... causes) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void addListener(GraphListener listener) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FlowNode getNode(String id) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Authentication getAuthentication() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<Action> loadActions(FlowNode node) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void saveActions(FlowNode node, List<Action> actions) {
+            throw new UnsupportedOperationException();
+        }
+    }
 }
