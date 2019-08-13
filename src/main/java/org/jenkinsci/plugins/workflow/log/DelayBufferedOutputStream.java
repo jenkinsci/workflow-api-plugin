@@ -76,12 +76,15 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
     /** We can only call {@link BufferedOutputStream#flushBuffer} via {@link #flush}, but we do not wish to flush the underlying stream, only write out the buffer. */
     private void flushBuffer() throws IOException {
         ThreadLocal<Boolean> enableFlush = ((FlushControlledOutputStream) out).enableFlush;
-        boolean orig = enableFlush.get();
         enableFlush.set(false);
         try {
             flush();
         } finally {
-            enableFlush.set(orig);
+            // This method is always called from a thread in the jenkins.util.Timer thread pool. We want to avoid
+            // leaking ThreadLocals on these long-lived threads (see JENKINS-58899), and we do not care about
+            // maintaining the value from call to call, since we only set it to false here for the duration of
+            // flush, and leave it as true in all other cases and on all other threads.
+            enableFlush.remove();
         }
     }
 
