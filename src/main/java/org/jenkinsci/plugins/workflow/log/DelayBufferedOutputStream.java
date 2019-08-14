@@ -77,15 +77,7 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
     private void flushBuffer() throws IOException {
         ThreadLocal<Boolean> enableFlush = ((FlushControlledOutputStream) out).enableFlush;
         enableFlush.set(false);
-        try {
-            flush();
-        } finally {
-            // This method is always called from a thread in the jenkins.util.Timer thread pool. We want to avoid
-            // leaking ThreadLocals on these long-lived threads (see JENKINS-58899), and we do not care about
-            // maintaining the value from call to call, since we only set it to false here for the duration of
-            // flush, and leave it as true in all other cases and on all other threads.
-            enableFlush.remove();
-        }
+        flush(); // Note that the ThreadLocal is removed from the thread inside of FlushControlledOutputStream.flush.
     }
 
     void flushAndReschedule() {
@@ -138,8 +130,16 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
         }
 
         @Override public void flush() throws IOException {
+            try {
             if (enableFlush.get()) {
                 super.flush();
+            }
+            } finally {
+                // We want to avoid leaking ThreadLocals on long-lived threads that happen to flush this stream
+                // (see JENKINS-58899), and we do not care about maintaining the value from call to call, since we
+                // only set it to false in DelayBufferedOutputStream.flushBuffer() for the duration of a single call
+                // to flush, and leave it as true in all other cases.
+                enableFlush.remove();
             }
         }
 
