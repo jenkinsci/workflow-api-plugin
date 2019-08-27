@@ -76,13 +76,8 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
     /** We can only call {@link BufferedOutputStream#flushBuffer} via {@link #flush}, but we do not wish to flush the underlying stream, only write out the buffer. */
     private void flushBuffer() throws IOException {
         ThreadLocal<Boolean> enableFlush = ((FlushControlledOutputStream) out).enableFlush;
-        boolean orig = enableFlush.get();
         enableFlush.set(false);
-        try {
-            flush();
-        } finally {
-            enableFlush.set(orig);
-        }
+        flush(); // Note that the ThreadLocal is removed from the thread inside of FlushControlledOutputStream.flush.
     }
 
     void flushAndReschedule() {
@@ -135,8 +130,16 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
         }
 
         @Override public void flush() throws IOException {
+            try {
             if (enableFlush.get()) {
                 super.flush();
+            }
+            } finally {
+                // We want to avoid leaking ThreadLocals on long-lived threads that happen to flush this stream
+                // (see JENKINS-58899), and we do not care about maintaining the value from call to call, since we
+                // only set it to false in DelayBufferedOutputStream.flushBuffer() for the duration of a single call
+                // to flush, and leave it as true in all other cases.
+                enableFlush.remove();
             }
         }
 
