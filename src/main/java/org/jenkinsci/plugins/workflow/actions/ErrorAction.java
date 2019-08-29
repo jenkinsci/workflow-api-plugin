@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.actions;
 
+import groovy.lang.GroovyClassLoader;
 import groovy.lang.MissingMethodException;
 import hudson.remoting.ClassFilter;
 import hudson.remoting.ProxyException;
@@ -64,6 +65,11 @@ public class ErrorAction implements PersistentAction {
     private boolean isUnserializableException(@CheckForNull Throwable error) {
         if (error == null) {
             return false;
+        }
+        // If the exception was defined in a Pipeline script, we don't want to serialize it
+        // directly to avoid leaking a reference to the class loader for the Pipeline script.
+        if (error.getClass().getClassLoader() instanceof GroovyClassLoader) {
+            return true;
         }
         if (error instanceof MultipleCompilationErrorsException || error instanceof MissingMethodException) {
             return true;

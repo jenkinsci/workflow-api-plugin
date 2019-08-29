@@ -154,4 +154,16 @@ public class ErrorActionTest {
         final NullObject nil = NullObject.getNullObject();
     }
 
+    @Test public void userDefinedError() throws Exception {
+        WorkflowJob p = r.createProject(WorkflowJob.class);
+        p.setDefinition(new CpsFlowDefinition(
+                "class MyException extends Exception {\n" +
+                "  MyException(String message) { super(message) }\n" +
+                "}\n" +
+                "throw new MyException('test')\n",
+                true));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        assertThat(b.getExecution().getCauseOfFailure(), Matchers.instanceOf(ProxyException.class));
+    }
+
 }
