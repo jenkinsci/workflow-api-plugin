@@ -1,7 +1,5 @@
 package org.jenkinsci.plugins.workflow.graph;
 
-import org.kohsuke.accmod.Restricted;
-
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Iterator;

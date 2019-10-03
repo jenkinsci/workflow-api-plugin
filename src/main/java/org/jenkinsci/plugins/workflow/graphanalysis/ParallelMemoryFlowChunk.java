@@ -29,7 +29,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

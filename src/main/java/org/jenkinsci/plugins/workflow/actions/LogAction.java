@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import hudson.console.AnnotatedLargeText;
-import hudson.model.Action;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;

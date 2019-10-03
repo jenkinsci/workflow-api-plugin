@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
@@ -98,7 +97,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     protected FlowNode myNext;
 
-    protected Collection<FlowNode> myBlackList = Collections.EMPTY_SET;
+    protected Collection<FlowNode> myBlackList = Collections.emptySet();
 
     /** When checking for blacklist membership, we convert to a hashset when checking more than this many elements */
     protected static final int MAX_LIST_CHECK_SIZE = 5;
@@ -107,7 +106,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     @Nonnull
     protected Collection<FlowNode> convertToFastCheckable(@CheckForNull Collection<FlowNode> nodeCollection) {
         if (nodeCollection == null || nodeCollection.size()==0) {
-            return Collections.EMPTY_SET;
+            return Collections.emptySet();
         } else  if (nodeCollection.size() == 1) {
             return Collections.singleton(nodeCollection.iterator().next());
         } else if (nodeCollection instanceof HashSet) {
@@ -149,7 +148,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         if (heads == null) {
             return false;
         }
-        return setup(heads, Collections.EMPTY_SET);
+        return setup(heads, Collections.emptySet());
     }
 
     /**
@@ -169,7 +168,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         if (head == null) {
             return false;
         }
-        return setup(Collections.singleton(head), Collections.EMPTY_SET);
+        return setup(Collections.singleton(head), Collections.emptySet());
     }
 
     /** Reset internal state so that we can begin walking a new flow graph
@@ -296,7 +295,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
                                         @CheckForNull Collection<FlowNode> blackList,
                                         Predicate<FlowNode> matchCondition) {
         if (!setup(heads, blackList)) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
 
         ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
@@ -312,7 +311,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     @Nonnull
     public List<FlowNode> allNodes(@CheckForNull Collection<FlowNode> heads) {
         if (!setup(heads)) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
         List<FlowNode> nodes = new ArrayList<FlowNode>();
         for (FlowNode f : this) {
@@ -324,7 +323,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     /** Convenience method to get the list of all {@link FlowNode}s for the execution, in iterator order. */
     @Nonnull
     public List<FlowNode> allNodes(@CheckForNull FlowExecution exec) {
-        return (exec == null) ? Collections.EMPTY_LIST : allNodes(exec.getCurrentHeads());
+        return (exec == null) ? Collections.emptyList() : allNodes(exec.getCurrentHeads());
     }
 
     /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with no blackList nodes */

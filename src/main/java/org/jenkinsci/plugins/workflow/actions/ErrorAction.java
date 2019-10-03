@@ -26,7 +26,6 @@ package org.jenkinsci.plugins.workflow.actions;
 
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.MissingMethodException;
-import hudson.remoting.ClassFilter;
 import hudson.remoting.ProxyException;
 import javax.annotation.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
