@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -376,7 +377,7 @@ public class ForkScanner extends AbstractFlowScanner {
         };
 
         for (FlowNode f : heads) {
-            iterators.add(FlowScanningUtils.fetchEnclosingBlocks(f).filter(notAHead));  // We can do this because Parallels always meet at a BlockStartNode
+            iterators.add(new FilteratorImpl<>((Iterator)f.iterateEnclosingBlocks().iterator(), notAHead));  // We can do this because Parallels always meet at a BlockStartNode
             FlowSegment b = new FlowSegment();
             b.add(f);
             livePieces.add(b);
