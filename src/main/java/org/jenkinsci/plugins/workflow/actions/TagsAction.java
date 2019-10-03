@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.actions;
 
-import hudson.model.Action;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.CheckForNull;
@@ -32,7 +31,6 @@ import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Tracks arbitrary annotations on FlowNode used for a variety of purposes
@@ -102,7 +100,7 @@ public class TagsAction implements PersistentAction {
     @Nonnull
     public static Map<String,String> getTags(@Nonnull  FlowNode node) {
         TagsAction tagAction = node.getAction(TagsAction.class);
-        return (tagAction == null) ? (Map)(Collections.emptyMap()) : tagAction.getTags();
+        return (tagAction == null) ? Collections.emptyMap() : tagAction.getTags();
     }
 
     /**

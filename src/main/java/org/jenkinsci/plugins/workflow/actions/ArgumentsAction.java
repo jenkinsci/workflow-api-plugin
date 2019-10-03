@@ -185,7 +185,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     @Nonnull
     public static Map<String, Object> getFilteredArguments(@Nonnull FlowNode n) {
         ArgumentsAction act = n.getPersistentAction(ArgumentsAction.class);
-        return act != null ? act.getFilteredArguments() : Collections.EMPTY_MAP;
+        return act != null ? act.getFilteredArguments() : Collections.emptyMap();
     }
 
     /** Return a tidy string description for the step arguments, or null if none is present or we can't make one

@@ -28,8 +28,6 @@ import java.io.IOException;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 
 /**

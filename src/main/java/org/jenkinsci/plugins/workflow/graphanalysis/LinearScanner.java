@@ -58,7 +58,7 @@ public class LinearScanner extends AbstractFlowScanner {
     protected void reset() {
         this.myCurrent = null;
         this.myNext = null;
-        this.myBlackList = Collections.EMPTY_SET;
+        this.myBlackList = Collections.emptySet();
     }
 
     /**
