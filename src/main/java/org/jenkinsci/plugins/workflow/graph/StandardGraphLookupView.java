@@ -103,10 +103,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
                 BlockStartNode maybeThis = (BlockStartNode) f;
 
                 // We're walking from the end to the start and see the start without finding the end first, block is incomplete
-                String previousEnd = blockStartToEnd.get(maybeThis.getId());
-                if (previousEnd == null) {
-                    blockStartToEnd.put(maybeThis.getId(), INCOMPLETE);
-                }
+                blockStartToEnd.putIfAbsent(maybeThis.getId(), INCOMPLETE);
                 if (start.equals(maybeThis)) {  // Early exit, the end can't be encountered before the start
                     return null;
                 }
