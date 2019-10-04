@@ -561,8 +561,7 @@ public class ForkScanner extends AbstractFlowScanner {
     @Override
     public FlowNode next() {
         currentType = nextType;
-        FlowNode output = super.next();
-        return output;
+        return super.next();
     }
 
     @Override

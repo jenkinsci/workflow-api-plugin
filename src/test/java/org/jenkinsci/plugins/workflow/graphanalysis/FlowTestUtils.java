@@ -41,7 +41,7 @@ import java.util.Collection;
  */
 public class FlowTestUtils {
     public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {
-        Predicate<FlowNode> outputPredicate = new Predicate<FlowNode>() {
+        return new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
                 if (input instanceof StepAtomNode) {
@@ -52,7 +52,6 @@ public class FlowTestUtils {
                 return false;
             }
         };
-        return outputPredicate;
     }
 
     public static final class CollectingVisitor implements FlowNodeVisitor {
