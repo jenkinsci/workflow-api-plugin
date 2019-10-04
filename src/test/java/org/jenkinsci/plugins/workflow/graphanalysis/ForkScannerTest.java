@@ -276,7 +276,7 @@ public class ForkScannerTest {
         // Fork case
         scanner.setup(exec.getNode("13"));
         Assert.assertFalse(scanner.isWalkingFromFinish());
-        Assert.assertEquals(null, scanner.currentType);
+        Assert.assertNull(scanner.currentType);
         Assert.assertEquals(ForkScanner.NodeType.PARALLEL_END, scanner.nextType);
         Assert.assertEquals("13", scanner.next().getId());
         Assert.assertNotNull(scanner.parallelBlockStartStack);
@@ -691,9 +691,9 @@ public class ForkScannerTest {
     @Test
     public void testParallelPredicate() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
-        Assert.assertEquals(true, new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("4")));
-        Assert.assertEquals(false, new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("6")));
-        Assert.assertEquals(false, new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("8")));
+        Assert.assertTrue(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("4")));
+        Assert.assertFalse(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("6")));
+        Assert.assertFalse(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("8")));
     }
 
     @Test

@@ -26,7 +26,7 @@ public class DurabilityBasicsTest {
             Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
             level.setDurabilityHint(null);
             r.configRoundtrip();
-            Assert.assertEquals(null, level.getDurabilityHint());
+            Assert.assertNull(level.getDurabilityHint());
 
             // Customize again so we can check for persistence
             level.setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);

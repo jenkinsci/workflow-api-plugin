@@ -152,10 +152,10 @@ public class FlowScannerTest {
         Assert.assertEquals(firstEchoNode, linear.findFirstMatch(heads, MATCH_ECHO_STEP));
         Assert.assertEquals(firstEchoNode, linear.findFirstMatch(lastNode, MATCH_ECHO_STEP));
         Assert.assertEquals(firstEchoNode, linear.findFirstMatch(exec, MATCH_ECHO_STEP));
-        Assert.assertEquals(null, linear.findFirstMatch(nullColl, MATCH_ECHO_STEP));
-        Assert.assertEquals(null, linear.findFirstMatch(Collections.EMPTY_SET, MATCH_ECHO_STEP));
-        Assert.assertEquals(null, linear.findFirstMatch(nullNode, MATCH_ECHO_STEP));
-        Assert.assertEquals(null, linear.findFirstMatch(nullExecution, MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(nullColl, MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(Collections.EMPTY_SET, MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(nullNode, MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(nullExecution, MATCH_ECHO_STEP));
 
 
         // Filtered nodes
@@ -198,7 +198,7 @@ public class FlowScannerTest {
         } catch (NoSuchElementException nsee) {
             // Passing case
         }
-        Assert.assertTrue(linear.iterator() == linear);
+        Assert.assertSame(linear.iterator(), linear);
         try {
             linear.remove();
             Assert.fail("Should throw UnsupportedOperation exception");
