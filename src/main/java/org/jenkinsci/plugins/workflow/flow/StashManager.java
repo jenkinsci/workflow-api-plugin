@@ -61,7 +61,6 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
@@ -299,7 +298,6 @@ public class StashManager {
      * <strong>Implement this interface directly at your own risk.</strong>
      * @see <a href="https://github.com/jenkinsci/jep/blob/master/jep/202/README.adoc">JEP-202</a>
      */
-    @Restricted(Beta.class)
     public interface StashAwareArtifactManager /* extends ArtifactManager */ {
 
         /** @see StashManager#stash(Run, String, FilePath, Launcher, EnvVars, TaskListener, String, String, boolean, boolean) */
