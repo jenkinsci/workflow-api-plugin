@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.workflow.flow;
 
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
+import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
@@ -46,12 +47,26 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     }
 
     /**
-     * Called when a {@link FlowExecution} has completed.
+     * Called when a {@link FlowExecution} has completed but not finished
      *
      * The {@link FlowExecution} will already have been removed from the {@link FlowExecutionList} by this point,
      * {@link GraphListener.Synchronous#onNewHead(FlowNode)} will have already been called for the {@link FlowEndNode},
      * {@link FlowExecution#getCurrentHeads()} will have one element, a {@link FlowEndNode}, and if the Pipeline has
      * failed, {@link FlowExecution#getCauseOfFailure()} will return non-null.
+     *
+     * @param execution The {@link FlowExecution} that has completed.
+     */
+    public void beforeCompleted(@Nonnull FlowExecution execution) {
+    }
+
+    /**
+     * Called when a {@link FlowExecution} has completed and finished.
+     *
+     * The {@link FlowExecution} will already have been removed from the {@link FlowExecutionList} by this point,
+     * {@link GraphListener.Synchronous#onNewHead(FlowNode)} will have already been called for the {@link FlowEndNode},
+     * {@link FlowExecution#getCurrentHeads()} will have one element, a {@link FlowEndNode}, if the Pipeline has
+     * failed, {@link FlowExecution#getCauseOfFailure()} will return non-null, and the owner {@link FlowExecution#getOwner()}
+     * listener {@link FlowExecutionOwner#getListener()} logger {@link TaskListener#getLogger()} is closed.
      *
      * @param execution The {@link FlowExecution} that has completed.
      */
@@ -91,6 +106,15 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     public static void fireCompleted(@Nonnull FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onCompleted(execution);
+        }
+    }
+
+    /**
+     * Fires the {@link #beforeCompleted(FlowExecution)} event.
+     */
+    public static void fireBeforeCompleted(@Nonnull FlowExecution execution) {
+        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
+            listener.beforeCompleted(execution);
         }
     }
 }
