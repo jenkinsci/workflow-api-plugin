@@ -368,7 +368,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         }
     }
 
-    /** Syntactic sugar for {@link #visitAll(Collection, FlowNodeVisitor)} where we don't blacklist any nodes */
+    /** Syntactic sugar for {@link #visitAll(Collection, Collection, FlowNodeVisitor)} where we don't blacklist any nodes */
     public void visitAll(@CheckForNull Collection<FlowNode> heads, @Nonnull FlowNodeVisitor visitor) {
         visitAll(heads, null, visitor);
     }
