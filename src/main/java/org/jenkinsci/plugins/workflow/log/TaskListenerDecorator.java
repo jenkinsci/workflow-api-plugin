@@ -87,11 +87,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
      */
     public static @Nullable TaskListenerDecorator merge(@CheckForNull TaskListenerDecorator original, @CheckForNull TaskListenerDecorator subsequent) {
         if (original == null) {
-            if (subsequent == null) {
-                return null;
-            } else {
-                return subsequent;
-            }
+            return subsequent;
         } else {
             if (subsequent == null) {
                 return original;

@@ -94,9 +94,7 @@ public abstract class ArgumentsAction implements PersistentAction {
             return ((CharSequence) o).length() > maxElements;
         }
         if ((o instanceof Map || o instanceof Collection || o.getClass().isArray())) {
-            if (CollectionUtils.size(o) > maxElements) {
-                return true;
-            }
+            return CollectionUtils.size(o) > maxElements;
         }
         return false;
     }
