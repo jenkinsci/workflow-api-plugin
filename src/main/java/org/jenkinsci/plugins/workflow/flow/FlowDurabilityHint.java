@@ -73,5 +73,5 @@ public enum FlowDurabilityHint {
 
     public String getTooltip() {
         return tooltip;
-    };
+    }
 }
