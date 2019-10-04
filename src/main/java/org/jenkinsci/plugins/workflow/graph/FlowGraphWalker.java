@@ -108,7 +108,7 @@ public class FlowGraphWalker implements Iterable<FlowNode> {
             return null;
         }
 
-        private final void checkForComodification() {
+        private void checkForComodification() {
             if (q.size() != expectedCount) {
                 throw new ConcurrentModificationException();
             }
