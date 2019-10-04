@@ -512,7 +512,7 @@ Action format:
                     enclosingNode);
             List<String> enclosingIds = node.getAllEnclosingIds();
             List<String> enclosingIdsIncludingNode = enclosingIdsIncludingNode(enclosingNode);
-            List<String> iteratedEnclosingBlockIds = new ArrayList<String>();
+            List<String> iteratedEnclosingBlockIds = new ArrayList<>();
             for (BlockStartNode bsn : node.iterateEnclosingBlocks()) {
                 iteratedEnclosingBlockIds.add(bsn.getId());
             }

@@ -91,7 +91,7 @@ public class FlowScannerTest {
 
         // ## Bunch of tests for convertToFastCheckable ##
         Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(null));
-        Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(new ArrayList<FlowNode>()));
+        Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(new ArrayList<>()));
 
         Collection<FlowNode> coll = linear.convertToFastCheckable(Arrays.asList(intermediateNode));
         Assert.assertTrue("Singleton set used for one element", coll instanceof AbstractSet);
@@ -102,10 +102,10 @@ public class FlowScannerTest {
         Assert.assertTrue("Original used for short list", coll instanceof List);
         Assert.assertEquals(2, coll.size());
 
-        coll = linear.convertToFastCheckable(new LinkedHashSet<FlowNode>(multipleItems));
+        coll = linear.convertToFastCheckable(new LinkedHashSet<>(multipleItems));
         Assert.assertTrue("Original used where set", coll instanceof LinkedHashSet);
 
-        multipleItems = new ArrayList<FlowNode>();
+        multipleItems = new ArrayList<>();
         for (int i=0; i < 3; i++) {
             multipleItems.add(intermediateNode);
         }
@@ -113,7 +113,7 @@ public class FlowScannerTest {
         Assert.assertTrue("Original used for short list", coll instanceof List);
         Assert.assertEquals(3, coll.size());
 
-        multipleItems = new ArrayList<FlowNode>();
+        multipleItems = new ArrayList<>();
         for (int i=0; i < 10; i++) {
             multipleItems.add(intermediateNode);
         }
@@ -167,7 +167,7 @@ public class FlowScannerTest {
 
         // Same filter using the filterator
         linear.setup(heads);
-        ArrayList<FlowNode> collected = new ArrayList<FlowNode>();
+        ArrayList<FlowNode> collected = new ArrayList<>();
         Filterator<FlowNode> filt = linear.filter(MATCH_ECHO_STEP);
         while (filt.hasNext()) {
             collected.add(filt.next());

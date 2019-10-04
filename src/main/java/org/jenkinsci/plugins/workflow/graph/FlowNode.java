@@ -68,7 +68,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     private String id;
 
     @SuppressFBWarnings(value="IS2_INCONSISTENT_SYNC", justification="this is a copy-on-write array so synchronization isn't needed between reader & writer")
-    private transient CopyOnWriteArrayList<Action> actions = new CopyOnWriteArrayList<Action>();
+    private transient CopyOnWriteArrayList<Action> actions = new CopyOnWriteArrayList<>();
 
     private transient final FlowExecution exec;
 
@@ -207,7 +207,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     @Nonnull
     public List<String> getAllEnclosingIds() {
         List<? extends BlockStartNode> nodes = getEnclosingBlocks();
-        ArrayList<String> output = new ArrayList<String>(nodes.size());
+        ArrayList<String> output = new ArrayList<>(nodes.size());
         for (FlowNode f : nodes) {
             output.add(f.getId());
         }

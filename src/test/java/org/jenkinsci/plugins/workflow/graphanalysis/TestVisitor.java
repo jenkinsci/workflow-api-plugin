@@ -139,7 +139,7 @@ public class TestVisitor implements SimpleChunkVisitor {
 
     }
 
-    public ArrayList<CallEntry> calls = new ArrayList<CallEntry>();
+    public ArrayList<CallEntry> calls = new ArrayList<>();
 
     @Override
     public void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner) {
@@ -183,7 +183,7 @@ public class TestVisitor implements SimpleChunkVisitor {
 
     /** Get all call entries of given type */
     public List<TestVisitor.CallEntry> filteredCallsByType(TestVisitor.CallType type) {
-        ArrayList<TestVisitor.CallEntry> output = new ArrayList<TestVisitor.CallEntry>();
+        ArrayList<TestVisitor.CallEntry> output = new ArrayList<>();
         for (TestVisitor.CallEntry ce : calls) {
             if (ce.type == type) {
                 output.add(ce);
@@ -196,10 +196,10 @@ public class TestVisitor implements SimpleChunkVisitor {
      *  Specifically: no atomNode dupes for the same node, no atomNode with a start/end for the same node*/
     public void assertNoDupes() throws Exception {
         // Full equality check
-        List<CallEntry> entries = new ArrayList<CallEntry>();
-        HashSet<Integer> visitedAtomNodes = new HashSet<Integer>();
-        HashSet<Integer> visitedChunkStartNodes = new HashSet<Integer>();
-        HashSet<Integer> visitedChunkEndNodes = new HashSet<Integer>();
+        List<CallEntry> entries = new ArrayList<>();
+        HashSet<Integer> visitedAtomNodes = new HashSet<>();
+        HashSet<Integer> visitedChunkStartNodes = new HashSet<>();
+        HashSet<Integer> visitedChunkEndNodes = new HashSet<>();
 
         for (CallEntry ce : this.calls) {
             // Complete equality check
@@ -248,7 +248,7 @@ public class TestVisitor implements SimpleChunkVisitor {
     }
 
     public void assertAllNodesGotChunkEvents(Iterable<FlowNode> nodes) {
-        HashSet<String> ids = new HashSet<String>();
+        HashSet<String> ids = new HashSet<>();
         for (CallEntry ce : this.calls) {
             // A node is either a start or end to a chunk, or an atom (a node within a chunk)
             if (CHUNK_EVENTS.contains(ce.type)) {
@@ -265,21 +265,21 @@ public class TestVisitor implements SimpleChunkVisitor {
 
     public void assertMatchingParallelBranchStartEnd() throws Exception {
         // Map the parallel start node to the start/end nodes for all branches
-        HashMap<Integer, List<Integer>> branchStartIds = new HashMap<Integer, List<Integer>>();
-        HashMap<Integer, List<Integer>> branchEndIds = new HashMap<Integer, List<Integer>>();
+        HashMap<Integer, List<Integer>> branchStartIds = new HashMap<>();
+        HashMap<Integer, List<Integer>> branchEndIds = new HashMap<>();
 
         for (CallEntry ce : this.calls) {
             if (ce.type == CallType.PARALLEL_BRANCH_END) {
                 List<Integer> ends = branchEndIds.get(ce.ids[0]);
                 if (ends == null) {
-                    ends = new ArrayList<Integer>();
+                    ends = new ArrayList<>();
                 }
                 ends.add(ce.ids[1]);
                 branchEndIds.put(ce.ids[0], ends);
             } else if (ce.type == CallType.PARALLEL_BRANCH_START) {
                 List<Integer> ends = branchStartIds.get(ce.ids[0]);
                 if (ends == null) {
-                    ends = new ArrayList<Integer>();
+                    ends = new ArrayList<>();
                 }
                 ends.add(ce.ids[1]);
                 branchStartIds.put(ce.ids[0], ends);
@@ -310,7 +310,7 @@ public class TestVisitor implements SimpleChunkVisitor {
     /** Verify that we have balanced start/end for parallels */
     public void assertMatchingParallelStartEnd() throws Exception {
         // It's like balancing parentheses, starts and ends must be equal
-        ArrayDeque<Integer> openParallelStarts = new ArrayDeque<Integer>();
+        ArrayDeque<Integer> openParallelStarts = new ArrayDeque<>();
 
         for (CallEntry ce : this.calls) {
             if (ce.type == CallType.PARALLEL_END) {

@@ -59,7 +59,7 @@ public class ErrorActionTest {
     public JenkinsRule r = new JenkinsRule();
 
     private List<ErrorAction> extractErrorActions(FlowExecution exec) {
-        List<ErrorAction> ret = new ArrayList<ErrorAction>();
+        List<ErrorAction> ret = new ArrayList<>();
 
         FlowGraphWalker walker = new FlowGraphWalker(exec);
         for (FlowNode n : walker) {

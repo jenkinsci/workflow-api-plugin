@@ -41,7 +41,7 @@ public class TagsAction implements PersistentAction {
     private static final String displayName = "Tags";
     private static final String urlSuffix = "tags";
 
-    private LinkedHashMap<String, String> tags = new LinkedHashMap<String, String>();
+    private LinkedHashMap<String, String> tags = new LinkedHashMap<>();
 
     /**
      * Add a tag key:value pair to this FlowNode, null or empty values are ignored

@@ -228,13 +228,13 @@ public class StashManager {
     @Restricted(DoNotUse.class) // just for tests, and incompatible with StashAwareArtifactManager
     @SuppressFBWarnings(value="DM_DEFAULT_ENCODING", justification="test code")
     public static Map<String,Map<String,String>> stashesOf(@Nonnull Run<?,?> build) throws IOException {
-        Map<String,Map<String,String>> result = new TreeMap<String,Map<String,String>>();
+        Map<String,Map<String,String>> result = new TreeMap<>();
         File[] kids = storage(build).listFiles();
         if (kids != null) {
             for (File kid : kids) {
                 String n = kid.getName();
                 if (n.endsWith(SUFFIX)) {
-                    Map<String,String> unpacked = new TreeMap<String,String>();
+                    Map<String,String> unpacked = new TreeMap<>();
                     result.put(n.substring(0, n.length() - SUFFIX.length()), unpacked);
                     try (InputStream is = new FileInputStream(kid)) {
                         InputStream wrapped = FilePath.TarCompression.GZIP.extract(is);

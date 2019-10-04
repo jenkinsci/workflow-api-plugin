@@ -25,10 +25,10 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     static final String INCOMPLETE = "";
 
     /** Map the blockStartNode to its endNode, to accellerate a range of operations */
-    HashMap<String, String> blockStartToEnd = new HashMap<String, String>();
+    HashMap<String, String> blockStartToEnd = new HashMap<>();
 
     /** Map a node to its nearest enclosing block */
-    HashMap<String, String> nearestEnclosingBlock = new HashMap<String, String>();
+    HashMap<String, String> nearestEnclosingBlock = new HashMap<>();
 
     public void clearCache() {
         blockStartToEnd.clear();
@@ -213,7 +213,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         if (node instanceof FlowStartNode || node instanceof FlowEndNode) {
             return Collections.emptyList();
         }
-        ArrayList<BlockStartNode> starts = new ArrayList<BlockStartNode>(2);
+        ArrayList<BlockStartNode> starts = new ArrayList<>(2);
         BlockStartNode currentlyEnclosing = findEnclosingBlockStart(node);
         while (currentlyEnclosing != null) {
             starts.add(currentlyEnclosing);

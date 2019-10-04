@@ -50,11 +50,11 @@ public class DepthFirstScanner extends AbstractFlowScanner {
 
     protected ArrayDeque<FlowNode> queue;
 
-    protected HashSet<FlowNode> visited = new HashSet<FlowNode>();
+    protected HashSet<FlowNode> visited = new HashSet<>();
 
     protected void reset() {
         if (this.queue == null) {
-            this.queue = new ArrayDeque<FlowNode>();
+            this.queue = new ArrayDeque<>();
         } else {
             this.queue.clear();
         }
@@ -68,7 +68,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
         if (heads.isEmpty()) {
             return;
         }
-        ArrayList<FlowNode>  nodes = new ArrayList<FlowNode>(heads);
+        ArrayList<FlowNode>  nodes = new ArrayList<>(heads);
         for(int i=nodes.size()-1; i >= 0; i--) {
             queue.push(nodes.get(i));
         }

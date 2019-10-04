@@ -46,7 +46,7 @@ public abstract class FlowNodeViewColumnDescriptor extends Descriptor<FlowNodeVi
      *      Don't use this method outside the core workflow plugins as we'll likely change this.
      */
     public static List<FlowNodeViewColumn> getDefaultInstances() {
-        List<FlowNodeViewColumn> r = new ArrayList<FlowNodeViewColumn>();
+        List<FlowNodeViewColumn> r = new ArrayList<>();
         for (FlowNodeViewColumnDescriptor d : all()) {
             FlowNodeViewColumn c = d.getDefaultInstance();
             if (c!=null)
