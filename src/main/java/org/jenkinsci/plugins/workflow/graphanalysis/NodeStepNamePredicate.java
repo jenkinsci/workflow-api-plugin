@@ -54,7 +54,7 @@ public final class NodeStepNamePredicate implements Predicate<FlowNode> {
     public boolean apply(@Nullable FlowNode input) {
         if (input instanceof StepNode) {
             StepDescriptor sd = ((StepNode) input).getDescriptor();
-            return (sd != null) ? descriptorId.equals(sd.getId()) : false;
+            return (sd != null) && descriptorId.equals(sd.getId());
         } else if (input != null && !(input instanceof FlowStartNode || input instanceof FlowEndNode)) {
             try {
                 // Workaround for cases where someone is using the latest workflow-api which has StepNode
