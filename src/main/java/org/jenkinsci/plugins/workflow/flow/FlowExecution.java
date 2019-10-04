@@ -73,7 +73,8 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
 
     protected transient GraphLookupView internalGraphLookup = null;
 
-    @CheckForNull /** CheckForNull due to loading pre-durability runs. */
+    /** CheckForNull due to loading pre-durability runs. */
+    @CheckForNull
     protected FlowDurabilityHint durabilityHint = null;
 
     /** Eventually this may be overridden if the FlowExecution has a better source of structural information, such as the {@link FlowNode} storage. */
