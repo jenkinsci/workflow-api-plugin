@@ -280,7 +280,7 @@ public abstract class LogStorageTestBase {
     // TODO test missing final newline
 
     protected final long assertOverallLog(long start, String expected, boolean html) throws Exception {
-        return assertLog(() -> text(), start, expected, html, html);
+        return assertLog(this::text, start, expected, html, html);
     }
 
     protected final long assertStepLog(String id, long start, String expected, boolean html) throws Exception {
