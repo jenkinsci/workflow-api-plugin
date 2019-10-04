@@ -64,9 +64,7 @@ public abstract class FlowDefinition extends AbstractDescribableImpl<FlowDefinit
         if (Util.isOverridden(FlowDefinition.class, getClass(), "create", FlowExecutionOwner.class, TaskListener.class, List.class)) {
             try {
                 return create(handle, new LogTaskListener(Logger.getLogger(FlowDefinition.class.getName()), Level.INFO), actions);
-            } catch (IOException x) {
-                throw x;
-            } catch (RuntimeException x) {
+            } catch (IOException | RuntimeException x) {
                 throw x;
             } catch (Exception x) {
                 throw new IOException(x);
