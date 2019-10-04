@@ -107,7 +107,7 @@ public interface SimpleChunkVisitor {
      * Notifies that we've seen the end of a parallel block
      * @param parallelStartNode First node of parallel ({@link BlockStartNode} before the branches)
      * @param parallelEndNode Last node of parallel ({@link BlockEndNode})
-     * @param scanner
+     * @param scanner ForkScanner used
      */
     void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
 
@@ -115,7 +115,7 @@ public interface SimpleChunkVisitor {
      * Hit the start of a parallel branch
      * @param parallelStartNode First node of parallel (BlockStartNode before the branches)
      * @param branchStartNode BlockStartNode beginning the branch (this will have the ThreadNameAction giving its name)
-     * @param scanner
+     * @param scanner ForkScanner used
      */
     void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
 
@@ -124,7 +124,7 @@ public interface SimpleChunkVisitor {
      * <p> May not be invoked if we're inside an in-progress parallel
      * @param parallelStartNode First node of parallel (BlockStartNode before the branches)
      * @param branchEndNode Final node of the branch (may be BlockEndNode if done, otherwise just the last one executed)
-     * @param scanner
+     * @param scanner ForkScanner used
      */
     void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
 
