@@ -358,8 +358,6 @@ public class ForkScanner extends AbstractFlowScanner {
      *     <li>Flow graphs are correctly constructed</li>
      *     <li>Heads are all separate branches</li>
      * </ul>
-     *
-     * @param heads
      */
     ArrayDeque<ParallelBlockStart> leastCommonAncestor(@Nonnull final Set<FlowNode> heads) {
         HashMap<FlowNode, FlowPiece> branches = new HashMap<>();
