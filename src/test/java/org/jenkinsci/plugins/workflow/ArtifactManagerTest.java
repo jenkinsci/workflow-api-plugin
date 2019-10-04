@@ -338,7 +338,7 @@ public class ArtifactManagerTest {
         }
 
         /**
-         * Verifies miscellaneous aspects of files in {@link root}.
+         * Verifies miscellaneous aspects of files in {@link Verify#root}.
          * Checks that files are in the expected places, directories can be listed, etc.
          * @see #setUpWorkspace
          */
