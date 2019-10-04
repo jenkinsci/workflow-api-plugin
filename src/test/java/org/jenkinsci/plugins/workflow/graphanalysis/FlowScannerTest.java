@@ -75,7 +75,7 @@ public class FlowScannerTest {
                         "echo 'doitagain'",
                 true));
 
-        /** Flow structure (ID - type)
+        /* Flow structure (ID - type)
          2 - FlowStartNode
          3 - SleepStep
          4 - EchoStep
@@ -217,7 +217,7 @@ public class FlowScannerTest {
                 "echo 'doitagain'",
                 true));
 
-        /** Flow structure (ID - type)
+        /* Flow structure (ID - type)
          2 - FlowStartNode
          3 - SleepStep
          4 - EchoStep
@@ -261,7 +261,7 @@ public class FlowScannerTest {
             "}\n" +
             "sleep 1",
             true));
-        /** Flow structure (ID - type)
+        /* Flow structure (ID - type)
          2 - FlowStartNode
          3 - EchoStep
          4 - TimeoutStep
@@ -327,7 +327,7 @@ public class FlowScannerTest {
             "echo 'final'",
             true));
 
-        /** Flow structure (ID - type)
+        /* Flow structure (ID - type)
          2 - FlowStartNode (BlockStartNode)
          3 - Echostep
          4 - ParallelStep (StepStartNode) (start branches)
@@ -434,7 +434,7 @@ public class FlowScannerTest {
                 "echo 'final'",
                 true));
 
-        /** Parallel nested in parallel (ID-type)
+        /* Parallel nested in parallel (ID-type)
          * 2 - FlowStartNode (BlockStartNode)
          * 3 - Echostep
          * 4 - ParallelStep (stepstartnode)

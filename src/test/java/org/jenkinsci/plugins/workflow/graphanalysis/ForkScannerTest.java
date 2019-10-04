@@ -288,7 +288,7 @@ public class ForkScannerTest {
         Assert.assertEquals(1, start.unvisited.size());
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
 
-        /** Flow structure (ID - type)
+        /* Flow structure (ID - type)
          2 - FlowStartNode (BlockStartNode)
          3 - Echostep
          4 - ParallelStep (StepStartNode) (start branches)
@@ -331,7 +331,7 @@ public class ForkScannerTest {
     public void testFlowSegmentSplit() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
 
-        /** Flow structure (ID - type)
+        /* Flow structure (ID - type)
          2 - FlowStartNode (BlockStartNode)
          3 - Echostep
          4 - ParallelStep (StepStartNode) (start branches)
@@ -570,7 +570,7 @@ public class ForkScannerTest {
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("7")));
         sanityTestIterationAndVisiter(new ArrayList<>(heads));
 
-        /** Now we do the same with nested run */
+        /* Now we do the same with nested run */
         exec = NESTED_PARALLEL_RUN.getExecution();
         heads = new LinkedHashSet<>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
 
