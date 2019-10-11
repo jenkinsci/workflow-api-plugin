@@ -56,7 +56,7 @@ public interface GraphLookupView {
     List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node);
 
     /** Provides a trivial implementation to facilitate implementing {@link #iterateEnclosingBlocks(FlowNode)}*/
-    static class EnclosingBlocksIterable implements Iterable<BlockStartNode> {
+    class EnclosingBlocksIterable implements Iterable<BlockStartNode> {
         FlowNode node;
         GraphLookupView view;
 
