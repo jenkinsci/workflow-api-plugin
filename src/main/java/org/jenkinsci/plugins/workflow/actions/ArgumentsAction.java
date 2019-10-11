@@ -135,7 +135,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     public Map<String,Object> getArguments() {
         Map<String,Object> args = getArgumentsInternal();
         if (args.isEmpty()) {
-            return Collections.<String,Object>emptyMap();
+            return Collections.emptyMap();
         } else {
             return Collections.unmodifiableMap(args);
         }
@@ -150,7 +150,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     @Nonnull
     public static Map<String,Object> getArguments(@Nonnull FlowNode n) {
         ArgumentsAction aa = n.getPersistentAction(ArgumentsAction.class);
-        return aa != null ? aa.getArguments() : Collections.<String,Object>emptyMap();
+        return aa != null ? aa.getArguments() : Collections.emptyMap();
     }
 
     /**
@@ -162,7 +162,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     public Map<String, Object> getFilteredArguments() {
         Map<String, Object> internalArgs = this.getArgumentsInternal();
         if (internalArgs.size() == 0) {
-            return Collections.<String,Object>emptyMap();
+            return Collections.emptyMap();
         }
         HashMap<String, Object> filteredArguments = Maps.newHashMapWithExpectedSize(internalArgs.size());
         for (Map.Entry<String, Object> entry : internalArgs.entrySet()) {
