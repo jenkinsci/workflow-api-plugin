@@ -169,7 +169,7 @@ public class FlowNodeTest {
 
     @Issue("JENKINS-27395")
     @Test
-    public void enclosingBlocksSingleBlock() throws Exception {
+    public void enclosingBlocksSingleBlock() {
         rr.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -208,7 +208,7 @@ public class FlowNodeTest {
 
     @Issue("JENKINS-27395")
     @Test
-    public void enclosingBlocks() throws Exception {
+    public void enclosingBlocks() {
         rr.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -423,7 +423,7 @@ Action format:
         });
     }
 
-    @Test public void useAbortedStatusWhenFailFast() throws Exception {
+    @Test public void useAbortedStatusWhenFailFast() {
         rr.then(r -> {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
         job.setDefinition(new CpsFlowDefinition(
@@ -446,7 +446,7 @@ Action format:
         });
     }
 
-    @Test public void iconColorUsesWarningActionResult() throws Exception {
+    @Test public void iconColorUsesWarningActionResult() {
         rr.then(r -> {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
         job.setDefinition(new CpsFlowDefinition(
@@ -462,7 +462,7 @@ Action format:
 
     @Issue("JENKINS-57805")
     @Test
-    public void nodeWithNoParentsInBruteForceScanForEnclosingBlock() throws Exception {
+    public void nodeWithNoParentsInBruteForceScanForEnclosingBlock() {
         logging.capture(10);
         rr.thenWithHardShutdown(j -> {
             WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "p");
@@ -545,7 +545,7 @@ Action format:
             this.result = Result.fromString(result);
         }
         @Override
-        public StepExecution start(StepContext sc) throws Exception {
+        public StepExecution start(StepContext sc) {
             class Execution extends StepExecution {
                 private final Result result;
                 public Execution(StepContext sc, Result result) {

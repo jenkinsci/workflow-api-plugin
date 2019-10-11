@@ -449,7 +449,7 @@ public class ForkScannerTest {
     };
 
     /** Verifies we're not doing anything wacky with parallels that loses appropriate parallel events. */
-    private void assertNoMissingParallelEvents(List<FlowNode> heads) throws Exception {
+    private void assertNoMissingParallelEvents(List<FlowNode> heads) {
         DepthFirstScanner allScan = new DepthFirstScanner();
         TestVisitor visit = new TestVisitor();
         ForkScanner forkScan = new ForkScanner();

@@ -18,7 +18,7 @@ public class DurabilityBasicsTest {
     public RestartableJenkinsRule r = new RestartableJenkinsRule();
 
     @Test
-    public void configRoundTrip() throws Exception {
+    public void configRoundTrip() {
         r.then(r -> {
             GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = r.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
             level.setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);
@@ -39,7 +39,7 @@ public class DurabilityBasicsTest {
     }
 
     @Test
-    public void defaultHandling() throws Exception {
+    public void defaultHandling() {
         r.then(r -> {
             Assert.assertEquals(GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT, GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint());
             GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = r.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);

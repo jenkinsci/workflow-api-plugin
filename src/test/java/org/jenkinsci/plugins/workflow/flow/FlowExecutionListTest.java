@@ -50,7 +50,7 @@ public class FlowExecutionListTest {
     @Rule public LoggerRule logging = new LoggerRule().record(FlowExecutionList.class, Level.FINE);
 
     @Issue("JENKINS-40771")
-    @Test public void simultaneousRegister() throws Exception {
+    @Test public void simultaneousRegister() {
         rr.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
                 WorkflowJob p = rr.j.createProject(WorkflowJob.class, "p");
