@@ -66,7 +66,7 @@ public class TestVisitor implements SimpleChunkVisitor {
 
         @Override
         public boolean equals(Object o) {
-            if (o == null || !(o instanceof CallEntry)) {
+            if (!(o instanceof CallEntry)) {
                 return false;
             }
             CallEntry entry = (CallEntry)o;

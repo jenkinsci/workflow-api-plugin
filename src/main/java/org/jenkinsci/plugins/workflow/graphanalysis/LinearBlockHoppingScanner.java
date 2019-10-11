@@ -87,7 +87,7 @@ public class LinearBlockHoppingScanner extends LinearScanner {
         FlowNode candidate = node;
 
         // Find the first candidate node preceding a block... and filtering by blacklist
-        while (candidate != null && candidate instanceof BlockEndNode) {
+        while (candidate instanceof BlockEndNode) {
             candidate = ((BlockEndNode) candidate).getStartNode();
             if (blacklistNodes.contains(candidate)) {
                 return null;
