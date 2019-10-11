@@ -40,14 +40,17 @@ public class LabelAction implements PersistentAction {
         this.displayName = displayName;
     }
 
+    @Override
     public String getIconFileName() {
         return null;
     }
 
+    @Override
     public String getDisplayName() {
         return displayName;
     }
 
+    @Override
     public String getUrlName() {
         return null;
     }

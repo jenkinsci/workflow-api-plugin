@@ -52,6 +52,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
 
     protected HashSet<FlowNode> visited = new HashSet<>();
 
+    @Override
     protected void reset() {
         if (this.queue == null) {
             this.queue = new ArrayDeque<>();

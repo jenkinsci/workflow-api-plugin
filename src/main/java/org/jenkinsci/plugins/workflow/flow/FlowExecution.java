@@ -256,6 +256,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     /** @see GraphLookupView#isActive(FlowNode)
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
+    @Override
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
     public boolean isActive(@Nonnull  FlowNode node) {
         if (!this.equals(node.getExecution())) {
@@ -268,6 +269,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      *  @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @CheckForNull
+    @Override
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
     public BlockEndNode getEndNode(@Nonnull BlockStartNode startNode) {
         if (!this.equals(startNode.getExecution())) {
@@ -280,6 +282,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @CheckForNull
+    @Override
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
     public BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node) {
         if (!this.equals(node.getExecution())) {
@@ -292,6 +295,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @Nonnull
+    @Override
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
     public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node) {
         if (!this.equals(node.getExecution())) {
@@ -304,6 +308,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
     @Nonnull
+    @Override
     @Restricted(NoExternalUse.class)
     public Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node) {
         if (!this.equals(node.getExecution())) {

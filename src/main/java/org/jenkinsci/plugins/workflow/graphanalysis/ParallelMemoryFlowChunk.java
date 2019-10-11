@@ -49,6 +49,7 @@ public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements Parallel
         super (nodeBefore,firstNode, lastNode, nodeAfter);
     }
 
+    @Override
     public void setBranch(@Nonnull String branchName, @Nonnull MemoryFlowChunk branchBlock) {
         branches.put(branchName, branchBlock);
     }

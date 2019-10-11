@@ -35,6 +35,7 @@ public class FlowNodeViewColumn extends AbstractDescribableImpl<FlowNodeViewColu
         return getDescriptor().getDisplayName();
     }
 
+    @Override
     public FlowNodeViewColumnDescriptor getDescriptor() {
         return (FlowNodeViewColumnDescriptor)super.getDescriptor();
     }
