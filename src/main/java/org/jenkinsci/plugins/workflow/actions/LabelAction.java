@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import hudson.model.Action;
 
 /**
  * To mark {@link FlowNode} with human readable label, like stages.

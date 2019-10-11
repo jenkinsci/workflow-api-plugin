@@ -23,8 +23,6 @@
  */
 package org.jenkinsci.plugins.workflow.actions;
 
-import hudson.model.Action;
-
 import javax.annotation.Nonnull;
 
 /**

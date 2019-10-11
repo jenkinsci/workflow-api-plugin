@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.actions;
 
-import hudson.model.Action;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
