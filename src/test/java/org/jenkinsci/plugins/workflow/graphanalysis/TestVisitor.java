@@ -318,7 +318,7 @@ public class TestVisitor implements SimpleChunkVisitor {
             } else if (ce.type == CallType.PARALLEL_START) {
                 if (openParallelStarts.size() > 0) {
                     Assert.assertEquals("Parallel start and end events must point to the same parallel start node ID",
-                            openParallelStarts.peekFirst(), new Integer(ce.ids[0])
+                            openParallelStarts.peekFirst(), Integer.valueOf(ce.ids[0])
                     );
                     openParallelStarts.pop();
                 } else if (isFromCompleteRun != null && isFromCompleteRun) {
