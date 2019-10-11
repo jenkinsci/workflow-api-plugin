@@ -133,7 +133,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
                 String enclosingIdFromCache = nearestEnclosingBlock.get(current.getId());
                 if (enclosingIdFromCache != null) {
                     try {
-                        return (BlockStartNode) (node.getExecution().getNode(enclosingIdFromCache));
+                        return (BlockStartNode) node.getExecution().getNode(enclosingIdFromCache);
                     } catch (IOException ioe) {
                         throw new RuntimeException(ioe);
                     }
@@ -162,7 +162,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         String id = blockStartToEnd.get(startNode.getId());
         if (id != null) {
             try {
-                return id == INCOMPLETE ? null : (BlockEndNode)(startNode.getExecution().getNode(id));
+                return id == INCOMPLETE ? null : (BlockEndNode) startNode.getExecution().getNode(id);
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             }
@@ -185,7 +185,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         String id = nearestEnclosingBlock.get(node.getId());
         if (id != null) {
             try {
-                return (BlockStartNode) (node.getExecution().getNode(id));
+                return (BlockStartNode) node.getExecution().getNode(id);
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             }

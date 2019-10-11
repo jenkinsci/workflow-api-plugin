@@ -370,7 +370,7 @@ public class ForkScanner extends AbstractFlowScanner {
             Collection<FlowNode> checkHeads = convertToFastCheckable(heads);
 
             @Override
-            public boolean apply(FlowNode input) { return !(checkHeads.contains(input)); }
+            public boolean apply(FlowNode input) { return !checkHeads.contains(input); }
         };
 
         for (FlowNode f : heads) {

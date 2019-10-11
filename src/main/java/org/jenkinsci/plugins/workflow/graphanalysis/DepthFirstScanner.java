@@ -83,7 +83,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
     }
 
     protected boolean testCandidate(FlowNode f, Collection<FlowNode> blackList) {
-        return !blackList.contains(f) && !((possibleParallelStart(f)) && visited.contains(f));
+        return !blackList.contains(f) && !(possibleParallelStart(f) && visited.contains(f));
     }
 
     @Override

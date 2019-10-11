@@ -122,6 +122,6 @@ public final class FlowScanningUtils {
     @Nonnull
     @Deprecated
     public static Filterator<FlowNode> fetchEnclosingBlocks(@Nonnull FlowNode f) {
-        return new FilteratorImpl<>((Iterator)(f.iterateEnclosingBlocks().iterator()), Predicates.<FlowNode>alwaysTrue());
+        return new FilteratorImpl<>((Iterator) f.iterateEnclosingBlocks().iterator(), Predicates.<FlowNode>alwaysTrue());
     }
 }

@@ -54,14 +54,14 @@ public final class NodeStepNamePredicate implements Predicate<FlowNode> {
     public boolean apply(@Nullable FlowNode input) {
         if (input instanceof StepNode) {
             StepDescriptor sd = ((StepNode) input).getDescriptor();
-            return (sd != null) && descriptorId.equals(sd.getId());
+            return sd != null && descriptorId.equals(sd.getId());
         } else if (input != null && !(input instanceof FlowStartNode || input instanceof FlowEndNode)) {
             try {
                 // Workaround for cases where someone is using the latest workflow-api which has StepNode
                 //  but manages to skip the post-2.26 versions of workflow-cps where it a parent of workflow-cps StepNode.
                 // Technically consumers *were* supposed to call ForkScanner#setParallelStartPredicate, but better to be foolproof.
                 Method getDescriptorMethod = input.getClass().getMethod("getDescriptor", null);
-                StepDescriptor sd = (StepDescriptor)(getDescriptorMethod.invoke(input, null));
+                StepDescriptor sd = (StepDescriptor) getDescriptorMethod.invoke(input, null);
                 return  (sd != null && descriptorId.equals(sd.getId()));
             } catch (NoSuchMethodException e) {
                 return false;
