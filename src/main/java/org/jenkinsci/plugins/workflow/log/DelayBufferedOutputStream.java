@@ -115,11 +115,7 @@ final class DelayBufferedOutputStream extends BufferedOutputStream {
     /** @see DelayBufferedOutputStream#flushBuffer */
     private static final class FlushControlledOutputStream extends FilterOutputStream {
 
-        private final ThreadLocal<Boolean> enableFlush = new ThreadLocal<Boolean>() {
-            @Override protected Boolean initialValue() {
-                return true;
-            }
-        };
+        private final ThreadLocal<Boolean> enableFlush = ThreadLocal.withInitial(() -> true);
 
         FlushControlledOutputStream(OutputStream out) {
             super(out);
