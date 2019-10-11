@@ -244,7 +244,7 @@ public class FlowScannerTest {
             // Blacklist tests
             scan.setup(heads, Collections.singleton(exec.getNode("4")));
             assertNodeOrder("Testing full scan for scanner " + scan.getClass(), scan, 6, 5);
-            FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), (Predicate)Predicates.alwaysTrue());
+            FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), Predicates.alwaysTrue());
             Assert.assertNull(f);
         }
     }

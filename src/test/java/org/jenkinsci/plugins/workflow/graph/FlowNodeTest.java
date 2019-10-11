@@ -151,7 +151,7 @@ public class FlowNodeTest {
         // Now we clear the cache and try this again
         Method m = FlowExecution.class.getDeclaredMethod("getInternalGraphLookup", null);
         m.setAccessible(true);
-        Object ob = m.invoke((FlowExecution) b.getExecution(), null);
+        Object ob = m.invoke(b.getExecution(), null);
         StandardGraphLookupView view = (StandardGraphLookupView)ob;
         ((StandardGraphLookupView) ob).clearCache();
 
