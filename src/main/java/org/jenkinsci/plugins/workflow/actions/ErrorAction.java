@@ -26,9 +26,11 @@ package org.jenkinsci.plugins.workflow.actions;
 
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.MissingMethodException;
+import groovy.lang.MissingPropertyException;
 import hudson.remoting.ProxyException;
 import javax.annotation.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
+import org.codehaus.groovy.tools.GroovyClass;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
@@ -68,6 +70,13 @@ public class ErrorAction implements PersistentAction {
         // If the exception was defined in a Pipeline script, we don't want to serialize it
         // directly to avoid leaking a reference to the class loader for the Pipeline script.
         if (error.getClass().getClassLoader() instanceof GroovyClassLoader) {
+            return true;
+        }
+        // Avoid MissingPropertyExceptions where the type points to the Pipeline script, it
+        // contains references to the class loader for the Pipeline Script. Storing it leads
+        // to memory leaks.
+        if (error instanceof MissingPropertyException &&
+                ((MissingPropertyException)error).getType().getClassLoader() instanceof GroovyClassLoader) {
             return true;
         }
         if (error instanceof MultipleCompilationErrorsException || error instanceof MissingMethodException) {

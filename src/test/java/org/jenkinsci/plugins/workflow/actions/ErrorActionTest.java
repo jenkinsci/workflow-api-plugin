@@ -166,4 +166,11 @@ public class ErrorActionTest {
         assertThat(b.getExecution().getCauseOfFailure(), Matchers.instanceOf(ProxyException.class));
     }
 
+    @Test public void missingPropertyExceptionMemoryLeak() throws Exception {
+        WorkflowJob p = r.createProject(WorkflowJob.class);
+        p.setDefinition(new CpsFlowDefinition("FOO", false));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        assertThat(b.getExecution().getCauseOfFailure(), Matchers.instanceOf(ProxyException.class));
+    }
+
 }
