@@ -30,7 +30,6 @@ import groovy.lang.MissingPropertyException;
 import hudson.remoting.ProxyException;
 import javax.annotation.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
-import org.codehaus.groovy.tools.GroovyClass;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
