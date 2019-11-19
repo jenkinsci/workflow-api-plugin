@@ -31,8 +31,6 @@ import hudson.model.Action;
 import hudson.model.TaskListener;
 import hudson.util.LogTaskListener;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
@@ -64,9 +62,7 @@ public abstract class FlowDefinition extends AbstractDescribableImpl<FlowDefinit
         if (Util.isOverridden(FlowDefinition.class, getClass(), "create", FlowExecutionOwner.class, TaskListener.class, List.class)) {
             try {
                 return create(handle, new LogTaskListener(Logger.getLogger(FlowDefinition.class.getName()), Level.INFO), actions);
-            } catch (IOException x) {
-                throw x;
-            } catch (RuntimeException x) {
+            } catch (IOException | RuntimeException x) {
                 throw x;
             } catch (Exception x) {
                 throw new IOException(x);

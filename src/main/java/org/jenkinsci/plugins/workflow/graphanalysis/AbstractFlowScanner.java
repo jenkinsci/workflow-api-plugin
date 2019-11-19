@@ -112,7 +112,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         } else if (nodeCollection instanceof HashSet) {
             return nodeCollection;
         }
-        return nodeCollection.size() > MAX_LIST_CHECK_SIZE ? new HashSet<FlowNode>(nodeCollection) : nodeCollection;
+        return nodeCollection.size() > MAX_LIST_CHECK_SIZE ? new HashSet<>(nodeCollection) : nodeCollection;
     }
 
     /**
@@ -128,7 +128,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
             return false;
         }
         Collection<FlowNode> fastEndNodes = convertToFastCheckable(blackList);
-        LinkedHashSet<FlowNode> filteredHeads = new LinkedHashSet<FlowNode>(heads);
+        LinkedHashSet<FlowNode> filteredHeads = new LinkedHashSet<>(heads);
         filteredHeads.removeAll(fastEndNodes);
 
         if (filteredHeads.size() == 0) {
@@ -231,7 +231,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     @Override
     @Nonnull
     public Filterator<FlowNode> filter(@Nonnull Predicate<FlowNode> filterCondition) {
-        return new FilteratorImpl<FlowNode>(this, filterCondition);
+        return new FilteratorImpl<>(this, filterCondition);
     }
 
     /**
@@ -298,7 +298,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
             return Collections.emptyList();
         }
 
-        ArrayList<FlowNode> nodes = new ArrayList<FlowNode>();
+        ArrayList<FlowNode> nodes = new ArrayList<>();
         for (FlowNode f : this) {
             if (matchCondition.apply(f)) {
                 nodes.add(f);
@@ -313,7 +313,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         if (!setup(heads)) {
             return Collections.emptyList();
         }
-        List<FlowNode> nodes = new ArrayList<FlowNode>();
+        List<FlowNode> nodes = new ArrayList<>();
         for (FlowNode f : this) {
             nodes.add(f);
         }
@@ -368,7 +368,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         }
     }
 
-    /** Syntactic sugar for {@link #visitAll(Collection, FlowNodeVisitor)} where we don't blacklist any nodes */
+    /** Syntactic sugar for {@link #visitAll(Collection, Collection, FlowNodeVisitor)} where we don't blacklist any nodes */
     public void visitAll(@CheckForNull Collection<FlowNode> heads, @Nonnull FlowNodeVisitor visitor) {
         visitAll(heads, null, visitor);
     }

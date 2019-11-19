@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
  */
 public class LabelledChunkFinder implements ChunkFinder {
 
+    @Override
     public boolean isStartInsideChunk() {
         return true;
     }

@@ -96,14 +96,17 @@ public class ErrorAction implements PersistentAction {
         return error;
     }
 
+    @Override
     public String getIconFileName() {
         return null;
     }
 
+    @Override
     public String getDisplayName() {
         return error.getMessage();
     }
 
+    @Override
     public String getUrlName() {
         return null;
     }

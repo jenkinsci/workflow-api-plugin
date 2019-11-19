@@ -8,8 +8,8 @@ package org.jenkinsci.plugins.workflow.flow;
  */
 public interface BlockableResume {
     /** Return true if we prevent the abiity to resume. */
-    public boolean isResumeBlocked();
+    boolean isResumeBlocked();
 
     /** Set resume on or off - may throw an {@link IllegalArgumentException} if trying to illegally toggle. */
-    public void setResumeBlocked(boolean isBlocked);
+    void setResumeBlocked(boolean isBlocked);
 }

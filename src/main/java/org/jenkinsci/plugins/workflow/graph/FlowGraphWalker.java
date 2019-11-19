@@ -18,9 +18,9 @@ import java.util.Stack;
 public class FlowGraphWalker implements Iterable<FlowNode> {
     // queue of nodes to visit.
     // it's a stack and not queue to visit nodes in DFS
-    Stack<FlowNode> q = new Stack<FlowNode>();
+    Stack<FlowNode> q = new Stack<>();
 
-    Set<FlowNode> visited = new HashSet<FlowNode>();
+    Set<FlowNode> visited = new HashSet<>();
 
     public FlowGraphWalker(FlowExecution exec) {
         q.addAll(exec.getCurrentHeads());
@@ -108,7 +108,7 @@ public class FlowGraphWalker implements Iterable<FlowNode> {
             return null;
         }
 
-        private final void checkForComodification() {
+        private void checkForComodification() {
             if (q.size() != expectedCount) {
                 throw new ConcurrentModificationException();
             }

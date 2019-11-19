@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import hudson.FilePath;
-import hudson.model.Action;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import java.util.Set;

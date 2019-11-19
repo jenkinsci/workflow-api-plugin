@@ -41,7 +41,7 @@ import java.util.Collection;
  */
 public class FlowTestUtils {
     public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {
-        Predicate<FlowNode> outputPredicate = new Predicate<FlowNode>() {
+        return new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
                 if (input instanceof StepAtomNode) {
@@ -52,11 +52,10 @@ public class FlowTestUtils {
                 return false;
             }
         };
-        return outputPredicate;
     }
 
     public static final class CollectingVisitor implements FlowNodeVisitor {
-        ArrayList<FlowNode> visited = new ArrayList<FlowNode>();
+        ArrayList<FlowNode> visited = new ArrayList<>();
 
         @Override
         public boolean visit(@Nonnull FlowNode f) {
@@ -77,7 +76,7 @@ public class FlowTestUtils {
 
     /** Assert node ordering using their ids */
     public static void assertNodeOrder(String description, Iterable<FlowNode> nodes, String... nodeIds) {
-        ArrayList<String> realIds = new ArrayList<String>();
+        ArrayList<String> realIds = new ArrayList<>();
         for (FlowNode f: nodes) {
             Assert.assertNotNull(f);
             realIds.add(f.getId());

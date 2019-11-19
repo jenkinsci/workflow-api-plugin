@@ -62,7 +62,7 @@ public final class NodeStepTypePredicate implements Predicate<FlowNode> {
                 //  but manages to skip the post-2.26 versions of workflow-cps where it a parent of workflow-cps StepNode.
                 // Technically consumers *were* supposed to call ForkScanner#setParallelStartPredicate, but better to be foolproof.
                 Method getDescriptorMethod = input.getClass().getMethod("getDescriptor", null);
-                StepDescriptor sd = (StepDescriptor)(getDescriptorMethod.invoke(input, null));
+                StepDescriptor sd = (StepDescriptor) getDescriptorMethod.invoke(input, null);
                 return  (sd == stepDescriptor);
             } catch (NoSuchMethodException e) {
                 return false; // Not a step node

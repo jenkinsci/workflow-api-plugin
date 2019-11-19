@@ -39,7 +39,7 @@ import java.util.Map;
 public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements ParallelFlowChunk<MemoryFlowChunk> {
 
     // LinkedHashMap to preserve insert order
-    private LinkedHashMap<String, MemoryFlowChunk> branches = new LinkedHashMap<String, MemoryFlowChunk>();
+    private LinkedHashMap<String, MemoryFlowChunk> branches = new LinkedHashMap<>();
 
     public ParallelMemoryFlowChunk(@Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode) {
         super (null,firstNode, lastNode, null);
@@ -49,6 +49,7 @@ public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements Parallel
         super (nodeBefore,firstNode, lastNode, nodeAfter);
     }
 
+    @Override
     public void setBranch(@Nonnull String branchName, @Nonnull MemoryFlowChunk branchBlock) {
         branches.put(branchName, branchBlock);
     }

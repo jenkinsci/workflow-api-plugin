@@ -32,7 +32,7 @@ import org.junit.Test;
 
 public class SpanCoalescerTest {
 
-    @Test public void works() throws Exception {
+    @Test public void works() {
         assertUncoalesced("plain\n");
         assertUncoalesced("<span class=\"pipeline-node-1\">one\n</span>");
         assertUncoalesced("plain\n<span class=\"pipeline-node-1\">1a\n1b\n</span><span class=\"pipeline-node-2\">2a\n2b\n</span>more plain\n");

@@ -209,7 +209,7 @@ public class ArtifactManagerTest {
         // also avoiding tests of file mode and symlinks: will not work on Windows, and may or may not work in various providers
     }
     private static class FindEncoding extends MasterToSlaveCallable<String, Exception> {
-        @Override public String call() throws Exception {
+        @Override public String call() {
             return System.getProperty("file.encoding") + " vs. " + System.getProperty("sun.jnu.encoding");
         }
     }
@@ -338,7 +338,7 @@ public class ArtifactManagerTest {
         }
 
         /**
-         * Verifies miscellaneous aspects of files in {@link root}.
+         * Verifies miscellaneous aspects of files in {@link Verify#root}.
          * Checks that files are in the expected places, directories can be listed, etc.
          * @see #setUpWorkspace
          */

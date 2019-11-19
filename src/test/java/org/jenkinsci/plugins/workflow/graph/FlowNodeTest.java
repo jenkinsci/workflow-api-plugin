@@ -51,7 +51,6 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -151,7 +150,7 @@ public class FlowNodeTest {
         // Now we clear the cache and try this again
         Method m = FlowExecution.class.getDeclaredMethod("getInternalGraphLookup", null);
         m.setAccessible(true);
-        Object ob = m.invoke((FlowExecution)(b.getExecution()), null);
+        Object ob = m.invoke(b.getExecution(), null);
         StandardGraphLookupView view = (StandardGraphLookupView)ob;
         ((StandardGraphLookupView) ob).clearCache();
 
@@ -169,7 +168,7 @@ public class FlowNodeTest {
 
     @Issue("JENKINS-27395")
     @Test
-    public void enclosingBlocksSingleBlock() throws Exception {
+    public void enclosingBlocksSingleBlock() {
         rr.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -208,7 +207,7 @@ public class FlowNodeTest {
 
     @Issue("JENKINS-27395")
     @Test
-    public void enclosingBlocks() throws Exception {
+    public void enclosingBlocks() {
         rr.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -423,7 +422,7 @@ Action format:
         });
     }
 
-    @Test public void useAbortedStatusWhenFailFast() throws Exception {
+    @Test public void useAbortedStatusWhenFailFast() {
         rr.then(r -> {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
         job.setDefinition(new CpsFlowDefinition(
@@ -446,7 +445,7 @@ Action format:
         });
     }
 
-    @Test public void iconColorUsesWarningActionResult() throws Exception {
+    @Test public void iconColorUsesWarningActionResult() {
         rr.then(r -> {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
         job.setDefinition(new CpsFlowDefinition(
@@ -462,7 +461,7 @@ Action format:
 
     @Issue("JENKINS-57805")
     @Test
-    public void nodeWithNoParentsInBruteForceScanForEnclosingBlock() throws Exception {
+    public void nodeWithNoParentsInBruteForceScanForEnclosingBlock() {
         logging.capture(10);
         rr.thenWithHardShutdown(j -> {
             WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, "p");
@@ -512,7 +511,7 @@ Action format:
                     enclosingNode);
             List<String> enclosingIds = node.getAllEnclosingIds();
             List<String> enclosingIdsIncludingNode = enclosingIdsIncludingNode(enclosingNode);
-            List<String> iteratedEnclosingBlockIds = new ArrayList<String>();
+            List<String> iteratedEnclosingBlockIds = new ArrayList<>();
             for (BlockStartNode bsn : node.iterateEnclosingBlocks()) {
                 iteratedEnclosingBlockIds.add(bsn.getId());
             }
@@ -545,7 +544,7 @@ Action format:
             this.result = Result.fromString(result);
         }
         @Override
-        public StepExecution start(StepContext sc) throws Exception {
+        public StepExecution start(StepContext sc) {
             class Execution extends StepExecution {
                 private final Result result;
                 public Execution(StepContext sc, Result result) {

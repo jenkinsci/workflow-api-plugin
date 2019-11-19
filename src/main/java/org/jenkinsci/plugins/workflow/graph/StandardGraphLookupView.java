@@ -25,10 +25,10 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     static final String INCOMPLETE = "";
 
     /** Map the blockStartNode to its endNode, to accellerate a range of operations */
-    HashMap<String, String> blockStartToEnd = new HashMap<String, String>();
+    HashMap<String, String> blockStartToEnd = new HashMap<>();
 
     /** Map a node to its nearest enclosing block */
-    HashMap<String, String> nearestEnclosingBlock = new HashMap<String, String>();
+    HashMap<String, String> nearestEnclosingBlock = new HashMap<>();
 
     public void clearCache() {
         blockStartToEnd.clear();
@@ -103,10 +103,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
                 BlockStartNode maybeThis = (BlockStartNode) f;
 
                 // We're walking from the end to the start and see the start without finding the end first, block is incomplete
-                String previousEnd = blockStartToEnd.get(maybeThis.getId());
-                if (previousEnd == null) {
-                    blockStartToEnd.put(maybeThis.getId(), INCOMPLETE);
-                }
+                blockStartToEnd.putIfAbsent(maybeThis.getId(), INCOMPLETE);
                 if (start.equals(maybeThis)) {  // Early exit, the end can't be encountered before the start
                     return null;
                 }
@@ -136,7 +133,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
                 String enclosingIdFromCache = nearestEnclosingBlock.get(current.getId());
                 if (enclosingIdFromCache != null) {
                     try {
-                        return (BlockStartNode) (node.getExecution().getNode(enclosingIdFromCache));
+                        return (BlockStartNode) node.getExecution().getNode(enclosingIdFromCache);
                     } catch (IOException ioe) {
                         throw new RuntimeException(ioe);
                     }
@@ -165,7 +162,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         String id = blockStartToEnd.get(startNode.getId());
         if (id != null) {
             try {
-                return id == INCOMPLETE ? null : (BlockEndNode)(startNode.getExecution().getNode(id));
+                return id == INCOMPLETE ? null : (BlockEndNode) startNode.getExecution().getNode(id);
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             }
@@ -188,7 +185,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         String id = nearestEnclosingBlock.get(node.getId());
         if (id != null) {
             try {
-                return (BlockStartNode) (node.getExecution().getNode(id));
+                return (BlockStartNode) node.getExecution().getNode(id);
             } catch (IOException ioe) {
                 throw new RuntimeException(ioe);
             }
@@ -213,7 +210,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         if (node instanceof FlowStartNode || node instanceof FlowEndNode) {
             return Collections.emptyList();
         }
-        ArrayList<BlockStartNode> starts = new ArrayList<BlockStartNode>(2);
+        ArrayList<BlockStartNode> starts = new ArrayList<>(2);
         BlockStartNode currentlyEnclosing = findEnclosingBlockStart(node);
         while (currentlyEnclosing != null) {
             starts.add(currentlyEnclosing);

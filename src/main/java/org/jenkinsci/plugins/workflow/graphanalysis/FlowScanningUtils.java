@@ -86,7 +86,7 @@ public final class FlowScanningUtils {
             } else { // Only one is null, that one should return the greater value
                 return (timingSecond == null) ? -1 : 1 ;
             }
-        };
+        }
     };
 
     public static final Comparator<FlowNode> ID_ORDER_COMPARATOR = new Comparator<FlowNode>() {
@@ -107,7 +107,7 @@ public final class FlowScanningUtils {
             } catch (NumberFormatException nfe) {
                 return first.getId().compareTo(second.getId());
             }
-        };
+        }
     };
 
     /**
@@ -122,6 +122,6 @@ public final class FlowScanningUtils {
     @Nonnull
     @Deprecated
     public static Filterator<FlowNode> fetchEnclosingBlocks(@Nonnull FlowNode f) {
-        return new FilteratorImpl<>((Iterator)(f.iterateEnclosingBlocks().iterator()), Predicates.<FlowNode>alwaysTrue());
+        return new FilteratorImpl<>((Iterator) f.iterateEnclosingBlocks().iterator(), Predicates.<FlowNode>alwaysTrue());
     }
 }

@@ -39,5 +39,5 @@ import java.util.Iterator;
 public interface Filterator<T> extends Iterator<T> {
     /** Returns a filtered view of the iterator, which calls the iterator until matches are found */
     @Nonnull
-    public Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
+    Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
 }

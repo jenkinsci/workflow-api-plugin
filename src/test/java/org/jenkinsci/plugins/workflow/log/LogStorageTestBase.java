@@ -80,7 +80,7 @@ public abstract class LogStorageTestBase {
     @ClassRule public static LoggerRule logging = new LoggerRule();
 
     /** Create a new storage implementation, but potentially reusing any data initialized in the last {@link Before} setup. */
-    protected abstract LogStorage createStorage() throws Exception;
+    protected abstract LogStorage createStorage();
 
     @Test public void smokes() throws Exception {
         LogStorage ls = createStorage();
@@ -191,7 +191,7 @@ public abstract class LogStorageTestBase {
             this.message = message;
             this.listener = listener;
         }
-        @Override public Void call() throws Exception {
+        @Override public Void call() {
             listener.getLogger().println(message);
             listener.getLogger().flush();
             return null;
@@ -199,7 +199,7 @@ public abstract class LogStorageTestBase {
     }
     /** Checking behavior of {@link DelayBufferedOutputStream} garbage collection. */
     private static final class GC extends MasterToSlaveCallable<Void, Exception> {
-        @Override public Void call() throws Exception {
+        @Override public Void call() {
             System.gc();
             System.runFinalization();
             return null;
@@ -280,7 +280,7 @@ public abstract class LogStorageTestBase {
     // TODO test missing final newline
 
     protected final long assertOverallLog(long start, String expected, boolean html) throws Exception {
-        return assertLog(() -> text(), start, expected, html, html);
+        return assertLog(this::text, start, expected, html, html);
     }
 
     protected final long assertStepLog(String id, long start, String expected, boolean html) throws Exception {
@@ -315,7 +315,7 @@ public abstract class LogStorageTestBase {
         assertLength(text(id), length);
     }
 
-    private void assertLength(AnnotatedLargeText<?> text, long length) throws Exception {
+    private void assertLength(AnnotatedLargeText<?> text, long length) {
         assertEquals(length, text.length());
     }
 

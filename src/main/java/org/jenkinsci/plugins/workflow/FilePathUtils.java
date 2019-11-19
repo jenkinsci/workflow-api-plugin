@@ -111,7 +111,7 @@ public class FilePathUtils {
     @Restricted(NoExternalUse.class)
     @Extension public static final class Listener extends ComputerListener {
 
-        private static final Map<VirtualChannel,String> channelNames = Collections.synchronizedMap(new WeakHashMap<VirtualChannel,String>());
+        private static final Map<VirtualChannel,String> channelNames = Collections.synchronizedMap(new WeakHashMap<>());
 
         static String getChannelName(@Nonnull VirtualChannel channel) {
             String channelName = channelNames.get(channel);

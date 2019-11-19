@@ -24,11 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepEndNode;
@@ -50,7 +46,6 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.junit.Assert;
 
-import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,6 +54,9 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
 import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
@@ -76,8 +74,9 @@ public class ForkScannerTest {
     public static Predicate<TestVisitor.CallEntry> predicateForCallEntryType(final TestVisitor.CallType type) {
         return new Predicate<TestVisitor.CallEntry>() {
             TestVisitor.CallType myType = type;
+
             @Override
-            public boolean apply(TestVisitor.CallEntry input) {
+            public boolean test(TestVisitor.CallEntry input) {
                 return input.type != null && input.type == myType;
             }
         };
@@ -182,10 +181,10 @@ public class ForkScannerTest {
      */
     private void assertIncompleteParallelsHaveEventsForEnd(List<FlowNode> heads, TestVisitor test) {
         // Verify we have at least one appropriate parallel end event, for the mandatory parallel
-        List<String> parallelEnds = Lists.transform(
-                test.filteredCallsByType(TestVisitor.CallType.PARALLEL_END),
-                CALL_TO_NODE_ID
-        );
+        List<String> parallelEnds =
+                test.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).stream()
+                        .map(CALL_TO_NODE_ID::apply)
+                        .collect(Collectors.toList());
         boolean hasMatchingEnd = false;
         for (FlowNode f : heads) {
             if (parallelEnds.contains(f.getId())) {
@@ -195,10 +194,10 @@ public class ForkScannerTest {
         }
         Assert.assertTrue("If there are multiple heads, we MUST be in a parallel and have an event for the end", hasMatchingEnd);
 
-        List<String> branchEnds = Lists.transform(
-                test.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_END),
-                CALL_TO_NODE_ID
-        );
+        List<String> branchEnds =
+                test.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_END).stream()
+                        .map(CALL_TO_NODE_ID::apply)
+                        .collect(Collectors.toList());
         // Verify each branch has a branch end event
         for (FlowNode f : heads) {
             // Below can be used if we harden up the guarantees with incomplete parallels
@@ -276,7 +275,7 @@ public class ForkScannerTest {
         // Fork case
         scanner.setup(exec.getNode("13"));
         Assert.assertFalse(scanner.isWalkingFromFinish());
-        Assert.assertEquals(null, scanner.currentType);
+        Assert.assertNull(scanner.currentType);
         Assert.assertEquals(ForkScanner.NodeType.PARALLEL_END, scanner.nextType);
         Assert.assertEquals("13", scanner.next().getId());
         Assert.assertNotNull(scanner.parallelBlockStartStack);
@@ -288,7 +287,7 @@ public class ForkScannerTest {
         Assert.assertEquals(1, start.unvisited.size());
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
 
-        /** Flow structure (ID - type)
+        /* Flow structure (ID - type)
          2 - FlowStartNode (BlockStartNode)
          3 - Echostep
          4 - ParallelStep (StepStartNode) (start branches)
@@ -331,7 +330,7 @@ public class ForkScannerTest {
     public void testFlowSegmentSplit() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
 
-        /** Flow structure (ID - type)
+        /* Flow structure (ID - type)
          2 - FlowStartNode (BlockStartNode)
          3 - Echostep
          4 - ParallelStep (StepStartNode) (start branches)
@@ -347,7 +346,7 @@ public class ForkScannerTest {
          15 - FlowEndNode (BlockEndNode)
          */
 
-        HashMap<FlowNode, ForkScanner.FlowPiece> nodeMap = new HashMap<FlowNode,ForkScanner.FlowPiece>();
+        HashMap<FlowNode, ForkScanner.FlowPiece> nodeMap = new HashMap<>();
         ForkScanner.FlowSegment mainBranch = new ForkScanner.FlowSegment();
         ForkScanner.FlowSegment sideBranch = new ForkScanner.FlowSegment();
         FlowNode BRANCH1_END = exec.getNode("9");
@@ -430,26 +429,20 @@ public class ForkScannerTest {
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         ForkScanner scan = new ForkScanner();
 
-        List<FlowNode> outputs = scan.filteredNodes(b.getExecution().getCurrentHeads(), (Predicate) Predicates.alwaysTrue());
+        List<FlowNode> outputs = scan.filteredNodes(b.getExecution().getCurrentHeads(), x -> true);
         Assert.assertEquals(9, outputs.size());
     }
 
-    private Function<FlowNode, String> NODE_TO_ID = new Function<FlowNode, String>() {
-        @Override
-        public String apply(@Nullable FlowNode input) {
-            return (input != null) ? input.getId() : null;
-        }
-    };
+    private Function<FlowNode, String> NODE_TO_ID = input -> input != null ? input.getId() : null;
 
-    private Function<TestVisitor.CallEntry, String> CALL_TO_NODE_ID = new Function<TestVisitor.CallEntry, String>() {
-        @Override
-        public String apply(@Nullable TestVisitor.CallEntry input) {
-            return (input != null && input.getNodeId() != null) ? input.getNodeId().toString() : null;
-        }
-    };
+    private Function<TestVisitor.CallEntry, String> CALL_TO_NODE_ID =
+            input ->
+                    input != null && input.getNodeId() != null
+                            ? input.getNodeId().toString()
+                            : null;
 
     /** Verifies we're not doing anything wacky with parallels that loses appropriate parallel events. */
-    private void assertNoMissingParallelEvents(List<FlowNode> heads) throws Exception {
+    private void assertNoMissingParallelEvents(List<FlowNode> heads) {
         DepthFirstScanner allScan = new DepthFirstScanner();
         TestVisitor visit = new TestVisitor();
         ForkScanner forkScan = new ForkScanner();
@@ -458,43 +451,46 @@ public class ForkScannerTest {
         List<FlowNode> matches = allScan.filteredNodes(heads, FlowScanningUtils.hasActionPredicate(ThreadNameAction.class));
         forkScan.setup(heads);
         forkScan.visitSimpleChunks(visit, new LabelledChunkFinder());
-        Set<String> callIds = new HashSet<String>(Lists.transform(visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_START), CALL_TO_NODE_ID));
-        for (String id : Lists.transform(matches, NODE_TO_ID)) {
+        Set<String> callIds =
+                visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_START).stream()
+                        .map(CALL_TO_NODE_ID)
+                        .collect(Collectors.toSet());
+        for (String id : matches.stream().map(NODE_TO_ID).collect(Collectors.toList())) {
             if (!callIds.contains(id)) {
                 Assert.fail("Parallel Branch start node without an appropriate parallelBranchStart callback: "+id);
             }
         }
 
         // Look for parallel starts & ends all being matched
-        matches = allScan.filteredNodes(heads, new Predicate<FlowNode>() {
-            @Override
-            public boolean apply(@Nullable FlowNode input) {
-                return input instanceof StepStartNode && ((StepStartNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
-                        && input.getPersistentAction(ThreadNameAction.class) == null;
-            }
-        });
-        List<FlowNode> parallelEnds = allScan.filteredNodes(heads, new Predicate<FlowNode>() {
-            @Override
-            public boolean apply(@Nullable FlowNode input) {
-                return input instanceof StepEndNode && ((StepEndNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
-                        && ((StepEndNode) input).getStartNode().getPersistentAction(ThreadNameAction.class) == null;
-            }
-        });
+        matches = allScan.filteredNodes(heads, input ->
+                input instanceof StepStartNode
+                        && ((StepStartNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
+                        && input.getPersistentAction(ThreadNameAction.class) == null);
+        List<FlowNode> parallelEnds = allScan.filteredNodes(heads, input ->
+                input instanceof StepEndNode
+                        && ((StepEndNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
+                        && ((StepEndNode) input).getStartNode().getPersistentAction(ThreadNameAction.class) == null);
         visit.reset();
         forkScan.setup(heads);
         forkScan.visitSimpleChunks(visit, new LabelledChunkFinder());
 
         // Parallel starts checked
-        callIds = new HashSet<String>(Lists.transform(visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_START), CALL_TO_NODE_ID));
-        for (String id : Lists.transform(matches, NODE_TO_ID)) {
+        callIds =
+                visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_START).stream()
+                        .map(CALL_TO_NODE_ID)
+                        .collect(Collectors.toSet());
+        for (String id : matches.stream().map(NODE_TO_ID).collect(Collectors.toList())) {
             if (!callIds.contains(id)) {
                 Assert.fail("Parallel start node without an appropriate parallelStart callback: "+id);
             }
         }
 
         // Parallel ends checked
-        callIds = new HashSet<String>(Lists.transform(visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_END), CALL_TO_NODE_ID));
-        for (String id : Lists.transform(parallelEnds, NODE_TO_ID)) {
+        callIds =
+                visit.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).stream()
+                        .map(CALL_TO_NODE_ID)
+                        .collect(Collectors.toSet());
+        for (String id : parallelEnds.stream().map(NODE_TO_ID).collect(Collectors.toList())) {
             if (!callIds.contains(id)) {
                 Assert.fail("Parallel END node without an appropriate parallelEnd callback: "+id);
             }
@@ -544,7 +540,7 @@ public class ForkScannerTest {
 
         ForkScanner scan = new ForkScanner();
         // Starts at the ends of the parallel branches
-        Set<FlowNode> heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("12"), exec.getNode("9")));
+        Set<FlowNode> heads = new LinkedHashSet<>(Arrays.asList(exec.getNode("12"), exec.getNode("9")));
         ArrayDeque<ForkScanner.ParallelBlockStart> starts = scan.leastCommonAncestor(heads);
         Assert.assertEquals(1, starts.size());
 
@@ -554,13 +550,13 @@ public class ForkScannerTest {
         Assert.assertArrayEquals(heads.toArray(), start.unvisited.toArray());
 
         // Ensure no issues with single start triggering least common ancestor
-        heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("4")));
+        heads = new LinkedHashSet<>(Arrays.asList(exec.getNode("4")));
         scan.setup(heads);
         Assert.assertNull(scan.currentParallelStart);
         Assert.assertTrue(scan.parallelBlockStartStack == null || scan.parallelBlockStartStack.isEmpty());
 
         // Empty fork
-        heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("6"), exec.getNode("7")));
+        heads = new LinkedHashSet<>(Arrays.asList(exec.getNode("6"), exec.getNode("7")));
         starts = scan.leastCommonAncestor(heads);
         Assert.assertEquals(1, starts.size());
         ForkScanner.ParallelBlockStart pbs = starts.pop();
@@ -568,11 +564,11 @@ public class ForkScannerTest {
         Assert.assertEquals(2, pbs.unvisited.size());
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("6")));
         Assert.assertTrue(pbs.unvisited.contains(exec.getNode("7")));
-        sanityTestIterationAndVisiter(new ArrayList<FlowNode>(heads));
+        sanityTestIterationAndVisiter(new ArrayList<>(heads));
 
-        /** Now we do the same with nested run */
+        /* Now we do the same with nested run */
         exec = NESTED_PARALLEL_RUN.getExecution();
-        heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
+        heads = new LinkedHashSet<>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
 
         // Problem: we get a parallel start with the same flowsegment in the following for more than one parallel start
         starts = scan.leastCommonAncestor(heads);
@@ -586,12 +582,12 @@ public class ForkScannerTest {
         Assert.assertEquals(1, outer.unvisited.size());
         Assert.assertEquals(exec.getNode("9"), outer.unvisited.peek());
         Assert.assertEquals(exec.getNode("4"), outer.forkStart);
-        sanityTestIterationAndVisiter(new ArrayList<FlowNode>(heads));
+        sanityTestIterationAndVisiter(new ArrayList<>(heads));
 
-        heads = new LinkedHashSet<FlowNode>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
+        heads = new LinkedHashSet<>(Arrays.asList(exec.getNode("9"), exec.getNode("17"), exec.getNode("20")));
         starts = scan.leastCommonAncestor(heads);
         Assert.assertEquals(2, starts.size());
-        sanityTestIterationAndVisiter(new ArrayList<FlowNode>(heads));
+        sanityTestIterationAndVisiter(new ArrayList<>(heads));
     }
 
     @Test
@@ -652,10 +648,10 @@ public class ForkScannerTest {
                 int branchANodeId = i+20;
                 int branchBNodeId = j+15;
                 System.out.println("Starting test with nodes "+branchANodeId+","+branchBNodeId);
-                ArrayList<FlowNode> starts = new ArrayList<FlowNode>();
+                ArrayList<FlowNode> starts = new ArrayList<>();
                 FlowTestUtils.addNodesById(starts, exec, branchANodeId, branchBNodeId);
-                List<FlowNode> all = scan.filteredNodes(starts, Predicates.<FlowNode>alwaysTrue());
-                Assert.assertEquals(new HashSet<FlowNode>(all).size(), all.size());
+                List<FlowNode> all = scan.filteredNodes(starts, x -> true);
+                Assert.assertEquals(new HashSet<>(all).size(), all.size());
                 scan.reset();
             }
         }
@@ -691,9 +687,9 @@ public class ForkScannerTest {
     @Test
     public void testParallelPredicate() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
-        Assert.assertEquals(true, new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("4")));
-        Assert.assertEquals(false, new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("6")));
-        Assert.assertEquals(false, new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("8")));
+        Assert.assertTrue(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("4")));
+        Assert.assertFalse(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("6")));
+        Assert.assertFalse(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("8")));
     }
 
     @Test
@@ -733,13 +729,22 @@ public class ForkScannerTest {
         TestVisitor.CallEntry first = new TestVisitor.CallEntry(TestVisitor.CallType.CHUNK_START, 2, -1, -1, -1);
         first.assertEquals(visitor.calls.get(18));
 
-        int chunkStartCount = Iterables.size(Iterables.filter(visitor.calls, predicateForCallEntryType(TestVisitor.CallType.CHUNK_START)));
-        int chunkEndCount = Iterables.size(Iterables.filter(visitor.calls, predicateForCallEntryType(TestVisitor.CallType.CHUNK_END)));
-        Assert.assertEquals(4, chunkStartCount);
-        Assert.assertEquals(4, chunkEndCount);
+        long chunkStartCount =
+                visitor.calls.stream()
+                        .filter(predicateForCallEntryType(TestVisitor.CallType.CHUNK_START))
+                        .count();
+        long chunkEndCount =
+                visitor.calls.stream()
+                        .filter(predicateForCallEntryType(TestVisitor.CallType.CHUNK_END))
+                        .count();
+        Assert.assertEquals(4L, chunkStartCount);
+        Assert.assertEquals(4L, chunkEndCount);
 
         // Verify the AtomNode calls are correct
-        List < TestVisitor.CallEntry > atomNodeCalls = Lists.newArrayList(Iterables.filter(visitor.calls, predicateForCallEntryType(TestVisitor.CallType.ATOM_NODE)));
+        List<TestVisitor.CallEntry> atomNodeCalls =
+                visitor.calls.stream()
+                        .filter(predicateForCallEntryType(TestVisitor.CallType.ATOM_NODE))
+                        .collect(Collectors.toList());
         Assert.assertEquals(5, atomNodeCalls.size());
         for (TestVisitor.CallEntry ce : atomNodeCalls) {
             int beforeId = ce.ids[0];
@@ -754,16 +759,13 @@ public class ForkScannerTest {
             Assert.assertTrue(ce+ "beforeNodeId >= atomNodeId", beforeId < atomNodeId);
         }
 
-
-        List<TestVisitor.CallEntry> parallelCalls = Lists.newArrayList(Iterables.filter(visitor.calls, new Predicate<TestVisitor.CallEntry>() {
-            @Override
-            public boolean apply(TestVisitor.CallEntry input) {
-                return input.type != null
-                        && input.type != TestVisitor.CallType.ATOM_NODE
-                        && input.type != TestVisitor.CallType.CHUNK_START
-                        && input.type != TestVisitor.CallType.CHUNK_END;
-            }
-        }));
+        List<TestVisitor.CallEntry> parallelCalls = visitor.calls.stream()
+                .filter(input ->
+                        input.type != null
+                                && input.type != TestVisitor.CallType.ATOM_NODE
+                                && input.type != TestVisitor.CallType.CHUNK_START
+                                && input.type != TestVisitor.CallType.CHUNK_END)
+                .collect(Collectors.toList());
         Assert.assertEquals(6, parallelCalls.size());
         // Start to end
         new TestVisitor.CallEntry(TestVisitor.CallType.PARALLEL_END, 4, 13).assertEquals(parallelCalls.get(0));
@@ -802,18 +804,18 @@ public class ForkScannerTest {
         f.visitSimpleChunks(visitor, new BlockChunkFinder());
         sanityTestIterationAndVisiter(heads);
 
-        ArrayList<TestVisitor.CallEntry> parallels = Lists.newArrayList(Iterables.filter(visitor.calls,
-                Predicates.or(
-                        predicateForCallEntryType(TestVisitor.CallType.PARALLEL_BRANCH_START),
-                        predicateForCallEntryType(TestVisitor.CallType.PARALLEL_BRANCH_END))
-                )
-        );
+        List<TestVisitor.CallEntry> parallels = visitor.calls.stream()
+                .filter(
+                        predicateForCallEntryType(TestVisitor.CallType.PARALLEL_BRANCH_START)
+                                .or(
+                                        predicateForCallEntryType(TestVisitor.CallType.PARALLEL_BRANCH_END)))
+                .collect(Collectors.toList());
         Assert.assertEquals(6, parallels.size());
 
         // Visiting from partially completed branches
         // Verify we still get appropriate parallels callbacks for a branch end
         //   even if in-progress and no explicit end node
-        ArrayList<FlowNode> ends = new ArrayList<FlowNode>();
+        ArrayList<FlowNode> ends = new ArrayList<>();
         ends.add(exec.getNode("11"));
         ends.add(exec.getNode("12"));
         ends.add(exec.getNode("14"));
@@ -825,18 +827,18 @@ public class ForkScannerTest {
         sanityTestIterationAndVisiter(ends);
 
         // Specifically test parallel structures
-        parallels = Lists.newArrayList(Iterables.filter(visitor.calls,
-                        Predicates.or(
-                                predicateForCallEntryType(TestVisitor.CallType.PARALLEL_BRANCH_START),
-                                predicateForCallEntryType(TestVisitor.CallType.PARALLEL_BRANCH_END))
-                )
-        );
+        parallels = visitor.calls.stream()
+                .filter(
+                        predicateForCallEntryType(TestVisitor.CallType.PARALLEL_BRANCH_START)
+                                .or(
+                                        predicateForCallEntryType(TestVisitor.CallType.PARALLEL_BRANCH_END)))
+                .collect(Collectors.toList());
         Assert.assertEquals(6, parallels.size());
         Assert.assertEquals(18, visitor.calls.size());
 
         // Test the least common ancestor implementation with triplicate
         FlowNode[] branchHeads = {exec.getNode("7"), exec.getNode("8"), exec.getNode("9")};
-        ArrayDeque<ForkScanner.ParallelBlockStart> starts = f.leastCommonAncestor(new HashSet<FlowNode>(Arrays.asList(branchHeads)));
+        ArrayDeque<ForkScanner.ParallelBlockStart> starts = f.leastCommonAncestor(new HashSet<>(Arrays.asList(branchHeads)));
         Assert.assertEquals(1, starts.size());
         ForkScanner.ParallelBlockStart pbs = starts.pop();
         Assert.assertEquals(exec.getNode("4"), pbs.forkStart);

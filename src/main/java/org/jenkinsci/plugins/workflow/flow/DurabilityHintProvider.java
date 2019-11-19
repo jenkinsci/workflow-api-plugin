@@ -13,12 +13,12 @@ import javax.annotation.Nonnull;
 public interface DurabilityHintProvider extends ExtensionPoint {
 
 
-    public int ordinal();
+    int ordinal();
 
     @CheckForNull
     FlowDurabilityHint suggestFor(@Nonnull Item x);
 
-    public static @Nonnull FlowDurabilityHint suggestedFor(@Nonnull Item x) {
+    static @Nonnull FlowDurabilityHint suggestedFor(@Nonnull Item x) {
         int ordinal = Integer.MAX_VALUE;
         FlowDurabilityHint hint = GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint();
 

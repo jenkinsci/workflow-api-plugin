@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import hudson.model.Action;
 
 /**
  * To mark {@link FlowNode} with human readable label, like stages.
@@ -40,14 +39,17 @@ public class LabelAction implements PersistentAction {
         this.displayName = displayName;
     }
 
+    @Override
     public String getIconFileName() {
         return null;
     }
 
+    @Override
     public String getDisplayName() {
         return displayName;
     }
 
+    @Override
     public String getUrlName() {
         return null;
     }

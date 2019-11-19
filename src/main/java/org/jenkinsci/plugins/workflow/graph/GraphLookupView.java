@@ -21,13 +21,13 @@ import java.util.NoSuchElementException;
  */
 public interface GraphLookupView {
     /** Tests if the node is a currently running head, or the start of a block that has not completed executing */
-    public boolean isActive(@Nonnull  FlowNode node);
+    boolean isActive(@Nonnull FlowNode node);
 
     /** Find the end node corresponding to a start node, and can be used to tell if the block is completed.
      *  @return {@link BlockEndNode} matching the given start node, or null if block hasn't completed
      */
     @CheckForNull
-    public BlockEndNode getEndNode(@Nonnull BlockStartNode startNode);
+    BlockEndNode getEndNode(@Nonnull BlockStartNode startNode);
 
     /**
      * Find the immediately enclosing {@link BlockStartNode} around a {@link FlowNode}
@@ -35,7 +35,7 @@ public interface GraphLookupView {
      * @return Null if node is a {@link FlowStartNode} or {@link FlowEndNode}
      */
     @CheckForNull
-    public BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node);
+    BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node);
 
     /**
      * Provide an {@link Iterable} over all enclosing blocks, which can be used similarly to {@link #findAllEnclosingBlockStarts(FlowNode)} but
@@ -45,7 +45,7 @@ public interface GraphLookupView {
      * @param node Node to find enclosing blocks for
      * @return Iterable over enclosing blocks, from the nearest-enclosing outward ("inside-out" order)
      */
-    public Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node);
+    Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node);
 
     /** Return all enclosing block start nodes, as with {@link #findEnclosingBlockStart(FlowNode)}.
      *  <p><strong>Usage note:</strong>Prefer using {@link #iterateEnclosingBlocks(FlowNode)} unless you know you need ALL blocks, since that can lazy-load.
@@ -53,10 +53,10 @@ public interface GraphLookupView {
      *  @return All enclosing block starts from the nearest-enclosing outward ("inside-out" order), or EMPTY_LIST if this is a start or end node
      */
     @Nonnull
-    public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node);
+    List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node);
 
     /** Provides a trivial implementation to facilitate implementing {@link #iterateEnclosingBlocks(FlowNode)}*/
-    public static class EnclosingBlocksIterable implements Iterable<BlockStartNode> {
+    class EnclosingBlocksIterable implements Iterable<BlockStartNode> {
         FlowNode node;
         GraphLookupView view;
 
