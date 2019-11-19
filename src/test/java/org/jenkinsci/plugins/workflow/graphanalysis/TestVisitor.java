@@ -242,7 +242,7 @@ public class TestVisitor implements SimpleChunkVisitor {
             Assert.assertNotNull("Callback with illegally null node: "+ce, id);
             if (ce.type == CallType.PARALLEL_START || ce.type == CallType.PARALLEL_END
                     || ce.type == CallType.PARALLEL_BRANCH_START || ce.type == CallType.PARALLEL_BRANCH_END) {
-                Assert.assertNotNull("Parallel event with illegally null parallel start node ID: "+ce, ce.ids[0]);
+                Assert.assertNotEquals("Parallel event with illegally null parallel start node ID: " + ce, -1, ce.ids[0]);
             }
         }
     }
