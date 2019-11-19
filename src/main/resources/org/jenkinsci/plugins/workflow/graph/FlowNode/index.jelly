@@ -39,6 +39,14 @@
               </li>
           </j:forEach>
       </ul>
+      <j:if test="${it.error != null}">
+          <h2>${%Error}</h2>
+          <pre>
+              <code>
+                  ${h.printThrowable(it.error.error)}
+              </code>
+          </pre>
+      </j:if>
     </l:main-panel>
   </l:layout>
 </j:jelly>
