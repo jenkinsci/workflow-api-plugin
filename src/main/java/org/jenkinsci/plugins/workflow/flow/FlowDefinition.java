@@ -30,8 +30,11 @@ import hudson.model.AbstractDescribableImpl;
 import hudson.model.Action;
 import hudson.model.TaskListener;
 import hudson.util.LogTaskListener;
+import hudson.scm.SCM;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -74,6 +77,10 @@ public abstract class FlowDefinition extends AbstractDescribableImpl<FlowDefinit
 
     @Override public FlowDefinitionDescriptor getDescriptor() {
         return (FlowDefinitionDescriptor) super.getDescriptor();
+    }
+
+    public Collection<? extends SCM> getSCMs() {
+        return Collections.emptyList();
     }
 
 }
