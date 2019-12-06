@@ -87,7 +87,7 @@ public class ArtifactManagerTest {
      */
     public static @CheckForNull DockerImage prepareImage() throws Exception {
         Docker docker = new Docker();
-        if (docker.isAvailable()) {
+        if (!Functions.isWindows() && docker.isAvailable()) { // TODO: Windows agents on ci.jenkins.io have Docker, but cannot build the image.
             return docker.build(JavaContainer.class);
         } else {
             System.err.println("No Docker support; falling back to running tests against an agent in a process on the same machine.");
