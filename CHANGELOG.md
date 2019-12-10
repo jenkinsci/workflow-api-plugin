@@ -2,11 +2,11 @@
 
 ### 2.38 (2019 Dec 6)
 
--   Fix: Fix: Proxy `MissingPropertyException` when the receiver's class is
+-   Fix: Proxy `MissingPropertyException` when the receiver's class is
     implemented in a Pipeline script to avoid leaking the class loader for
     the Pipeline script through `ErrorAction`. ([PR
     110](https://github.com/jenkinsci/workflow-api-plugin/pull/110))
--   Improvement: Show the stack trace for failed Pipine steps in the Pipeline Steps view. ([PR 103](https://github.com/jenkinsci/workflow-api-plugin/pull/103))
+-   Improvement: Show the stack trace for failed Pipeline steps in the Pipeline Steps view. ([PR 103](https://github.com/jenkinsci/workflow-api-plugin/pull/103))
 -   Internal: Refactor various parts of the codebase, improve tests, and migrate documentation from wiki to GitHub. ([PR 104](https://github.com/jenkinsci/workflow-api-plugin/pull/104), [PR 105](https://github.com/jenkinsci/workflow-api-plugin/pull/105), [PR 107](https://github.com/jenkinsci/workflow-api-plugin/pull/107), [PR 108](https://github.com/jenkinsci/workflow-api-plugin/pull/108), [PR 109](https://github.com/jenkinsci/workflow-api-plugin/pull/109), [PR 112](https://github.com/jenkinsci/workflow-api-plugin/pull/112))
 
 ### 2.37 (2019 Aug 29)
