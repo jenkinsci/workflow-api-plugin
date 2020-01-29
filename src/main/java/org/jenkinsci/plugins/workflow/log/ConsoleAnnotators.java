@@ -71,7 +71,7 @@ public class ConsoleAnnotators {
                 @SuppressWarnings("deprecation") // TODO still used in the AnnotatedLargeText version
                 Cipher sym = PASSING_ANNOTATOR.decrypt();
                 try (ObjectInputStream ois = new ObjectInputStreamEx(new GZIPInputStream(
-                        new CipherInputStream(new ByteArrayInputStream(Base64.getDecoder().decode(base64)), sym)),
+                        new CipherInputStream(new ByteArrayInputStream(Base64.getDecoder().decode(base64.getBytes(StandardCharsets.UTF_8))), sym)),
                         Jenkins.get().pluginManager.uberClassLoader,
                         ClassFilter.DEFAULT)) {
                     long timestamp = ois.readLong();
