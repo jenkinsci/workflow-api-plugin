@@ -100,7 +100,7 @@ public class ConsoleAnnotators {
         }
         StaplerResponse rsp = Stapler.getCurrentResponse();
         if (rsp != null) {
-            rsp.setHeader("X-ConsoleAnnotator", new String(Base64.getEncoder().encode(baos.toByteArray()), Charset.defaultCharset()));
+            rsp.setHeader("X-ConsoleAnnotator", new String(Base64.getEncoder().encode(baos.toByteArray()), StandardCharsets.US_ASCII));
         }
     }
 
