@@ -26,7 +26,6 @@ package org.jenkinsci.plugins.workflow.log;
 
 import com.jcraft.jzlib.GZIPInputStream;
 import com.jcraft.jzlib.GZIPOutputStream;
-import com.trilead.ssh2.crypto.Base64;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.console.ConsoleAnnotator;
@@ -37,6 +36,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import static java.lang.Math.abs;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
@@ -69,7 +69,7 @@ public class ConsoleAnnotators {
                 @SuppressWarnings("deprecation") // TODO still used in the AnnotatedLargeText version
                 Cipher sym = PASSING_ANNOTATOR.decrypt();
                 try (ObjectInputStream ois = new ObjectInputStreamEx(new GZIPInputStream(
-                        new CipherInputStream(new ByteArrayInputStream(Base64.decode(base64.toCharArray())), sym)),
+                        new CipherInputStream(new ByteArrayInputStream(Base64.getDecoder().decode(base64)), sym)),
                         Jenkins.get().pluginManager.uberClassLoader,
                         ClassFilter.DEFAULT)) {
                     long timestamp = ois.readLong();
@@ -98,7 +98,7 @@ public class ConsoleAnnotators {
         }
         StaplerResponse rsp = Stapler.getCurrentResponse();
         if (rsp != null) {
-            rsp.setHeader("X-ConsoleAnnotator", new String(Base64.encode(baos.toByteArray())));
+            rsp.setHeader("X-ConsoleAnnotator", new String(Base64.getEncoder().encode(baos.toByteArray())));
         }
     }
 
