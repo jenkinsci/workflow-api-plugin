@@ -36,6 +36,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import static java.lang.Math.abs;
+
+import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 import javax.crypto.Cipher;
@@ -98,7 +100,7 @@ public class ConsoleAnnotators {
         }
         StaplerResponse rsp = Stapler.getCurrentResponse();
         if (rsp != null) {
-            rsp.setHeader("X-ConsoleAnnotator", new String(Base64.getEncoder().encode(baos.toByteArray())));
+            rsp.setHeader("X-ConsoleAnnotator", new String(Base64.getEncoder().encode(baos.toByteArray()), Charset.defaultCharset()));
         }
     }
 
