@@ -1,5 +1,13 @@
 ## Changelog
 
+### 2.39
+
+Release date: 2020-01-30
+
+* Internal: Remove references to Trilead to fix PCT issues when using newer versions of Jenkins. ([PR 116](https://github.com/jenkinsci/workflow-api-plugin/pull/116))
+* Internal: Update parent POM and project URL. ([PR 115](https://github.com/jenkinsci/workflow-api-plugin/pull/115))
+* Internal: Fix typos in CHANGELOG.md. ([PR 114](https://github.com/jenkinsci/workflow-api-plugin/pull/114))
+
 ### 2.38
 
 Release date: 2019-12-06
