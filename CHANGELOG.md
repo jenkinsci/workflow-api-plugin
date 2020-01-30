@@ -1,6 +1,8 @@
 ## Changelog
 
-### 2.38 (2019 Dec 6)
+### 2.38
+
+Release date: 2019-12-06
 
 -   Fix: Proxy `MissingPropertyException` when the receiver's class is
     implemented in a Pipeline script to avoid leaking the class loader for
@@ -9,7 +11,9 @@
 -   Improvement: Show the stack trace for failed Pipeline steps in the Pipeline Steps view. ([PR 103](https://github.com/jenkinsci/workflow-api-plugin/pull/103))
 -   Internal: Refactor various parts of the codebase, improve tests, and migrate documentation from wiki to GitHub. ([PR 104](https://github.com/jenkinsci/workflow-api-plugin/pull/104), [PR 105](https://github.com/jenkinsci/workflow-api-plugin/pull/105), [PR 107](https://github.com/jenkinsci/workflow-api-plugin/pull/107), [PR 108](https://github.com/jenkinsci/workflow-api-plugin/pull/108), [PR 109](https://github.com/jenkinsci/workflow-api-plugin/pull/109), [PR 112](https://github.com/jenkinsci/workflow-api-plugin/pull/112))
 
-### 2.37 (2019 Aug 29)
+### 2.37
+
+Release date: 2019-08-29
 
 -   Fix: Proxy exceptions when the exception class is implemented in a
     Pipeline script to avoid leaking the class loader for the Pipeline
@@ -21,7 +25,9 @@
 -   Internal: Update tests to fix PCT failures. ([PR
     99](https://github.com/jenkinsci/workflow-api-plugin/pull/99))
 
-### 2.36 (2019 Aug 01)
+### 2.36
+
+Release date: 2019-08-01
 
 -   Developer: `TaskListenerDecorator` API is now stable instead of a
     beta API. ([PR
@@ -33,7 +39,9 @@
     ([PR
     92](https://github.com/jenkinsci/workflow-api-plugin/pull/92))
 
-### 2.35 (2019 Jun 07)
+### 2.35
+
+Release date: 2019-06-07
 
 -   Fix: Prevent
     `StandardGraphLookupView.bruteForceScanForEnclosingBlocks` from
@@ -44,7 +52,9 @@
     fail to start because of a problem with a single build. ([PR
     93](https://github.com/jenkinsci/workflow-api-plugin/pull/93))
 
-### 2.34 (2019 May 10)
+### 2.34
+
+Release date: 2019-05-10
 
 -   Improvement: Add the name of the stash to the exception thrown when
     trying to create an empty stash. ([PR
@@ -57,26 +67,34 @@
     execution of a step even though the step completed normally.
     ([JENKINS-43995](https://issues.jenkins-ci.org/browse/JENKINS-43995), [JENKINS-39203](https://issues.jenkins-ci.org/browse/JENKINS-39203))
 
-### 2.33 (2018 Nov 19)
+### 2.33
+
+Release date: 2018-11-19
 
 -   [JENKINS-54566](https://issues.jenkins-ci.org/browse/JENKINS-54566):
     Prevent the error "Failed to execute command Pipe.Flush(-1)" from
     occurring by flushing streams before they have been garbage
     collected.
 
-### 2.32 (2018 Nov 09)
+### 2.32
+
+Release date: 2018-11-09
 
 -   Developer: Add an SPI for `LogStorage` implementations to
     satisfy `WorkflowRun#getLogFile`. (Part
     of [JENKINS-54128](https://issues.jenkins-ci.org/browse/JENKINS-54128),
     but version 2.29 of Pipeline Job Plugin contains the actual fix)
 
-### 2.31 (2018 Oct 26)
+### 2.31
+
+Release date: 2018-10-26
 
 -   [JENKINS-54073](https://issues.jenkins-ci.org/browse/JENKINS-54073):
     Buffer remote log output to fix logging-related performance issues.
 
-### 2.30 (2018 Oct 12)
+### 2.30
+
+Release date: 2018-10-12
 
 -   [JEP-210](https://jenkins.io/jep/210): redesigned
     log storage system for Pipeline builds. Should have no effect
@@ -89,7 +107,9 @@
     red ball in the Pipeline steps view to distinguish them from
     failures.
 
-### 2.30-beta-1 (2018 Oct 04)
+### 2.30-beta-1
+
+Release date: 2018-10-04
 
 -   [JEP-210](https://jenkins.io/jep/210): redesigned
     log storage system for Pipeline builds. Should have no effect
@@ -103,19 +123,15 @@
     red ball in the Pipeline steps view to distinguish them from
     failures.
 
-### 2.29 (2018 Jul 24) - Bleeding-Edge Release
+### 2.29
+
+Release date: 2018-07-24
 
 -   No user-visible changes - test utilities for ArtifactManager
 
-### 2.27.1 (Unreleased) Stable Release
+### 2.28
 
--   Support for Incremental releases
--   Minor fix to displayed message format
--   Improvement: Mark interrupted steps using a gray ball instead of a
-    red ball in the Pipeline steps view to distinguish them from
-    failures.
-
-### 2.28 (June 15, 2018) - Bleeding-Edge Release
+Release date: 2018-06-15
 
 -   **Now requires Jenkins core 2.121**
 -   Support for Incremental releases
@@ -123,7 +139,9 @@
     ([JENKINS-49635](https://issues.jenkins-ci.org/browse/JENKINS-49635))
 -   Minor fix to displayed message format
 
-### 2.27 (Apr 12, 2018)
+### 2.27
+
+Release date: 2018-04-12
 
 -   Add ability to insert a placeholder for Step Arguments that cannot
     be serialized (API to
@@ -132,12 +150,16 @@
 -   Improvement/Bugfix: Catch all errors thrown when saving the FlowNode
     in an error-safe way, to allow processes to complete normally 
 
-### 2.26 (Feb 23, 2018)
+### 2.26
+
+Release date: 2018-02-23
 
 -   Bugfix: Deal with additional unserializable Throwable types
     ([JENKINS-49025](https://issues.jenkins-ci.org/browse/JENKINS-49025))
 
-### 2.25 (Jan 22, 2018)
+### 2.25
+
+Release date: 2018-01-22
 
 -   **Now Requires Java 8** (core 2.60.3+)
 -   Major new feature: Durability Settings & Ability To Disable Pipeline
@@ -151,25 +173,33 @@
 -   Small micro-optimization to reduce garbage generated when displaying
     arguments for step
 
-### 2.24 (Dec 4, 2017)
+### 2.24
+
+Release date: 2017-12-04
 
 -   [JENKINS-47725](https://issues.jenkins-ci.org/browse/JENKINS-47725) -
     Fix a WeakHashMap synchronization issue
 -   Minor POM changes & making an API slightly more restrictive in
     Generics it returns
 
-### 2.23.1 (Oct 24, 2017)
+### 2.23.1
+
+Release date: 2017-10-24
 
 -   Revert [JENKINS-40912](https://issues.jenkins-ci.org/browse/JENKINS-40912) - 
     the change caused stash steps to hang in specific cases.  Will be
     amended and re-released with fixes.
 
-### 2.23 (Oct 24, 2017)
+### 2.23
+
+Release date: 2017-10-24
 
 -   [JENKINS-40912](https://issues.jenkins-ci.org/browse/JENKINS-40912) -
     return list of files for stashing and unstashing
 
-### 2.22 (Sep 26, 2017)
+### 2.22
+
+Release date: 2017-09-26
 
 -   New APIs to provide fast access to information about the structure
     of the pipeline graph
@@ -184,28 +214,38 @@
         determine if a step or block is complete or not
         ([JENKINS-38223](https://issues.jenkins-ci.org/browse/JENKINS-38223))
 
-### 2.20 (Aug 1, 2017)
+### 2.20
+
+Release date: 2017-08-01
 
 -   Make the PersistentAction API public to help with optimizing
     frequent action lookups in other pipeline plugins
 
-### 2.19 (Jul 24, 2017)
+### 2.19
+
+Release date: 2017-07-24
 
 -   [JENKINS-44636](https://issues.jenkins-ci.org/browse/JENKINS-44636)
     New `QueueItemAction` for tracking node block queue status.
 
-### 2.18 (Jun 29, 2017)
+### 2.18
+
+Release date: 2017-06-29
 
 -   [JENKINS-31582](https://issues.jenkins-ci.org/browse/JENKINS-31582) Addition
     to `ArgumentsAction`.
 
-### 2.17 (Jun 5, 2017)
+### 2.17
+
+Release date: 2017-06-05
 
 -   [JENKINS-](https://issues.jenkins-ci.org/browse/JENKINS-43055)[38536](https://issues.jenkins-ci.org/browse/JENKINS-38536)
     Fix finding the last FlowNode for an in-progress parallel with a
     long-running step
 
-### 2.16 (May 30, 2017)
+### 2.16
+
+Release date: 2017-05-30
 
 -   [JENKINS-43055](https://issues.jenkins-ci.org/browse/JENKINS-43055) Made `GraphListener`
     into an extension point.
@@ -213,20 +253,26 @@
 -   [JENKINS-37327](https://issues.jenkins-ci.org/browse/JENKINS-37327) API
     allowing empty stashes.
 
-### 2.15 (May 22, 2017)
+### 2.15
+
+Release date: 2017-05-22
 
 -   [JENKINS-37324](https://issues.jenkins-ci.org/browse/JENKINS-37324) -
     Retain and display arguments to pipeline steps
 -   [JENKINS-43055](https://issues.jenkins-ci.org/browse/JENKINS-43055) -
     Add a FlowExecutionListener extension point
 
-### 2.13 (Apr 13, 2017)
+### 2.13
+
+Release date: 2017-04-13
 
 -   [JENKINS-42895](https://issues.jenkins-ci.org/browse/JENKINS-42895) Fix
     sanity checks failing when running a pipeline with a parallel
     containing 0 branches
 
-### 2.12 (Mar 6, 2017)
+### 2.12
+
+Release date: 2017-03-06
 
 -   [JENKINS-39839](https://issues.jenkins-ci.org/browse/JENKINS-39839)
     GraphAnalysis visitor fix: missing parallel events in specific
@@ -246,7 +292,9 @@
 -   Harden the GraphAnalysis visitor API guarantees and better
     documentation of the APIs and their assumptions + guarantees
 
-### 2.11 (Feb 14, 2017)
+### 2.11
+
+Release date: 2017-02-14
 
 -   [JENKINS-40771](https://issues.jenkins-ci.org/browse/JENKINS-40771)
     Race condition when scheduling \>1 Pipeline build simultaneously
@@ -257,19 +305,25 @@
     (extends fix made in 2.5).
 -   `FlowCopier` extensions.
 
-### 2.10 (Feb 7, 2017)
+### 2.10
+
+Release date: 2017-02-07
 
 -   Add StepNode so plugins can obtain StepDescriptor information for a
     FlowNode without requiring a workflow-cps plugin dependency
 
-### 2.8 (Dec 1, 2016)
+### 2.8
+
+Release date: 2016-12-01
 
 -   Fix:
     [JENKINS-38536](https://issues.jenkins-ci.org/browse/JENKINS-38536)
     Resolve case where SimpleBlockVisitor does not find the correct
     **last** branch out of a set of parallels
 
-### 2.7 (Nov 29, 2016)
+### 2.7
+
+Release date: 2016-11-29
 
 -   Fix:
     [JENKINS-38089](https://issues.jenkins-ci.org/browse/JENKINS-38089)
@@ -279,13 +333,17 @@
     key-value pairs) to steps as a precursor to
     [JENKINS-39522](https://issues.jenkins-ci.org/browse/JENKINS-39522)
 
-### 2.6 (Nov 07, 2016)
+### 2.6
+
+Release date: 2016-11-07
 
 -   [JENKINS-39456](https://issues.jenkins-ci.org/browse/JENKINS-39456)
     Reduce memory usage of execution graph.
 -   Clarifying Javadoc of `LinearScanner` about passing multiple heads.
 
-### 2.5 (Oct 19, 2016)
+### 2.5
+
+Release date: 2016-10-19
 
 -   [JENKINS-38867](https://issues.jenkins-ci.org/browse/JENKINS-38867)
     Improved performance of basic step graph calculations, for example
@@ -296,7 +354,9 @@
 -   [JENKINS-38640](https://issues.jenkins-ci.org/browse/JENKINS-38640)
     Improved performance of `stash` on large artifacts.
 
-### 2.4 (Sep 23, 2016)
+### 2.4
+
+Release date: 2016-09-23
 
 -   [JENKINS-38458](https://issues.jenkins-ci.org/browse/JENKINS-38458) -
     Make DepthFirstScanner obey the same ordering rules as
@@ -305,12 +365,16 @@
     Make ForkScanner return parallel branches in last-\>first order for
     consistency with its general iteration
 
-### 2.3 (Sep 07, 2016)
+### 2.3
+
+Release date: 2016-09-07
 
 -   [JENKINS-31155](https://issues.jenkins-ci.org/browse/JENKINS-31155)
     infrastructure.
 
-### 2.2 (Aug 25, 2016)
+### 2.2
+
+Release date: 2016-08-25
 
 -   Major Feature: new suite of APIs for analyzing the graph of
     FlowNodes from an execution  ([see package
@@ -348,14 +412,18 @@
 -   Fix a NullPointerException with the FlowExecutionList
 -   Dev-only: Javadocs & .gitignore changes
 
-### 2.1 (Jun 16, 2016)
+### 2.1
+
+Release date: 2016-06-16
 
 -   API for
     [JENKINS-26130](https://issues.jenkins-ci.org/browse/JENKINS-26130).
 -   Diagnostics related to
     [JENKINS-34281](https://issues.jenkins-ci.org/browse/JENKINS-34281).
 
-### 2.0 (Apr 05, 2016)
+### 2.0
+
+Release date: 2016-04-05
 
 -   First release under per-plugin versioning scheme. See [1.x
     changelog](https://github.com/jenkinsci/workflow-plugin/blob/82e7defa37c05c5f004f1ba01c93df61ea7868a5/CHANGES.md)
