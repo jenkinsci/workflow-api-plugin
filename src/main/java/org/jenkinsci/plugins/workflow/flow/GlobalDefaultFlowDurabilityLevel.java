@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.workflow.flow;
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.security.Permission;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
@@ -41,6 +42,10 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
         public void setDurabilityHint(FlowDurabilityHint hint){
             this.durabilityHint = hint;
             save();
+        }
+
+        public Permission getRequiredPermission() {
+            return Jenkins.MANAGE;
         }
 
         @Override

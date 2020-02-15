@@ -64,7 +64,7 @@
     <properties>
         <revision>2.40</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.138.4</jenkins.version>
+        <jenkins.version>2.221-rc29319.58a3f01c1ec1</jenkins.version>
         <java.level>8</java.level>
         <no-test-jar>false</no-test-jar>
         <workflow-support-plugin.version>2.21</workflow-support-plugin.version>
