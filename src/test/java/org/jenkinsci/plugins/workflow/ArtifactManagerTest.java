@@ -24,6 +24,11 @@
 
 package org.jenkinsci.plugins.workflow;
 
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.CredentialsScope;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.domains.Domain;
+import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.ExtensionList;
@@ -108,7 +113,9 @@ public class ArtifactManagerTest {
             DumbSlave agent;
             if (image != null) {
                 runningContainer = image.start(JavaContainer.class).start();
-                agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(runningContainer.ipBound(22), runningContainer.port(22), "test", "test", "", ""));
+                StandardUsernameCredentials creds = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM, "test","desc","test","test");
+                CredentialsProvider.lookupStores(Jenkins.get()).iterator().next().addCredentials(Domain.global(), creds);
+                agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(runningContainer.ipBound(22), runningContainer.port(22), "test"));
                 Jenkins.get().addNode(agent);
                 r.waitOnline(agent);
             } else {
