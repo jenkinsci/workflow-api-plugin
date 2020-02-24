@@ -113,7 +113,7 @@ public class ArtifactManagerTest {
             DumbSlave agent;
             if (image != null) {
                 runningContainer = image.start(JavaContainer.class).start();
-                StandardUsernameCredentials creds = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM, "test","desc","test","test");
+                StandardUsernameCredentials creds = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM, "test", "desc", "test", "test");
                 CredentialsProvider.lookupStores(Jenkins.get()).iterator().next().addCredentials(Domain.global(), creds);
                 agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(runningContainer.ipBound(22), runningContainer.port(22), "test"));
                 Jenkins.get().addNode(agent);
