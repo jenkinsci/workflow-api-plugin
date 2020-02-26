@@ -1,5 +1,12 @@
 ## Changelog
 
+### 2.40
+
+Release date: 2020-02-26
+
+* This plugin now requires Jenkins 2.150.3 or newer.
+* Internal: Update test dependencies and tests to fix PCT issues. ([PR 119](https://github.com/jenkinsci/workflow-api-plugin/pull/119))
+
 ### 2.39
 
 Release date: 2020-01-30
