@@ -3,11 +3,13 @@ package org.jenkinsci.plugins.workflow.flow;
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.security.Permission;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
 /**
  * Supports a global default durability level for users
@@ -67,6 +69,12 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
 
         public static FlowDurabilityHint[] getDurabilityHintValues() {
             return FlowDurabilityHint.values();
+        }
+
+        @Nonnull
+        @Override
+        public Permission getRequiredGlobalConfigPagePermission() {
+            return Jenkins.MANAGE;
         }
     }
 
