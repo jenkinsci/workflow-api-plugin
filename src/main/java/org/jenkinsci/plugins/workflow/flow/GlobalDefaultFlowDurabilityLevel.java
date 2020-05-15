@@ -80,13 +80,13 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
 
         // TODO: remove when Jenkins core baseline is 2.222+
         Permission getJenkinsManageOrAdmin() {
-            Permission systemRead;
+            Permission manage;
             try { // System Read is available starting from Jenkins 2.222 (https://jenkins.io/changelog/#v2.222). See JEP-224 for more info
-                systemRead = (Permission) ReflectionUtils.getPublicProperty(Jenkins.get(), "SYSTEM_READ");
+                manage = (Permission) ReflectionUtils.getPublicProperty(Jenkins.get(), "MANAGE");
             } catch (IllegalArgumentException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-                systemRead = Jenkins.ADMINISTER;
+                manage = Jenkins.ADMINISTER;
             }
-            return systemRead;
+            return manage;
         }
     }
 
