@@ -3,11 +3,15 @@ package org.jenkinsci.plugins.workflow.flow;
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.security.Permission;
+import hudson.util.ReflectionUtils;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * Supports a global default durability level for users
@@ -67,6 +71,23 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
 
         public static FlowDurabilityHint[] getDurabilityHintValues() {
             return FlowDurabilityHint.values();
+        }
+
+        @Nonnull
+        // TODO: Add @Override when Jenkins core baseline is 2.222+
+        public Permission getRequiredGlobalConfigPagePermission() {
+            return getJenkinsManageOrAdmin();
+        }
+
+        // TODO: remove when Jenkins core baseline is 2.222+
+        Permission getJenkinsManageOrAdmin() {
+            Permission manage;
+            try { // Manage is available starting from Jenkins 2.222 (https://jenkins.io/changelog/#v2.222). See JEP-223 for more info
+                manage = (Permission) ReflectionUtils.getPublicProperty(Jenkins.get(), "MANAGE");
+            } catch (IllegalArgumentException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+                manage = Jenkins.ADMINISTER;
+            }
+            return manage;
         }
     }
 
