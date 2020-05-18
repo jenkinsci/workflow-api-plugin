@@ -74,6 +74,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
         }
 
         @Nonnull
+        // TODO: Add @Override when Jenkins core baseline is 2.222+
         public Permission getRequiredGlobalConfigPagePermission() {
             return getJenkinsManageOrAdmin();
         }
@@ -81,7 +82,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
         // TODO: remove when Jenkins core baseline is 2.222+
         Permission getJenkinsManageOrAdmin() {
             Permission manage;
-            try { // System Read is available starting from Jenkins 2.222 (https://jenkins.io/changelog/#v2.222). See JEP-224 for more info
+            try { // Manage is available starting from Jenkins 2.222 (https://jenkins.io/changelog/#v2.222). See JEP-223 for more info
                 manage = (Permission) ReflectionUtils.getPublicProperty(Jenkins.get(), "MANAGE");
             } catch (IllegalArgumentException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
                 manage = Jenkins.ADMINISTER;

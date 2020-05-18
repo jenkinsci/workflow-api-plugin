@@ -97,7 +97,7 @@ public class DurabilityBasicsTest {
 
     // TODO: remove when Jenkins core baseline is 2.222+
     private Permission getJenkinsManage() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        // Jenkins.MANAGE is available starting from Jenkins 2.222 (https://jenkins.io/changelog/#v2.222). See JEP-224 for more info
+        // Jenkins.MANAGE is available starting from Jenkins 2.222 (https://jenkins.io/changelog/#v2.222). See JEP-223 for more info
         return (Permission) ReflectionUtils.getPublicProperty(Jenkins.get(), "MANAGE");
     }
 }
