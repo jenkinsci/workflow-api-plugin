@@ -39,6 +39,7 @@ import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.DirScanner;
+import hudson.util.FileVisitor;
 import hudson.util.io.ArchiverFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -47,7 +48,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.annotation.CheckForNull;
@@ -60,6 +64,7 @@ import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -109,13 +114,21 @@ public class StashManager {
      * @see StashAwareArtifactManager#stash
      */
     @SuppressFBWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", justification="fine if mkdirs returns false")
-    public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener,
+    public static List<File> stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener,
                              @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
+        List<File> files = new ArrayList<>();
+        DirScanner.Glob scanner = new DirScanner.Glob(Util.fixEmpty(includes) == null ? "**" : includes, excludes, useDefaultExcludes);
+        scanner.scan(new File(workspace.getRemote()), new FileVisitor() {
+            @Override
+            public void visit(File f, String relativePath) throws IOException {
+                files.add(f);
+            }
+        });
         StashAwareArtifactManager saam = stashAwareArtifactManager(build);
         if (saam != null) {
             saam.stash(name, workspace, launcher, env, listener, includes, excludes, useDefaultExcludes, allowEmpty);
-            return;
+            return files;
         }
         File storage = storage(build, name);
         storage.getParentFile().mkdirs();
@@ -123,12 +136,14 @@ public class StashManager {
             listener.getLogger().println("Warning: overwriting stash ‘" + name + "’");
         }
         try (OutputStream os = new FileOutputStream(storage)) {
-            int count = workspace.archive(ArchiverFactory.TARGZ, os, new DirScanner.Glob(Util.fixEmpty(includes) == null ? "**" : includes, excludes, useDefaultExcludes));
+
+            int count = workspace.archive(ArchiverFactory.TARGZ, os, scanner);
             if (count == 0 && !allowEmpty) {
                 throw new AbortException("No files included in stash ‘" + name + "’");
             }
             listener.getLogger().println("Stashed " + count + " file(s)");
         }
+        return files;
     }
 
     @Deprecated
@@ -147,18 +162,18 @@ public class StashManager {
      * @throws AbortException in case there is no such saved stash
      * @see StashAwareArtifactManager#unstash
      */
-    public static void unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public static List<File> unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
         StashAwareArtifactManager saam = stashAwareArtifactManager(build);
         if (saam != null) {
             saam.unstash(name, workspace, launcher, env, listener);
-            return;
+            return Collections.emptyList();
         }
         File storage = storage(build, name);
         if (!storage.isFile()) {
             throw new AbortException("No such saved stash ‘" + name + "’");
         }
-        new FilePath(storage).untar(workspace, FilePath.TarCompression.GZIP);
+        return new FilePath(storage).untar(workspace, FilePath.TarCompression.GZIP);
     }
 
     @Deprecated
