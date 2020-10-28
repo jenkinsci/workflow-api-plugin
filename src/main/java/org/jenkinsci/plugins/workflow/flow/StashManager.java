@@ -114,21 +114,20 @@ public class StashManager {
      * @see StashAwareArtifactManager#stash
      */
     @SuppressFBWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", justification="fine if mkdirs returns false")
-    public static List<File> stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener,
+    public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener,
+                             @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException {
+        stash2(build, name, workspace, launcher, env, listener, includes, excludes, useDefaultExcludes, allowEmpty);
+    }
+
+    @SuppressFBWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", justification="fine if mkdirs returns false")
+    public static List<String> stash2(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener,
                              @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
-        List<File> files = new ArrayList<>();
         DirScanner.Glob scanner = new DirScanner.Glob(Util.fixEmpty(includes) == null ? "**" : includes, excludes, useDefaultExcludes);
-        scanner.scan(new File(workspace.getRemote()), new FileVisitor() {
-            @Override
-            public void visit(File f, String relativePath) throws IOException {
-                files.add(f);
-            }
-        });
+
         StashAwareArtifactManager saam = stashAwareArtifactManager(build);
         if (saam != null) {
-            saam.stash(name, workspace, launcher, env, listener, includes, excludes, useDefaultExcludes, allowEmpty);
-            return files;
+            return saam.stash2(name, workspace, launcher, env, listener, includes, excludes, useDefaultExcludes, allowEmpty);
         }
         File storage = storage(build, name);
         storage.getParentFile().mkdirs();
@@ -137,13 +136,13 @@ public class StashManager {
         }
         try (OutputStream os = new FileOutputStream(storage)) {
 
-            int count = workspace.archive(ArchiverFactory.TARGZ, os, scanner);
-            if (count == 0 && !allowEmpty) {
+            List<String> files = workspace.archive2(ArchiverFactory.TARGZ, os, scanner);
+            if (files.size() == 0 && !allowEmpty) {
                 throw new AbortException("No files included in stash ‘" + name + "’");
             }
-            listener.getLogger().println("Stashed " + count + " file(s)");
+            listener.getLogger().println("Stashed " + files.size() + " file(s)");
+            return files;
         }
-        return files;
     }
 
     @Deprecated
@@ -162,18 +161,34 @@ public class StashManager {
      * @throws AbortException in case there is no such saved stash
      * @see StashAwareArtifactManager#unstash
      */
-    public static List<File> unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public static void unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+        unstash2(build, name, workspace, launcher, env, listener);
+    }
+
+    /**
+     * Restores a stash of some files from a build.
+     * @param build a build used as storage
+     * @param name a name passed previously to {@link #stash}
+     * @param workspace a directory to copy into
+     * @param launcher a way to launch processes, if required
+     * @param env environment to use when launching processes, if required
+     * @param listener a way to report progress or problems
+     * @throws AbortException in case there is no such saved stash
+     * @see StashAwareArtifactManager#unstash
+     * @return a list of stashed files
+     *  If something goes wrong a exception is launched
+     */
+    public static List<String> unstash2(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
         StashAwareArtifactManager saam = stashAwareArtifactManager(build);
         if (saam != null) {
-            saam.unstash(name, workspace, launcher, env, listener);
-            return Collections.emptyList();
+            return saam.unstash2(name, workspace, launcher, env, listener);
         }
         File storage = storage(build, name);
         if (!storage.isFile()) {
             throw new AbortException("No such saved stash ‘" + name + "’");
         }
-        return new FilePath(storage).untar(workspace, FilePath.TarCompression.GZIP);
+        return new FilePath(storage).untar2(workspace, FilePath.TarCompression.GZIP);
     }
 
     @Deprecated
@@ -315,8 +330,16 @@ public class StashManager {
         /** @see StashManager#stash(Run, String, FilePath, Launcher, EnvVars, TaskListener, String, String, boolean, boolean) */
         void stash(@Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener, @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException;
 
+        default List<String> stash2(@Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener, @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException{
+            return Collections.<String>emptyList();
+        }
+
         /** @see StashManager#unstash(Run, String, FilePath, Launcher, EnvVars, TaskListener) */
         void unstash(@Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException;
+
+        default List<String> unstash2(@Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException{
+            return Collections.<String>emptyList();
+        }
 
         /** @see StashManager#clearAll(Run, TaskListener) */
         void clearAllStashes(@Nonnull TaskListener listener) throws IOException, InterruptedException;
