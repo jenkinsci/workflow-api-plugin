@@ -486,6 +486,7 @@ Action format:
         });
     }
 
+    @Issue("JENKINS-64438")
     @Test
     public void addOrReplaceActionWorks()  {
         rr.then(r -> {
@@ -613,4 +614,3 @@ Action format:
         }
     }
 }
-
