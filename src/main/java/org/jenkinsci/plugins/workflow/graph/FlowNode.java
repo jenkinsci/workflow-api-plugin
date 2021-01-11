@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -462,6 +463,15 @@ public abstract class FlowNode extends Actionable implements Saveable {
                 @Override
                 public int size() {
                     return actions.size();
+                }
+
+                @Override
+                public boolean removeAll(Collection<?> c) {
+                    boolean changed = actions.removeAll(c);
+                    if (changed) {
+                        persistSafe();
+                    }
+                    return changed;
                 }
         };
     }
