@@ -5,6 +5,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -194,7 +195,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                             LOGGER.log(WARNING, "Failed to load " + e, t);
                         }
                     }
-                });
+                }, MoreExecutors.newDirectExecutorService());
             }
         }
     }
@@ -230,7 +231,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     public void onFailure(Throwable t) {
                         LOGGER.log(Level.WARNING, null, t);
                     }
-                });
+                }, MoreExecutors.newDirectExecutorService());
             }
 
             return Futures.allAsList(all);
