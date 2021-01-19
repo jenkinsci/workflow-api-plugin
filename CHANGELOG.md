@@ -1,5 +1,13 @@
 ## Changelog
 
+### 2.41
+
+Release date: 2021-01-19
+
+* Fix: Stop `FlowNode.addOrReplaceAction` from incorrectly throwing an `UnsupportedOperationException` when replacing an existing action ([JENKINS-64438](https://issues.jenkins.io/browse/JENKINS-64438))
+* Improvement: Allow users with Overall/Manage permission to configure the Pipeline Default Speed/Durability Level section on the global configuration page ([JENKINS-62303](https://issues.jenkins.io/browse/JENKINS-62303))
+* Internal: Update minimum Jenkins version to 2.176.4, update dependencies and parent POM, and start using the plugin BOM ([PR #121](https://github.com/jenkinsci/workflow-api-plugin/pull/121), [PR #122](https://github.com/jenkinsci/workflow-api-plugin/pull/122), [PR #123](https://github.com/jenkinsci/workflow-api-plugin/pull/123), [PR #126](https://github.com/jenkinsci/workflow-api-plugin/pull/126), [PR #127](https://github.com/jenkinsci/workflow-api-plugin/pull/127), [PR #129](https://github.com/jenkinsci/workflow-api-plugin/pull/129), [PR #130](https://github.com/jenkinsci/workflow-api-plugin/pull/130), [PR #131](https://github.com/jenkinsci/workflow-api-plugin/pull/131), [PR #132](https://github.com/jenkinsci/workflow-api-plugin/pull/132))
+
 ### 2.40
 
 Release date: 2020-02-26
