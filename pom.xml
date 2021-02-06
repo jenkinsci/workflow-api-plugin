@@ -147,7 +147,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- TODO the tests depend on workflow-support and cps which both need api published first... -->
-                    <skipTests>true</skipTests>
+                    <!-- need to run at least one flag or the pipeline fails -->
+                    <test>InjectedTest</test>
                 </configuration>
             </plugin>
         </plugins>
