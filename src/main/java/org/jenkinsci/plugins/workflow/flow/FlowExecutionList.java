@@ -181,9 +181,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                     @Override
                     public void onSuccess(List<StepExecution> result) {
-                        LOGGER.log(FINE, "Will resume {0}", result);
-                        for (StepExecution se : result) {
-                            se.onResume();
+                        if (result != null) {
+                            LOGGER.log(FINE, "Will resume {0}", result);
+                            for (StepExecution se : result) {
+                                se.onResume();
+                            }
                         }
                     }
 
@@ -218,11 +220,13 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 Futures.addCallback(execs,new FutureCallback<List<StepExecution>>() {
                     @Override
                     public void onSuccess(List<StepExecution> result) {
-                        for (StepExecution e : result) {
-                            try {
-                                f.apply(e);
-                            } catch (RuntimeException x) {
-                                LOGGER.log(Level.WARNING, null, x);
+                        if (result != null) {
+                            for (StepExecution e : result) {
+                                try {
+                                    f.apply(e);
+                                } catch (RuntimeException x) {
+                                    LOGGER.log(Level.WARNING, null, x);
+                                }
                             }
                         }
                     }
