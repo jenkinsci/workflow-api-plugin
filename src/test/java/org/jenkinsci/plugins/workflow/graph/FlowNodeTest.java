@@ -486,6 +486,16 @@ Action format:
         });
     }
 
+    @Issue("JENKINS-64438")
+    @Test
+    public void addOrReplaceActionWorks()  {
+        rr.then(r -> {
+            WorkflowJob j = r.createProject(WorkflowJob.class);
+            j.setDefinition(new CpsFlowDefinition("doubleWarning()", true));
+            r.buildAndAssertSuccess(j);
+        });
+    }
+
     private void assertWarning(FlowNode node, Result expectedResult, BallColor expectedColor) {
         WarningAction warningAction = node.getPersistentAction(WarningAction.class);
         assertNotNull(warningAction);
@@ -572,5 +582,35 @@ Action format:
             }
         }
     }
-}
 
+    public static class DoubleWarningStep extends Step {
+
+        @DataBoundConstructor
+        public DoubleWarningStep() {}
+
+        @Override
+        public StepExecution start(StepContext context) throws Exception {
+            return new StepExecution(context) {
+                @Override
+                public boolean start() throws Exception {
+                    getContext().get(FlowNode.class).addAction(new WarningAction(Result.FAILURE).withMessage("First"));
+                    getContext().get(FlowNode.class).addOrReplaceAction(new WarningAction(Result.FAILURE).withMessage("Second"));
+                    getContext().onSuccess(null);
+                    return true;
+                }
+            };
+        }
+        @TestExtension("addOrReplaceActionWorks")
+        public static class DescriptorImpl extends StepDescriptor {
+            @Override
+            public String getFunctionName() {
+                return "doubleWarning";
+            }
+
+            @Override
+            public Set<? extends Class<?>> getRequiredContext() {
+                return Collections.singleton(FlowNode.class);
+            }
+        }
+    }
+}
