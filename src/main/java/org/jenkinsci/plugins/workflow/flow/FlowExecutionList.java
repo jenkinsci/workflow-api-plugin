@@ -21,10 +21,13 @@ import org.jenkinsci.plugins.workflow.steps.StepExecutionIterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -181,11 +184,9 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                     @Override
                     public void onSuccess(List<StepExecution> result) {
-                        if (result != null) {
-                            LOGGER.log(FINE, "Will resume {0}", result);
-                            for (StepExecution se : result) {
-                                se.onResume();
-                            }
+                        LOGGER.log(FINE, "Will resume {0}", result);
+                        for (StepExecution se : result) {
+                            se.onResume();
                         }
                     }
 
@@ -197,7 +198,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                             LOGGER.log(WARNING, "Failed to load " + e, t);
                         }
                     }
-                }, MoreExecutors.newDirectExecutorService());
+                }, newExecutorService());
             }
         }
     }
@@ -220,13 +221,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 Futures.addCallback(execs,new FutureCallback<List<StepExecution>>() {
                     @Override
                     public void onSuccess(List<StepExecution> result) {
-                        if (result != null) {
-                            for (StepExecution e : result) {
-                                try {
-                                    f.apply(e);
-                                } catch (RuntimeException x) {
-                                    LOGGER.log(Level.WARNING, null, x);
-                                }
+                        for (StepExecution e : result) {
+                            try {
+                                f.apply(e);
+                            } catch (RuntimeException x) {
+                                LOGGER.log(Level.WARNING, null, x);
                             }
                         }
                     }
@@ -235,7 +234,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     public void onFailure(Throwable t) {
                         LOGGER.log(Level.WARNING, null, t);
                     }
-                }, MoreExecutors.newDirectExecutorService());
+                }, newExecutorService());
             }
 
             return Futures.allAsList(all);
@@ -257,6 +256,26 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         SingleLaneExecutorService executor = get().executor;
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
+    }
+
+    /**
+     * Returns an {@link ExecutorService} to be used as a parameter in other methods.
+     * It calls {@code MoreExecutors#newDirectExecutorService} or falls back to {@code MoreExecutors#sameThreadExecutor}
+     * for compatibility with older (< 18.0) versions of guava.
+     */
+    private static ExecutorService newExecutorService() {
+        try {
+            try {
+                Method method = MoreExecutors.class.getMethod("newDirectExecutorService");
+                return (ExecutorService) method.invoke(null);
+            } catch (NoSuchMethodException e) {
+                // guava older than 18, fallback to `sameThreadExecutor`
+                Method method = MoreExecutors.class.getMethod("sameThreadExecutor");
+                return (ExecutorService) method.invoke(null);
+            }
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e ) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

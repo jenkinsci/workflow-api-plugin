@@ -26,7 +26,6 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
@@ -37,6 +36,7 @@ import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
