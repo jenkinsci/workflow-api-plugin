@@ -270,7 +270,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 Method method = MoreExecutors.class.getMethod("sameThreadExecutor");
                 return (ExecutorService) method.invoke(null);
             } catch (NoSuchMethodException e) {
-                // TODO invert this to prefer the newer guava method once guava is upgraded in Jenkins core
+                // TODO invert this to prefer the newer guava method once guava is upgraded in Jenkins core, (or update jenkins.version)
                 Method method = MoreExecutors.class.getMethod("newDirectExecutorService");
                 return (ExecutorService) method.invoke(null);
             }
