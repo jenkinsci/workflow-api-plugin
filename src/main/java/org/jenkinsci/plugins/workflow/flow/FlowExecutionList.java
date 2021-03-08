@@ -260,17 +260,18 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
     /**
      * Returns an {@link ExecutorService} to be used as a parameter in other methods.
-     * It calls {@code MoreExecutors#newDirectExecutorService} or falls back to {@code MoreExecutors#sameThreadExecutor}
-     * for compatibility with older (< 18.0) versions of guava.
+     * It calls {@code MoreExecutors#sameThreadExecutor} or falls back to {@code MoreExecutors#newDirectExecutorService}
+     * for compatibility with newer (> 18.0) versions of guava.
      */
     private static ExecutorService newExecutorService() {
         try {
             try {
-                Method method = MoreExecutors.class.getMethod("newDirectExecutorService");
+                // guava older than 18
+                Method method = MoreExecutors.class.getMethod("sameThreadExecutor");
                 return (ExecutorService) method.invoke(null);
             } catch (NoSuchMethodException e) {
-                // guava older than 18, fallback to `sameThreadExecutor`
-                Method method = MoreExecutors.class.getMethod("sameThreadExecutor");
+                // TODO invert this to prefer the newer guava method once guava is upgraded in Jenkins core
+                Method method = MoreExecutors.class.getMethod("newDirectExecutorService");
                 return (ExecutorService) method.invoke(null);
             }
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e ) {
