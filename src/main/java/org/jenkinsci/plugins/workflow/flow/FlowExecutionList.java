@@ -5,7 +5,6 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -21,13 +20,10 @@ import org.jenkinsci.plugins.workflow.steps.StepExecutionIterator;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -198,7 +194,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                             LOGGER.log(WARNING, "Failed to load " + e, t);
                         }
                     }
-                }, newExecutorService());
+                }, MoreExecutors.directExecutor());
             }
         }
     }
@@ -234,7 +230,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     public void onFailure(Throwable t) {
                         LOGGER.log(Level.WARNING, null, t);
                     }
-                }, newExecutorService());
+                }, MoreExecutors.directExecutor());
             }
 
             return Futures.allAsList(all);
@@ -257,26 +253,4 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
     }
-
-    /**
-     * Returns an {@link ExecutorService} to be used as a parameter in other methods.
-     * It calls {@code MoreExecutors#sameThreadExecutor} or falls back to {@code MoreExecutors#newDirectExecutorService}
-     * for compatibility with newer (> 18.0) versions of guava.
-     */
-    private static ExecutorService newExecutorService() {
-        try {
-            try {
-                // guava older than 18
-                Method method = MoreExecutors.class.getMethod("sameThreadExecutor");
-                return (ExecutorService) method.invoke(null);
-            } catch (NoSuchMethodException e) {
-                // TODO invert this to prefer the newer guava method once guava is upgraded in Jenkins core
-                Method method = MoreExecutors.class.getMethod("newDirectExecutorService");
-                return (ExecutorService) method.invoke(null);
-            }
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e ) {
-            throw new RuntimeException(e);
-        }
-    }
-
 }
