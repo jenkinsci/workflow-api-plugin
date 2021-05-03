@@ -46,7 +46,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
  * <p>Use case: we don't care about parallel branches or know they don't exist, we just want to walk through the top-level blocks.
  *
  * <p>This is the fastest and simplest way to walk a flow, because you only care about a single node at a time.
- * Nuance: where there are multiple parent nodes (in a parallel block), and one is blacklisted, we'll find the first non-blacklisted one.
+ * Nuance: where there are multiple parent nodes (in a parallel block), and one is denylisted, we'll find the first non-denylisted one.
  * @author Sam Van Oort
  */
 @NotThreadSafe
@@ -63,7 +63,7 @@ public class LinearScanner extends AbstractFlowScanner {
 
     /**
      * {@inheritDoc}
-     * @param heads Head nodes that have been filtered against blackList. <strong>Do not pass multiple heads.</strong>
+     * @param heads Head nodes that have been filtered against denyList. <strong>Do not pass multiple heads.</strong>
      */
     @Override
     protected void setHeads(@Nonnull Collection<FlowNode> heads) {

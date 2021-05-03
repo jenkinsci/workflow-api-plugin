@@ -48,7 +48,7 @@ public abstract class WorkspaceAction implements PersistentAction {
      * The {@link Node#getAssignedLabels} of the node owning the workspace.
      * {@link Node#getSelfLabel} should be exempted, so this set may be empty in the typical case.
      * (Could be reconstructed in most cases via {@link Jenkins#getNode} on {@link #getNode},
-     * but not for a slave which has since been removed, common with clouds.)
+     * but not for an agent which has since been removed, common with clouds.)
      */
     public abstract @Nonnull Set<LabelAtom> getLabels();
 
