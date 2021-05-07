@@ -57,8 +57,8 @@ import java.util.NoSuchElementException;
  * </ul>
  *
  * <p>All APIs visit the parent nodes, walking backward from heads(inclusive) until they they hit {@link #myBlackList} nodes (exclusive) or reach the end of the DAG.
- * If blackList nodes are an empty collection or null, APIs will walk to the beginning of the FlowGraph.
- * Multiple blackList nodes are helpful for putting separate bounds on walking different parallel branches.
+ * If denyList nodes are an empty collection or null, APIs will walk to the beginning of the FlowGraph.
+ * Multiple denyList nodes are helpful for putting separate bounds on walking different parallel branches.
  *
  * <p><strong>Key Points:</strong>
  * <ul><li>There are many helper methods offering syntactic sugar for the above APIs in common use cases (simpler method signatures).</li>
@@ -83,7 +83,7 @@ import java.util.NoSuchElementException;
  *   <li>Scan through all nodes *just* within a block
  *      <ul>
  *        <li>Use the {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode} as the head</li>
- *        <li>Use the {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} as its blacklist with {@link Collections#singleton(Object)}</li>
+ *        <li>Use the {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} as its denylist with {@link Collections#singleton(Object)}</li>
  *     </ul></li>
  *   </ul>
  *
@@ -99,7 +99,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     protected Collection<FlowNode> myBlackList = Collections.emptySet();
 
-    /** When checking for blacklist membership, we convert to a hashset when checking more than this many elements */
+    /** When checking for denylist membership, we convert to a hashset when checking more than this many elements */
     protected static final int MAX_LIST_CHECK_SIZE = 5;
 
     /** Helper: convert stop nodes to a collection that can efficiently be checked for membership, handling null if needed */
@@ -142,7 +142,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     /**
-     * Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to blacklist
+     * Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to denylist
      */
     public boolean setup(@CheckForNull Collection<FlowNode> heads) {
         if (heads == null) {
@@ -152,7 +152,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     /**
-     *  Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to blacklist, and have just a single head
+     *  Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to denylist, and have just a single head
      */
     public boolean setup(@CheckForNull FlowNode head, @CheckForNull Collection<FlowNode> blackList) {
         if (head == null) {
@@ -162,7 +162,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     /**
-     * Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to blacklist and have just a single head
+     * Helper: version of {@link #setup(Collection, Collection)} where we don't have any nodes to denylist and have just a single head
      */
     public boolean setup(@CheckForNull FlowNode head) {
         if (head == null) {
@@ -183,7 +183,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      *   - {@link #reset()} has already been invoked to reset state
      *   - filteredHeads has already had any points in {@link #myBlackList} removed
      *   - none of the filteredHeads are null
-     * @param filteredHeads Head nodes that have been filtered against blackList
+     * @param filteredHeads Head nodes that have been filtered against denyList
      */
     protected abstract void setHeads(@Nonnull Collection<FlowNode> filteredHeads);
 
@@ -261,19 +261,19 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     // Polymorphic methods for syntactic sugar
 
-    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is no blackList */
+    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is no denyList */
     @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.findFirstMatch(heads, null, matchPredicate);
     }
 
-    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is a single head and no blackList */
+    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is a single head and no denyList */
     @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.findFirstMatch(Collections.singleton(head), null, matchPredicate);
     }
 
-    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} using {@link FlowExecution#getCurrentHeads()}  to get heads and no blackList */
+    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} using {@link FlowExecution#getCurrentHeads()}  to get heads and no denyList */
     @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
         if (exec != null && exec.getCurrentHeads() != null && !exec.getCurrentHeads().isEmpty()) {
@@ -326,13 +326,13 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         return (exec == null) ? Collections.emptyList() : allNodes(exec.getCurrentHeads());
     }
 
-    /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with no blackList nodes */
+    /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with no denyList nodes */
     @Nonnull
     public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(heads, null, matchPredicate);
     }
 
-    /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with a single head and no blackList nodes */
+    /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with a single head and no denyList nodes */
     @Nonnull
     public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
@@ -368,7 +368,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
         }
     }
 
-    /** Syntactic sugar for {@link #visitAll(Collection, Collection, FlowNodeVisitor)} where we don't blacklist any nodes */
+    /** Syntactic sugar for {@link #visitAll(Collection, Collection, FlowNodeVisitor)} where we don't denylist any nodes */
     public void visitAll(@CheckForNull Collection<FlowNode> heads, @Nonnull FlowNodeVisitor visitor) {
         visitAll(heads, null, visitor);
     }

@@ -62,7 +62,7 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
  * using {@link #merge} to pick up any earlier decorator in {@link StepContext#get}.
  * <p>Expected to be serializable either locally or over Remoting,
  * so an implementation of {@link #decorate} cannot assume that {@link JenkinsJVM#isJenkinsJVM}.
- * Any master-side configuration should thus be saved into instance fields when the decorator is constructed.
+ * Any controller-side configuration should thus be saved into instance fields when the decorator is constructed.
  * @see <a href="https://issues.jenkins-ci.org/browse/JENKINS-45693">JENKINS-45693</a>
  */
 public abstract class TaskListenerDecorator implements /* TODO Remotable */ Serializable {

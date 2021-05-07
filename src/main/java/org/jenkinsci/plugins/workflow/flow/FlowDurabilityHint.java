@@ -26,7 +26,7 @@ package org.jenkinsci.plugins.workflow.flow;
 import javax.annotation.Nonnull;
 
 /**
- * Provides hints about just how hard we should try to protect our workflow from failures of the master.
+ * Provides hints about just how hard we should try to protect our workflow from failures of the controller.
  * There is a trade-off between durability and performance, with higher levels carrying much higher overheads to execution.
  * Storage and persistence of data should try to provide at least the specified level (may offer more).
  *
