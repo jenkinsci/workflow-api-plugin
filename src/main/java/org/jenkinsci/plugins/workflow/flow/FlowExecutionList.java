@@ -194,7 +194,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                             LOGGER.log(WARNING, "Failed to load " + e, t);
                         }
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
         }
     }
@@ -230,7 +230,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     public void onFailure(Throwable t) {
                         LOGGER.log(Level.WARNING, null, t);
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
 
             return Futures.allAsList(all);
@@ -253,5 +253,4 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
     }
-
 }
