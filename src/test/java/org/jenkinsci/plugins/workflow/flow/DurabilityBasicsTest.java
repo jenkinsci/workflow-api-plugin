@@ -14,7 +14,7 @@ import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
-import org.jvnet.hudson.test.RestartableJenkinsRule;
+import org.jvnet.hudson.test.JenkinsSessionRule;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
@@ -28,42 +28,42 @@ import static org.junit.Assert.assertTrue;
 public class DurabilityBasicsTest {
 
     @Rule
-    public RestartableJenkinsRule r = new RestartableJenkinsRule();
+    public JenkinsSessionRule sessions = new JenkinsSessionRule();
 
     @Test
-    public void configRoundTrip() {
-        r.then(r -> {
-            GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = r.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
+    public void configRoundTrip() throws Throwable {
+        sessions.then(j -> {
+            GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = j.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
             level.setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);
-            r.configRoundtrip();
+            j.configRoundtrip();
             Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
             level.setDurabilityHint(null);
-            r.configRoundtrip();
+            j.configRoundtrip();
             Assert.assertNull(level.getDurabilityHint());
 
             // Customize again so we can check for persistence
             level.setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);
             Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
         });
-        r.then(r -> {
-            GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = r.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
+        sessions.then(j -> {
+            GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = j.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
             Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
         });
     }
 
     @Test
-    public void defaultHandling() {
-        r.then(r -> {
+    public void defaultHandling() throws Throwable {
+        sessions.then(j -> {
             Assert.assertEquals(GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT, GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint());
-            GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = r.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
+            GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = j.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
             level.setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);
             Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint());
         });
     }
 
     @Test
-    public void managePermissionShouldAccessGlobalConfig() {
-        r.then(r -> {
+    public void managePermissionShouldAccessGlobalConfig() throws Throwable {
+        sessions.then(j -> {
             Permission jenkinsManage;
             try {
                 jenkinsManage = getJenkinsManage();
@@ -73,8 +73,8 @@ public class DurabilityBasicsTest {
             }
             final String USER = "user";
             final String MANAGER = "manager";
-            r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
-            r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy()
+            j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+            j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy()
                     // Read access
                     .grant(Jenkins.READ).everywhere().to(USER)
 
