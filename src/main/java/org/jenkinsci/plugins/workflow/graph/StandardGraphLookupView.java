@@ -31,13 +31,17 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     HashMap<String, String> nearestEnclosingBlock = new HashMap<>();
 
     public void clearCache() {
-        blockStartToEnd.clear();
-        nearestEnclosingBlock.clear();
+        synchronized (blockStartToEnd) {
+            blockStartToEnd.clear();
+        }
+        synchronized (nearestEnclosingBlock) {
+            nearestEnclosingBlock.clear();
+        }
     }
 
     /** Update with a new node added to the flowgraph */
     @Override
-    public void onNewHead(@Nonnull FlowNode newHead) {
+    public synchronized void onNewHead(@Nonnull FlowNode newHead) {
         if (newHead instanceof BlockEndNode) {
             blockStartToEnd.put(((BlockEndNode)newHead).getStartNode().getId(), newHead.getId());
             String overallEnclosing = nearestEnclosingBlock.get(((BlockEndNode) newHead).getStartNode().getId());
@@ -92,10 +96,12 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         scan.setup(start.getExecution().getCurrentHeads());
         for (FlowNode f : scan) {
             if (f instanceof BlockEndNode) {
-                BlockEndNode end = (BlockEndNode)f;
+                BlockEndNode end = (BlockEndNode) f;
                 BlockStartNode maybeStart = end.getStartNode();
                 // Cache start in case we need to scan again in the future
-                blockStartToEnd.put(maybeStart.getId(), end.getId());
+                synchronized (blockStartToEnd) {
+                    blockStartToEnd.put(maybeStart.getId(), end.getId());
+                }
                 if (start.equals(maybeStart)) {
                     return end;
                 }
@@ -103,7 +109,9 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
                 BlockStartNode maybeThis = (BlockStartNode) f;
 
                 // We're walking from the end to the start and see the start without finding the end first, block is incomplete
-                blockStartToEnd.putIfAbsent(maybeThis.getId(), INCOMPLETE);
+                synchronized (blockStartToEnd) {
+                    blockStartToEnd.putIfAbsent(maybeThis.getId(), INCOMPLETE);
+                }
                 if (start.equals(maybeThis)) {  // Early exit, the end can't be encountered before the start
                     return null;
                 }
@@ -123,19 +131,23 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             if (current instanceof BlockEndNode) {
                 // Hop over the block to the start
                 BlockStartNode start = ((BlockEndNode) current).getStartNode();
-                blockStartToEnd.put(start.getId(), current.getId());
+                synchronized (blockStartToEnd) {
+                    blockStartToEnd.put(start.getId(), current.getId());
+                }
                 current = start;
                 continue;  // Simplifies cases below we only need to look at the immediately preceding node.
             }
 
             // Try for a cache hit
             if (current != node) {
-                String enclosingIdFromCache = nearestEnclosingBlock.get(current.getId());
-                if (enclosingIdFromCache != null) {
-                    try {
-                        return (BlockStartNode) node.getExecution().getNode(enclosingIdFromCache);
-                    } catch (IOException ioe) {
-                        throw new RuntimeException(ioe);
+                synchronized (nearestEnclosingBlock) {
+                    String enclosingIdFromCache = nearestEnclosingBlock.get(current.getId());
+                    if (enclosingIdFromCache != null) {
+                        try {
+                            return (BlockStartNode) node.getExecution().getNode(enclosingIdFromCache);
+                        } catch (IOException ioe) {
+                            throw new RuntimeException(ioe);
+                        }
                     }
                 }
             }
@@ -146,7 +158,9 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             }
             FlowNode parent = current.getParents().get(0);
             if (parent instanceof BlockStartNode) {
-                nearestEnclosingBlock.put(current.getId(), parent.getId());
+                synchronized (nearestEnclosingBlock) {
+                    nearestEnclosingBlock.put(current.getId(), parent.getId());
+                }
                 return (BlockStartNode) parent;
             }
             current = parent;
@@ -159,19 +173,21 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     @Override
     public BlockEndNode getEndNode(@Nonnull final BlockStartNode startNode) {
 
-        String id = blockStartToEnd.get(startNode.getId());
-        if (id != null) {
-            try {
-                return id == INCOMPLETE ? null : (BlockEndNode) startNode.getExecution().getNode(id);
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
+        synchronized (blockStartToEnd) {
+            String id = blockStartToEnd.get(startNode.getId());
+            if (id != null) {
+                try {
+                    return id == INCOMPLETE ? null : (BlockEndNode) startNode.getExecution().getNode(id);
+                } catch (IOException ioe) {
+                    throw new RuntimeException(ioe);
+                }
+            } else {
+                BlockEndNode node = bruteForceScanForEnd(startNode);
+                if (node != null) {
+                    blockStartToEnd.put(startNode.getId(), node.getId());
+                }
+                return node;
             }
-        } else {
-            BlockEndNode node = bruteForceScanForEnd(startNode);
-            if (node != null) {
-                blockStartToEnd.put(startNode.getId(), node.getId());
-            }
-            return node;
         }
     }
 
@@ -182,19 +198,21 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             return null;
         }
 
-        String id = nearestEnclosingBlock.get(node.getId());
-        if (id != null) {
-            try {
-                return (BlockStartNode) node.getExecution().getNode(id);
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
+        synchronized (nearestEnclosingBlock) {
+            String id = nearestEnclosingBlock.get(node.getId());
+            if (id != null) {
+                try {
+                    return (BlockStartNode) node.getExecution().getNode(id);
+                } catch (IOException ioe) {
+                    throw new RuntimeException(ioe);
+                }
             }
-        }
 
-        BlockStartNode enclosing = bruteForceScanForEnclosingBlock(node);
-        if (enclosing != null) {
-            nearestEnclosingBlock.put(node.getId(), enclosing.getId());
-            return enclosing;
+            BlockStartNode enclosing = bruteForceScanForEnclosingBlock(node);
+            if (enclosing != null) {
+                nearestEnclosingBlock.put(node.getId(), enclosing.getId());
+                return enclosing;
+            }
         }
         return null;
     }
