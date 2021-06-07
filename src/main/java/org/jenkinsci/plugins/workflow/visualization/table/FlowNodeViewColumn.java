@@ -10,13 +10,14 @@ import org.kohsuke.stapler.export.Exported;
  * Extension point for adding a column to a table rendering of {@link FlowNode}s.
  *
  * <p>
- * This object must have the {@code column.groovy}. This view
+ * This object must have the <code>column.groovy</code>. This view
  * is called for each cell of this column. The {@link FlowNode} object
  * is passed in the "node" variable. The view should render
  * a {@code <td>} tag.
+ *</p>
  *
  * <p>
- * This object may have an additional {@code columnHeader.groovy}. The default column header
+ * This object may have an additional <code>columnHeader.groovy</code>. The default column header
  * will render {@link #getColumnCaption()}.
  *
  * @author Kohsuke Kawaguchi

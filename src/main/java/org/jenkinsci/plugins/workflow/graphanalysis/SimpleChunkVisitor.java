@@ -32,13 +32,13 @@ import javax.annotation.Nonnull;
 
 /**
  * This visitor's callbacks are invoked as we walk through a pipeline flow graph, and it splits it into chunks.
- * <p> A {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
+ * <p>A {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)} creates these FlowChunks using a {@link ChunkFinder} to define the chunk boundaries.
  *
  * <p>We walk through the {@link FlowNode}s in reverse order from end to start, so <em>end callbacks are invoked before
  *  their corresponding start callbacks.</em>
  *
  * <p><strong>Callback types</strong>
- * <p> There are two kinds of callbacks - chunk callbacks, and parallel structure callbacks
+ * <p>There are two kinds of callbacks - chunk callbacks, and parallel structure callbacks.
  * <p><strong>Chunk Callbacks:</strong>
  * <ul>
  *     <li>{@link #chunkStart(FlowNode, FlowNode, ForkScanner)} - detected the start of a chunk beginning with a node</li>
@@ -46,7 +46,7 @@ import javax.annotation.Nonnull;
  *     <li>{@link #atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)} - most nodes, which aren't boundaries of chunks</li>
  * </ul>
  *
- * <p><p><strong>Chunk callback rules:</strong>
+ * <p><strong>Chunk callback rules:</strong>
  * <ol>
  *     <li>For a single node, it may have EITHER OR BOTH chunkStart and chunkEnd events</li>
  *     <li>Every node that doesn't get a startChunk/endChunk callback gets an atomNode callback.</li>
@@ -55,7 +55,7 @@ import javax.annotation.Nonnull;
  *     <li>You cannot have a atomNode callback AND a start/end for the same flownode (application of the above).</li>
  * </ol>
  *
- * <p>Parallel Structure Callbacks: Zero, One, or (in niche cases) several different ones may be invoked for any given FlowNode</p>
+ * <p>Parallel Structure Callbacks: Zero, One, or (in niche cases) several different ones may be invoked for any given FlowNode.
  * <p>These are used to provide awareness of parallel/branching structures if they need special handling.
  * <ul>
  *     <li>{@link #parallelStart(FlowNode, FlowNode, ForkScanner)}</li>
@@ -63,12 +63,12 @@ import javax.annotation.Nonnull;
  *     <li>{@link #parallelBranchStart(FlowNode, FlowNode, ForkScanner)}</li>
  *     <li>{@link #parallelBranchEnd(FlowNode, FlowNode, ForkScanner)}</li>
  * </ul>
- * <em>The cases where a node triggers multiple callbacks are where it is one of several forked branches of an incomplete parallel
+ * <p><em>The cases where a node triggers multiple callbacks are where it is one of several forked branches of an incomplete parallel
  *   block.  In this case it can be a parallelBranchEnd, also potentially a parallelEnd, plus whatever role that node might normally
  *   have (such as the start of another parallel).</em>
  *
  * <p>Implementations get to decide how to use and handle chunks, and should be stateful.
- * <p><h3>At a minimum they should handle:</h3>
+ * <h3>At a minimum they should handle:</h3>
  * <ul>
  *     <li>Cases where there is no enclosing chunk (no start/end found, or outside a chunk)</li>
  *     <li>Cases where there is no chunk end to match the start, because we haven't finished running a block</li>
