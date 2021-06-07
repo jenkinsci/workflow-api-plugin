@@ -10,9 +10,9 @@ import javax.annotation.Nonnull;
  * <p>This is used to define a linear "chunk" from the graph of FlowNodes returned by a {@link ForkScanner}, after it applies ordering.
  * <p>This is done by invoking {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)}.
  * <p>Your {@link SimpleChunkVisitor} will receive callbacks about chunk boundaries on the basis of the ChunkFinder.
- *   It is responsible for tracking the state based on events fired
+ *   It is responsible for tracking the state based on events fired.
  *
- * <p><p><em>Common uses:</em>
+ * <p><em>Common uses:</em>
  * <ul>
  *     <li>Find all {@link FlowNode}s within a specific block type, such the block created by a timeout block, 'node' (executor) block, etc</li>
  *     <li>Find all {@link FlowNode}s between specific markers, such as labels, milestones, or steps generating an error</li>
