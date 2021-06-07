@@ -39,7 +39,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     @Override
     public synchronized void onNewHead(@Nonnull FlowNode newHead) {
         if (newHead instanceof BlockEndNode) {
-            blockStartToEnd.put(((BlockEndNode) newHead).getStartNode().getId(), newHead.getId());
+            blockStartToEnd.put(((BlockEndNode)newHead).getStartNode().getId(), newHead.getId());
             String overallEnclosing = nearestEnclosingBlock.get(((BlockEndNode) newHead).getStartNode().getId());
             if (overallEnclosing != null) {
                 nearestEnclosingBlock.put(newHead.getId(), overallEnclosing);
@@ -92,7 +92,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         scan.setup(start.getExecution().getCurrentHeads());
         for (FlowNode f : scan) {
             if (f instanceof BlockEndNode) {
-                BlockEndNode end = (BlockEndNode) f;
+                BlockEndNode end = (BlockEndNode)f;
                 BlockStartNode maybeStart = end.getStartNode();
                 // Cache start in case we need to scan again in the future
                 blockStartToEnd.put(maybeStart.getId(), end.getId());
@@ -115,6 +115,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     /** Do a brute-force scan for the enclosing blocks **/
     synchronized BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull final FlowNode node) {
         FlowNode current = node;
+
         while (!(current instanceof FlowStartNode)) {  // Hunt back for enclosing blocks, a potentially expensive operation
             if (current instanceof BlockEndNode) {
                 // Hop over the block to the start
