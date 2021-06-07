@@ -148,6 +148,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             }
             current = parent;
         }
+
         return null;
     }
 
@@ -177,6 +178,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         if (node instanceof FlowStartNode || node instanceof FlowEndNode) {
             return null;
         }
+
         String id = nearestEnclosingBlock.get(node.getId());
         if (id != null) {
             try {
