@@ -14,10 +14,12 @@ import org.kohsuke.stapler.export.Exported;
  * is called for each cell of this column. The {@link FlowNode} object
  * is passed in the "node" variable. The view should render
  * a {@code <td>} tag.
+ *</p>
  *
  * <p>
- * This object may have an additional <tt>columnHeader.groovy</tt>. The default column header
+ * This object may have an additional {@code <tt>columnHeader.groovy</tt>}. The default column header
  * will render {@link #getColumnCaption()}.
+ *</p>
  *
  * @author Kohsuke Kawaguchi
  * @since 1.279

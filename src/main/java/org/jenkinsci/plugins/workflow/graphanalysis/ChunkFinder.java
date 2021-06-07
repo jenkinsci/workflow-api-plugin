@@ -7,18 +7,18 @@ import javax.annotation.Nonnull;
 
 /**
  * Think of this as setting conditions to mark a region of interest in the graph of {@link FlowNode} from a {@link org.jenkinsci.plugins.workflow.flow.FlowExecution}.
- * <p>This is used to define a linear "chunk" from the graph of FlowNodes returned by a {@link ForkScanner}, after it applies ordering.
- * <p>This is done by invoking {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)}.
+ * <p>This is used to define a linear "chunk" from the graph of FlowNodes returned by a {@link ForkScanner}, after it applies ordering.</p>
+ * <p>This is done by invoking {@link ForkScanner#visitSimpleChunks(SimpleChunkVisitor, ChunkFinder)}.</p>
  * <p>Your {@link SimpleChunkVisitor} will receive callbacks about chunk boundaries on the basis of the ChunkFinder.
- *   It is responsible for tracking the state based on events fired
+ *   It is responsible for tracking the state based on events fired</p>
  *
- * <p><p><em>Common uses:</em>
+ * <p><em>Common uses:</em></p>
  * <ul>
  *     <li>Find all {@link FlowNode}s within a specific block type, such the block created by a timeout block, 'node' (executor) block, etc</li>
  *     <li>Find all {@link FlowNode}s between specific markers, such as labels, milestones, or steps generating an error</li>
  * </ul>
  *
- * <p><em>Implementation Notes:</em>
+ * <p><em>Implementation Notes:</em></p>
  * <ul>
  *     <li>This can be used to detect both block-delimited regions of interest and marker-based regions</li>
  *     <li>Block-delimited regions should END when encountering the right kind of {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode}
