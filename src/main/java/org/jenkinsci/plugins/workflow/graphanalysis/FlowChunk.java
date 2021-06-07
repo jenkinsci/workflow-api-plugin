@@ -32,7 +32,7 @@ import javax.annotation.Nonnull;
  * <p>Common container interface for a series of {@link FlowNode}s with a logical start and end.</p>
  * <p>We use this because every plugin has a different way of storing info about the nodes.</p>
  *
- * <p> Common uses:
+ * <p> Common uses:</p>
  * <ul>
  *     <li>A single FlowNode (when coupling with timing/status APIs)</li>
  *     <li>A block (with a {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} and {@link org.jenkinsci.plugins.workflow.graph.BlockEndNode})</li>
@@ -41,7 +41,6 @@ import javax.annotation.Nonnull;
  *     <li>A parallel branch within a parallel block</li>
  *     <li>A mix of types in sequence, such as nested structures</li>
  * </ul>
- * </p>
  *
  * @author Sam Van Oort
  */
