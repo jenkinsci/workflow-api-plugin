@@ -19,7 +19,6 @@ import org.kohsuke.stapler.export.Exported;
  * <p>
  * This object may have an additional <code>columnHeader.groovy</code>. The default column header
  * will render {@link #getColumnCaption()}.
- *</p>
  *
  * @author Kohsuke Kawaguchi
  * @since 1.279
