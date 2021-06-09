@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
-import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Actionable;
@@ -36,6 +35,7 @@ import java.io.IOException;
 import java.io.ObjectStreamException;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -76,7 +76,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     protected FlowNode(FlowExecution exec, String id, List<FlowNode> parents) {
         this.id = id;
         this.exec = exec;
-        this.parents = ImmutableList.copyOf(parents);
+        this.parents = Collections.unmodifiableList(new ArrayList<>(parents));
         parentIds = ids();
         // Note that enclosingId is set in the constructors of AtomNode, BlockEndNode, and BlockStartNode, since we need
         // BlockEndNode in particular to have its start node beforehand.
@@ -85,7 +85,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     protected FlowNode(FlowExecution exec, String id, FlowNode... parents) {
         this.id = id;
         this.exec = exec;
-        this.parents = ImmutableList.copyOf(parents);
+        this.parents = Collections.unmodifiableList(Arrays.asList(parents));
         parentIds = ids();
         // Note that enclosingId is set in the constructors of AtomNode, BlockEndNode, and BlockStartNode, since we need
         // BlockEndNode in particular to have its start node beforehand.

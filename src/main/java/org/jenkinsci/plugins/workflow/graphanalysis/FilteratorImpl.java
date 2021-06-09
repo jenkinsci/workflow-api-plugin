@@ -24,11 +24,10 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
-
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Iterator;
+import java.util.function.Predicate;
 
 /** Filters an iterator against a match predicate by wrapping an iterator
  * @author Sam Van Oort
@@ -51,12 +50,33 @@ class FilteratorImpl<T> implements Filterator<T> {
 
         while(it.hasNext()) {
             T val = it.next();
+            if (matchCondition.test(val)) {
+                this.nextVal = val;
+                hasNext = true;
+                break;
+            }
+        }
+    }
+
+    public FilteratorImpl(@Nonnull Iterator<T> it, @Nonnull com.google.common.base.Predicate<T> matchCondition) {
+        this.wrapped = it;
+        this.matchCondition = t ->  matchCondition.apply(t);
+
+        while(it.hasNext()) {
+            T val = it.next();
             if (matchCondition.apply(val)) {
                 this.nextVal = val;
                 hasNext = true;
                 break;
             }
         }
+    }
+
+    @Nonnull
+    @Override
+    public Filterator<T> filter( @Nonnull com.google.common.base.Predicate<T> matchCondition )
+    {
+        return new FilteratorImpl<>(this, matchCondition);
     }
 
     @Override
@@ -72,7 +92,7 @@ class FilteratorImpl<T> implements Filterator<T> {
         boolean foundMatch = false;
         while(wrapped.hasNext()) {
             nextMatch = wrapped.next();
-            if (matchCondition.apply(nextMatch)) {
+            if (matchCondition.test(nextMatch)) {
                 foundMatch = true;
                 break;
             }

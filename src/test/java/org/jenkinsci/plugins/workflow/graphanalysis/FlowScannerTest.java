@@ -24,9 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterators;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
@@ -49,6 +46,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Predicate;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
 import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
@@ -161,7 +159,7 @@ public class FlowScannerTest {
         // Filtered nodes
         assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, MATCH_ECHO_STEP), 5, 4);
         assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, Collections.singleton(intermediateNode), MATCH_ECHO_STEP), 5);
-        Assert.assertEquals(0, linear.filteredNodes(heads, null, (Predicate) Predicates.alwaysFalse()).size());
+        Assert.assertEquals(0, linear.filteredNodes(heads, null, input -> false));
         Assert.assertEquals(0, linear.filteredNodes(nullNode, MATCH_ECHO_STEP).size());
         Assert.assertEquals(0, linear.filteredNodes(Collections.EMPTY_SET, MATCH_ECHO_STEP).size());
 
@@ -244,7 +242,7 @@ public class FlowScannerTest {
             // Blacklist tests
             scan.setup(heads, Collections.singleton(exec.getNode("4")));
             assertNodeOrder("Testing full scan for scanner " + scan.getClass(), scan, 6, 5);
-            FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), Predicates.alwaysTrue());
+            FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), input -> true);
             Assert.assertNull(f);
         }
     }
@@ -275,7 +273,7 @@ public class FlowScannerTest {
          */
 
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-        Predicate<FlowNode> matchEchoStep = FlowTestUtils.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
+        Predicate<FlowNode> matchEchoStep = FlowTestUtils.predicateMatchStepDescriptor( "org.jenkinsci.plugins.workflow.steps.EchoStep");
         FlowExecution exec = b.getExecution();
         Collection<FlowNode> heads = exec.getCurrentHeads();
 

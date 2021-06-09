@@ -14,7 +14,6 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
-import com.google.common.annotations.GwtCompatible;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import java.util.concurrent.Executor;
@@ -23,7 +22,6 @@ import java.util.concurrent.Executor;
  * An {@link Executor} that runs each task in the thread that invokes {@link Executor#execute
  * execute}.
  */
-@GwtCompatible
 @Restricted(NoExternalUse.class)
 enum DirectExecutor implements Executor {
   INSTANCE;

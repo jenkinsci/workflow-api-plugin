@@ -24,10 +24,9 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
-
 import javax.annotation.Nonnull;
 import java.util.Iterator;
+import java.util.function.Predicate;
 
 /** Iterator that may be navigated through a filtered wrapper.
  *
@@ -37,7 +36,14 @@ import java.util.Iterator;
  *  @author Sam Van Oort
  */
 public interface Filterator<T> extends Iterator<T> {
+
     /** Returns a filtered view of the iterator, which calls the iterator until matches are found */
     @Nonnull
+    @Deprecated
     Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
+
+    /** please use the standard {@link Predicate} */
+    @Nonnull
+    @Deprecated
+    Filterator<T> filter(@Nonnull com.google.common.base.Predicate<T> matchCondition);
 }
