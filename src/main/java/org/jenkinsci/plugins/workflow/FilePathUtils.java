@@ -63,7 +63,7 @@ public class FilePathUtils {
      * Note that if an administrator disconnects an agent, configures and connects an unrelated agent with the same name,
      * and then this method is called on a path created against the original connection, the result may be misleading.
      * @param f a file, possibly remote
-     * @return a node name ({@code ""} for master), if known, else null
+     * @return a node name ({@code ""} for the controller), if known, else null
      */
     public static @CheckForNull String getNodeNameOrNull(@Nonnull FilePath f) {
         return Listener.getChannelName(f.getChannel());
@@ -72,7 +72,7 @@ public class FilePathUtils {
     /**
      * Same as {@link #getNodeNameOrNull} but throws a diagnostic exception in case of failure.
      * @param f a file, possible remote
-     * @return a node name ({@code ""} for master), if known
+     * @return a node name ({@code ""} for the controller), if known
      * @throws IllegalStateException if the association to a node is unknown
      */
     public static @Nonnull String getNodeName(@Nonnull FilePath f) throws IllegalStateException {
@@ -80,7 +80,7 @@ public class FilePathUtils {
         if (name != null) {
             return name;
         } else {
-            throw new IllegalStateException("no known slave for " + f + " among " + Listener.getChannelNames());
+            throw new IllegalStateException("no known agent for " + f + " among " + Listener.getChannelNames());
         }
     }
 

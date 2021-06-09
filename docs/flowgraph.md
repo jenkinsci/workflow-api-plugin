@@ -75,7 +75,7 @@ This may seem backwards, but it enables us to freely append to the Flow Graph as
 * **There are no bounds on the size of the flow graph, it may have thousands of nodes in it.**  Real users with complex Pipelines will really generate graphs this size.  Yes, really.  
 * **Repeat: there are no bounds on the size of the flow graph.  This means if you use recursive function calls to iterate over the Flow Graph you will get a `StackOverFlowError`!!!**  Use the `AbstractFlowScanner` implementations - they're free of stack overflows and well-tested.
 * As a back of napkin estimate, most Flow Graphs fall in the 200-700 `FlowNode` range
-* `GraphListener` gotcha: because the listener is invoked for each new `FlowNode`, if you implement some operation that iterates over a lot of the Flow Graph then you've just done an O(n^2) operation and it can result in very high CPU use.  This can bog down a Jenkins master if not done carefully.
+* `GraphListener` gotcha: because the listener is invoked for each new `FlowNode`, if you implement some operation that iterates over a lot of the Flow Graph then you've just done an O(n^2) operation and it can result in very high CPU use.  This can bog down a Jenkins controller if not done carefully.
     - Careful use of the methods above to iterate/find enclosing flownodes can make this much safer
 
 

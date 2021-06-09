@@ -41,22 +41,21 @@ import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
-import org.jvnet.hudson.test.RestartableJenkinsRule;
+import org.jvnet.hudson.test.JenkinsSessionRule;
 
 public class FlowExecutionListTest {
 
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
-    @Rule public RestartableJenkinsRule rr = new RestartableJenkinsRule();
+    @Rule public JenkinsSessionRule sessions = new JenkinsSessionRule();
     @Rule public LoggerRule logging = new LoggerRule().record(FlowExecutionList.class, Level.FINE);
 
     @Issue("JENKINS-40771")
-    @Test public void simultaneousRegister() {
-        rr.addStep(new Statement() {
-            @Override public void evaluate() throws Throwable {
-                WorkflowJob p = rr.j.createProject(WorkflowJob.class, "p");
+    @Test public void simultaneousRegister() throws Throwable {
+        sessions.then(j -> {
+                WorkflowJob p = j.createProject(WorkflowJob.class, "p");
                 { // make sure there is an initial FlowExecutionList.xml
                     p.setDefinition(new CpsFlowDefinition("", true));
-                    rr.j.buildAndAssertSuccess(p);
+                    j.buildAndAssertSuccess(p);
                 }
                 p.setDefinition(new CpsFlowDefinition("echo params.key; sleep 5", true));
                 p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("key", null)));
@@ -68,18 +67,15 @@ public class FlowExecutionListTest {
                 assertNotNull(b2);
                 WorkflowRun b3 = p.getBuildByNumber(3);
                 assertNotNull(b3);
-                rr.j.waitForMessage("Sleeping for ", b2);
-                rr.j.waitForMessage("Sleeping for ", b3);
-            }
+                j.waitForMessage("Sleeping for ", b2);
+                j.waitForMessage("Sleeping for ", b3);
         });
-        rr.addStep(new Statement() {
-            @Override public void evaluate() throws Throwable {
-                WorkflowJob p = rr.j.jenkins.getItemByFullName("p", WorkflowJob.class);
+        sessions.then(j -> {
+                WorkflowJob p = j.jenkins.getItemByFullName("p", WorkflowJob.class);
                 WorkflowRun b2 = p.getBuildByNumber(2);
                 WorkflowRun b3 = p.getBuildByNumber(3);
-                rr.j.assertBuildStatusSuccess(rr.j.waitForCompletion(b2));
-                rr.j.assertBuildStatusSuccess(rr.j.waitForCompletion(b3));
-            }
+                j.assertBuildStatusSuccess(j.waitForCompletion(b2));
+                j.assertBuildStatusSuccess(j.waitForCompletion(b3));
         });
     }
 

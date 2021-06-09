@@ -75,7 +75,7 @@ public abstract class FlowExecutionOwner implements Serializable {
     }
 
     /**
-     * A directory (on the master) where information may be persisted.
+     * A directory (on the controller) where information may be persisted.
      * @see Run#getRootDir
      */
     public abstract File getRootDir() throws IOException;

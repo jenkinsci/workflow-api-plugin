@@ -161,11 +161,11 @@ public abstract class LogStorageTestBase {
         logging.capture(100).record(Channel.class, Level.WARNING);
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
-        overall.getLogger().println("overall from master");
+        overall.getLogger().println("overall from controller");
         TaskListener step = ls.nodeListener(new MockNode("1"));
-        step.getLogger().println("step from master");
-        long overallPos = assertOverallLog(0, "overall from master\n<span class=\"pipeline-node-1\">step from master\n</span>", true);
-        long stepPos = assertStepLog("1", 0, "step from master\n", true);
+        step.getLogger().println("step from controller");
+        long overallPos = assertOverallLog(0, "overall from controller\n<span class=\"pipeline-node-1\">step from controller\n</span>", true);
+        long stepPos = assertStepLog("1", 0, "step from controller\n", true);
         DumbSlave s = r.createOnlineSlave();
         r.showAgentLogs(s, agentLoggers());
         VirtualChannel channel = s.getChannel();
