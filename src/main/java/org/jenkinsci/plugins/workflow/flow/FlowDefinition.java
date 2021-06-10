@@ -30,8 +30,11 @@ import hudson.model.AbstractDescribableImpl;
 import hudson.model.Action;
 import hudson.model.TaskListener;
 import hudson.util.LogTaskListener;
+import hudson.scm.SCM;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -74,6 +77,19 @@ public abstract class FlowDefinition extends AbstractDescribableImpl<FlowDefinit
 
     @Override public FlowDefinitionDescriptor getDescriptor() {
         return (FlowDefinitionDescriptor) super.getDescriptor();
+    }
+
+    /**
+     * Returns a list of all {@link SCM SCMs} that are part of the static configuration of the {@link FlowDefinition}.
+     * Subclasses of {@link FlowDefinition} may override this method to return statically configured SCMs 
+     * that they may be aware of. For example, {@code CpsScmFlowDefinition} returns SCM used to retrieve 
+     * Jenkinsfile. 
+     * Does not include any SCMs used dynamically during Pipeline execution.
+     * May be empty (or not overridden) if the Pipeline does not include any statically configured SCMs.
+     * This method is used in {@code WorkflowJob} class which will combine lists of static and dynamic SCMs.
+     */
+    public Collection<? extends SCM> getSCMs() {
+        return Collections.emptyList();
     }
 
 }
