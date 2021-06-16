@@ -24,20 +24,20 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
 
     static final String INCOMPLETE = "";
 
-    /** Map the blockStartNode to its endNode, to accelerate a range of operations */
+    /** Map the blockStartNode to its endNode, to accellerate a range of operations */
     HashMap<String, String> blockStartToEnd = new HashMap<>();
 
     /** Map a node to its nearest enclosing block */
     HashMap<String, String> nearestEnclosingBlock = new HashMap<>();
 
-    public synchronized void clearCache() {
+    public void clearCache() {
         blockStartToEnd.clear();
         nearestEnclosingBlock.clear();
     }
 
     /** Update with a new node added to the flowgraph */
     @Override
-    public synchronized void onNewHead(@Nonnull FlowNode newHead) {
+    public void onNewHead(@Nonnull FlowNode newHead) {
         if (newHead instanceof BlockEndNode) {
             blockStartToEnd.put(((BlockEndNode)newHead).getStartNode().getId(), newHead.getId());
             String overallEnclosing = nearestEnclosingBlock.get(((BlockEndNode) newHead).getStartNode().getId());
@@ -87,7 +87,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     }
 
     // Do a brute-force scan for the block end matching the start, caching info along the way for future use
-    synchronized BlockEndNode bruteForceScanForEnd(@Nonnull BlockStartNode start) {
+    BlockEndNode bruteForceScanForEnd(@Nonnull BlockStartNode start) {
         DepthFirstScanner scan = new DepthFirstScanner();
         scan.setup(start.getExecution().getCurrentHeads());
         for (FlowNode f : scan) {
@@ -112,8 +112,11 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         return null;
     }
 
+
+
+
     /** Do a brute-force scan for the enclosing blocks **/
-    synchronized BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull final FlowNode node) {
+    BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull final FlowNode node) {
         FlowNode current = node;
 
         while (!(current instanceof FlowStartNode)) {  // Hunt back for enclosing blocks, a potentially expensive operation
@@ -154,7 +157,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
 
     @CheckForNull
     @Override
-    public synchronized BlockEndNode getEndNode(@Nonnull final BlockStartNode startNode) {
+    public BlockEndNode getEndNode(@Nonnull final BlockStartNode startNode) {
 
         String id = blockStartToEnd.get(startNode.getId());
         if (id != null) {
@@ -174,7 +177,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
 
     @CheckForNull
     @Override
-    public synchronized BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node) {
+    public BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node) {
         if (node instanceof FlowStartNode || node instanceof FlowEndNode) {
             return null;
         }
