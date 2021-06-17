@@ -24,6 +24,8 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
@@ -47,6 +49,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
 import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
@@ -467,8 +471,11 @@ public class FlowScannerTest {
         Assert.assertEquals(7, matches.size());
 
         scanner.setup(heads);
-        Assert.assertTrue("FlowGraphWalker differs from DepthFirstScanner", Iterators.elementsEqual(new FlowGraphWalker(exec).iterator(), scanner.iterator()));
-
+        MatcherAssert.assertThat("FlowGraphWalker differs from DepthFirstScanner",
+                                 StreamSupport.stream(new FlowGraphWalker(exec).spliterator(), false)
+                                     .collect(Collectors.toList()),
+                                 Matchers.containsInAnyOrder(StreamSupport.stream(scanner.spliterator(), false)
+                                    .collect(Collectors.toList()))) ;
 
         // We're going to test the ForkScanner in more depth since this is its natural use
         scanner = new ForkScanner();

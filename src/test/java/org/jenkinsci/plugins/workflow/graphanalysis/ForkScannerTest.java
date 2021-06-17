@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.collect.Iterables;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepEndNode;
@@ -687,9 +686,9 @@ public class ForkScannerTest {
     @Test
     public void testParallelPredicate() throws Exception {
         FlowExecution exec = SIMPLE_PARALLEL_RUN.getExecution();
-        Assert.assertTrue(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("4")));
-        Assert.assertFalse(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("6")));
-        Assert.assertFalse(new ForkScanner.IsParallelStartPredicate().apply(exec.getNode("8")));
+        Assert.assertTrue(new ForkScanner.IsParallelStartPredicate().test(exec.getNode("4")));
+        Assert.assertFalse(new ForkScanner.IsParallelStartPredicate().test(exec.getNode("6")));
+        Assert.assertFalse(new ForkScanner.IsParallelStartPredicate().test(exec.getNode("8")));
     }
 
     @Test
@@ -856,7 +855,8 @@ public class ForkScannerTest {
         WorkflowRun run  = job.scheduleBuild2(0).getStartCondition().get();
         SemaphoreStep.waitForStart(semaphoreName+"/1", run);
 
-        FlowNode semaphoreNode = Iterables.tryFind(run.getExecution().getCurrentHeads(), new NodeStepTypePredicate("semaphore")).orNull();
+        FlowNode semaphoreNode = run.getExecution().getCurrentHeads().stream()
+            .filter(new NodeStepTypePredicate("semaphore")).findFirst().orElse(null);
 
         TestVisitor visitor = new TestVisitor();
         List<FlowNode> heads = run.getExecution().getCurrentHeads();

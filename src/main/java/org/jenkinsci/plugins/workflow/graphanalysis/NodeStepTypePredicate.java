@@ -22,8 +22,6 @@
  * THE SOFTWARE.
  */
 package org.jenkinsci.plugins.workflow.graphanalysis;
-
-import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
@@ -34,9 +32,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.function.Predicate;
 
 /** Predicate that matches {@link FlowNode}s (specifically {@link StepNode}s) with a specific {@link StepDescriptor} type. */
-public final class NodeStepTypePredicate implements Predicate<FlowNode> {
+public final class NodeStepTypePredicate implements Predicate<FlowNode>
+{
     StepDescriptor stepDescriptor;
 
     public NodeStepTypePredicate(@Nonnull StepDescriptor descriptorType) {
@@ -53,7 +53,7 @@ public final class NodeStepTypePredicate implements Predicate<FlowNode> {
     }
 
     @Override
-    public boolean apply(@Nullable FlowNode input) {
+    public boolean test(@Nullable FlowNode input) {
         if (input instanceof StepNode) {
             return ((StepNode) input).getDescriptor() == stepDescriptor;
         } else if (input != null && !(input instanceof FlowStartNode || input instanceof FlowEndNode)) {

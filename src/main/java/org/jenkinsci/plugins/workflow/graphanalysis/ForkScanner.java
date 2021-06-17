@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
@@ -48,6 +47,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Scanner that will scan down all forks when we hit parallel blocks before continuing, but generally runs in linear order
@@ -145,8 +145,8 @@ public class ForkScanner extends AbstractFlowScanner {
         static final NodeStepNamePredicate PARALLEL_STEP = new NodeStepNamePredicate("org.jenkinsci.plugins.workflow.cps.steps.ParallelStep");
 
         @Override
-        public boolean apply(@Nullable FlowNode input) {
-            return (input instanceof BlockStartNode && PARALLEL_STEP.apply(input) && input.getPersistentAction(ThreadNameAction.class) == null);
+        public boolean test(@Nullable FlowNode input) {
+            return (input instanceof BlockStartNode && PARALLEL_STEP.test(input) && input.getPersistentAction(ThreadNameAction.class) == null);
         }
     }
 
@@ -163,7 +163,7 @@ public class ForkScanner extends AbstractFlowScanner {
 
     // Needed because the *next* node might be a parallel start if we start in middle and we don't know it
     public static boolean isParallelStart(@CheckForNull FlowNode f) {
-        return parallelStartPredicate.apply(f);
+        return parallelStartPredicate.test(f);
     }
 
     // Needed because the *next* node might be a parallel end and we don't know it from a normal one
@@ -371,11 +371,11 @@ public class ForkScanner extends AbstractFlowScanner {
             Collection<FlowNode> checkHeads = convertToFastCheckable(heads);
 
             @Override
-            public boolean apply(FlowNode input) { return !checkHeads.contains(input); }
+            public boolean test(FlowNode input) { return !checkHeads.contains(input); }
         };
 
         for (FlowNode f : heads) {
-            iterators.add(new FilteratorImpl<>((Iterator)f.iterateEnclosingBlocks().iterator(), notAHead));  // We can do this because Parallels always meet at a BlockStartNode
+            iterators.add(new FilteratorImpl((Iterator)f.iterateEnclosingBlocks().iterator(), notAHead));  // We can do this because Parallels always meet at a BlockStartNode
             FlowSegment b = new FlowSegment();
             b.add(f);
             livePieces.add(b);

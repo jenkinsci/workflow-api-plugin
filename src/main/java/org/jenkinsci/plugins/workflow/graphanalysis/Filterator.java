@@ -42,8 +42,4 @@ public interface Filterator<T> extends Iterator<T> {
     @Deprecated
     Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
 
-    /** please use the standard {@link Predicate} */
-    @Nonnull
-    @Deprecated
-    Filterator<T> filter(@Nonnull com.google.common.base.Predicate<T> matchCondition);
 }

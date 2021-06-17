@@ -58,27 +58,6 @@ class FilteratorImpl<T> implements Filterator<T> {
         }
     }
 
-    public FilteratorImpl(@Nonnull Iterator<T> it, @Nonnull com.google.common.base.Predicate<T> matchCondition) {
-        this.wrapped = it;
-        this.matchCondition = t ->  matchCondition.apply(t);
-
-        while(it.hasNext()) {
-            T val = it.next();
-            if (matchCondition.apply(val)) {
-                this.nextVal = val;
-                hasNext = true;
-                break;
-            }
-        }
-    }
-
-    @Nonnull
-    @Override
-    public Filterator<T> filter( @Nonnull com.google.common.base.Predicate<T> matchCondition )
-    {
-        return new FilteratorImpl<>(this, matchCondition);
-    }
-
     @Override
     public boolean hasNext() {
         return hasNext;

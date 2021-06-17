@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.actions;
 
-import com.google.common.primitives.Primitives;
 import hudson.PluginManager;
 import hudson.model.Describable;
 import java.util.Collection;

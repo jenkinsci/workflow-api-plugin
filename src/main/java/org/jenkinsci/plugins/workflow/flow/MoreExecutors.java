@@ -14,7 +14,6 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
-import com.google.common.annotations.GwtCompatible;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import java.util.concurrent.Executor;
@@ -29,7 +28,6 @@ import java.util.concurrent.ExecutorService;
  * @author Justin Mahoney
  * @since 3.0
  */
-@GwtCompatible(emulated = true)
 @Restricted(NoExternalUse.class)
 public final class MoreExecutors {
   private MoreExecutors() {}

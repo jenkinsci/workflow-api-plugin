@@ -23,7 +23,6 @@
  */
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
@@ -34,6 +33,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.function.Predicate;
 
 /** Predicate that matches {@link FlowNode}s (specifically {@link StepNode}s) with a specific {@link StepDescriptor} name.
  *  May be used in preference to {@link NodeStepTypePredicate} in cases whern dependency structures prevent import
@@ -51,7 +51,7 @@ public final class NodeStepNamePredicate implements Predicate<FlowNode> {
     }
 
     @Override
-    public boolean apply(@Nullable FlowNode input) {
+    public boolean test(@Nullable FlowNode input) {
         if (input instanceof StepNode) {
             StepDescriptor sd = ((StepNode) input).getDescriptor();
             return sd != null && descriptorId.equals(sd.getId());

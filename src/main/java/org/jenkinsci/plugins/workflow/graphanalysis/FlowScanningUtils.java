@@ -24,8 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import hudson.model.Action;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
@@ -35,6 +33,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.function.Predicate;
 
 /**
  * Library of common functionality when analyzing/walking flow graphs
@@ -51,17 +50,12 @@ public final class FlowScanningUtils {
      * @return Predicate that will match when FlowNode has the action given
      */
     @Nonnull
-    public static  Predicate<FlowNode> hasActionPredicate(@Nonnull final Class<? extends Action> actionClass) {
-        return new Predicate<FlowNode>() {
-            @Override
-            public boolean apply(FlowNode input) {
-                return (input != null && input.getAction(actionClass) != null);
-            }
-        };
+    public static Predicate<FlowNode> hasActionPredicate(@Nonnull final Class<? extends Action> actionClass) {
+        return input -> (input != null && input.getAction( actionClass) != null);
     }
 
     // Default predicates, which may be used for common conditions
-    public static final Predicate<FlowNode> MATCH_BLOCK_START = (Predicate)Predicates.instanceOf(BlockStartNode.class);
+    public static final Predicate<FlowNode> MATCH_BLOCK_START = flowNode -> flowNode instanceof BlockStartNode;
 
     /** Sorts flownodes putting the one begun last (oldest startTime) at the end, with null times last
      *  because likely they represent the newest nodes with a {@link TimingAction} not attached yet. */
@@ -122,6 +116,6 @@ public final class FlowScanningUtils {
     @Nonnull
     @Deprecated
     public static Filterator<FlowNode> fetchEnclosingBlocks(@Nonnull FlowNode f) {
-        return new FilteratorImpl<>((Iterator) f.iterateEnclosingBlocks().iterator(), Predicates.<FlowNode>alwaysTrue());
+        return new FilteratorImpl<>((Iterator) f.iterateEnclosingBlocks().iterator(), o -> true);
     }
 }
