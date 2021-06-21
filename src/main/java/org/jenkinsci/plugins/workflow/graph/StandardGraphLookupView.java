@@ -11,13 +11,12 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Provides overall insight into the structure of a flow graph... but with limited visibility so we can change implementation.
- * Designed to work entirely on the basis of the {@link FlowNode#id} rather than the {@link FlowNode}s themselves.
+ * Designed to work entirely on the basis of the {@link FlowNode#getId()} rather than the {@link FlowNode}s themselves.
  */
 @SuppressFBWarnings(value = "ES_COMPARING_STRINGS_WITH_EQ", justification = "Can can use instance identity when comparing to a final constant")
 @Restricted(NoExternalUse.class)
@@ -40,10 +39,11 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     @Override
     public void onNewHead(@Nonnull FlowNode newHead) {
         if (newHead instanceof BlockEndNode) {
-            blockStartToEnd.put(((BlockEndNode)newHead).getStartNode().getId(), newHead.getId());
-            String overallEnclosing = nearestEnclosingBlock.get(((BlockEndNode) newHead).getStartNode().getId());
-            if (overallEnclosing != null) {
-                nearestEnclosingBlock.put(newHead.getId(), overallEnclosing);
+            String startNodeId = ((BlockEndNode)newHead).getStartNode().getId();
+            blockStartToEnd.put(startNodeId, newHead.getId());
+            String enclosingId = nearestEnclosingBlock.get(startNodeId);
+            if (enclosingId != null) {
+                nearestEnclosingBlock.put(newHead.getId(), enclosingId);
             }
         } else {
             if (newHead instanceof BlockStartNode) {
@@ -168,11 +168,9 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
                 throw new RuntimeException(ioe);
             }
         } else {
-            BlockEndNode node = bruteForceScanForEnd(startNode);
-            if (node != null) {
-                blockStartToEnd.put(startNode.getId(), node.getId());
-            }
-            return node;
+            // returns the end node or null
+            // if this returns end node, it also adds start and end to blockStartToEnd
+            return bruteForceScanForEnd(startNode);
         }
     }
 
@@ -192,12 +190,8 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
             }
         }
 
-        BlockStartNode enclosing = bruteForceScanForEnclosingBlock(node);
-        if (enclosing != null) {
-            nearestEnclosingBlock.put(node.getId(), enclosing.getId());
-            return enclosing;
-        }
-        return null;
+        // when scan completes, enclosing is in the cache if it exists
+        return bruteForceScanForEnclosingBlock(node);
     }
 
     @Override
