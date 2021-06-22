@@ -26,6 +26,8 @@ package org.jenkinsci.plugins.workflow.actions;
 
 import hudson.PluginManager;
 import hudson.model.Describable;
+
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import org.apache.commons.collections.CollectionUtils;
@@ -67,6 +70,10 @@ public abstract class ArgumentsAction implements PersistentAction {
         UNSERIALIZABLE
     }
 
+    private static final List<Class> WRAPPER_TYPES = Arrays.asList(Boolean.class, Byte.class, Character.class,
+                                                              Double.class, Float.class, Integer.class,
+                                                              Long.class, Short.class, Void.class);
+
     /** Largest String, Collection, or array size we'll retain -- provides a rough size limit on any single field.
      *  Set to 0 or -1 to remove length limits.
      */
@@ -85,7 +92,7 @@ public abstract class ArgumentsAction implements PersistentAction {
         if (maxElements <= 0 ) {
             return false;
         }
-        if (o == null || o.getClass().isPrimitive() || o.getClass().isEnum()) {
+        if (o == null || WRAPPER_TYPES.contains(o.getClass()) || o.getClass().isEnum()) {
             return false;
         }
         if (o instanceof CharSequence) {
@@ -162,13 +169,10 @@ public abstract class ArgumentsAction implements PersistentAction {
         if (internalArgs.size() == 0) {
             return Collections.emptyMap();
         }
-        HashMap<String, Object> filteredArguments = new HashMap(internalArgs.size());
-        for (Map.Entry<String, Object> entry : internalArgs.entrySet()) {
-            if (entry.getValue() != null && !(entry.getValue() instanceof NotStoredReason)) {
-                // TODO this is incorrect: value could be a Map/List with some nested entries that are NotStoredReason
-                filteredArguments.put(entry.getKey(), entry.getValue());
-            }
-        }
+        Map<String, Object>  filteredArguments = internalArgs.entrySet().stream()
+            .filter(entry -> entry.getValue() != null && !(entry.getValue() instanceof NotStoredReason))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
         return filteredArguments;
     }
 
