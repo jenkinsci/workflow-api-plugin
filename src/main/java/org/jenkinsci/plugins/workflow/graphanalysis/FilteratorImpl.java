@@ -58,6 +58,14 @@ class FilteratorImpl<T> implements Filterator<T> {
         }
     }
 
+    @Nonnull
+    @Override
+    @Deprecated
+    public Filterator<T> filter(@Nonnull com.google.common.base.Predicate<T> matchCondition) {
+        return filter((Predicate<T>) matchCondition::apply);
+    }
+
+
     @Override
     public boolean hasNext() {
         return hasNext;

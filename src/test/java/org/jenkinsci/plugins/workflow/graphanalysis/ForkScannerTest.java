@@ -45,14 +45,7 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.junit.Assert;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -280,7 +273,7 @@ public class ForkScannerTest {
         Assert.assertNotNull(scanner.parallelBlockStartStack);
         Assert.assertEquals(0, scanner.parallelBlockStartStack.size());
         Assert.assertEquals(exec.getNode("4"), scanner.currentParallelStartNode);
-        sanityTestIterationAndVisiter(Arrays.asList(exec.getNode("13")));
+        sanityTestIterationAndVisiter(Collections.singletonList(exec.getNode("13")));
 
         ForkScanner.ParallelBlockStart start = scanner.currentParallelStart;
         Assert.assertEquals(1, start.unvisited.size());
@@ -428,7 +421,7 @@ public class ForkScannerTest {
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         ForkScanner scan = new ForkScanner();
 
-        List<FlowNode> outputs = scan.filteredNodes(b.getExecution().getCurrentHeads(), x -> true);
+        List<FlowNode> outputs = scan.filteredNodes(b.getExecution().getCurrentHeads(), (Predicate<FlowNode>) x -> true);
         Assert.assertEquals(9, outputs.size());
     }
 
@@ -461,11 +454,11 @@ public class ForkScannerTest {
         }
 
         // Look for parallel starts & ends all being matched
-        matches = allScan.filteredNodes(heads, input ->
+        matches = allScan.filteredNodes(heads, (Predicate<FlowNode>) input ->
                 input instanceof StepStartNode
                         && ((StepStartNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
                         && input.getPersistentAction(ThreadNameAction.class) == null);
-        List<FlowNode> parallelEnds = allScan.filteredNodes(heads, input ->
+        List<FlowNode> parallelEnds = allScan.filteredNodes(heads, (Predicate<FlowNode>) input ->
                 input instanceof StepEndNode
                         && ((StepEndNode) input).getDescriptor() instanceof ParallelStep.DescriptorImpl
                         && ((StepEndNode) input).getStartNode().getPersistentAction(ThreadNameAction.class) == null);
@@ -649,7 +642,7 @@ public class ForkScannerTest {
                 System.out.println("Starting test with nodes "+branchANodeId+","+branchBNodeId);
                 ArrayList<FlowNode> starts = new ArrayList<>();
                 FlowTestUtils.addNodesById(starts, exec, branchANodeId, branchBNodeId);
-                List<FlowNode> all = scan.filteredNodes(starts, x -> true);
+                List<FlowNode> all = scan.filteredNodes(starts, (Predicate<FlowNode>) x -> true);
                 Assert.assertEquals(new HashSet<>(all).size(), all.size());
                 scan.reset();
             }

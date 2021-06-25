@@ -236,6 +236,18 @@ public abstract class AbstractFlowScanner implements Iterable<FlowNode>, Filtera
         return new FilteratorImpl<>(this, filterCondition);
     }
 
+    /**
+     * Expose a filtered view of this FlowScanner's output.
+     * @param filterCondition Filterator only returns {@link FlowNode}s matching this predicate.
+     * @return A {@link Filterator} against this FlowScanner, which can be filtered in additional ways.
+     */
+    @Override
+    @Nonnull
+    @Deprecated
+    public Filterator<FlowNode> filter(@Nonnull com.google.common.base.Predicate<FlowNode> filterCondition) {
+        return new FilteratorImpl<>(this, filterCondition::apply);
+    }
+
 
     /**
      * Find the first FlowNode within the iteration order matching a given condition
@@ -247,7 +259,6 @@ public abstract class AbstractFlowScanner implements Iterable<FlowNode>, Filtera
      * @return First matching node, or null if no matches found
      */
     @CheckForNull
-    @Deprecated
     public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
                                    @CheckForNull Collection<FlowNode> blackListNodes,
                                    Predicate<FlowNode> matchCondition) {
@@ -263,30 +274,50 @@ public abstract class AbstractFlowScanner implements Iterable<FlowNode>, Filtera
         return null;
     }
 
+    @Deprecated
+    public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads,
+                                   @CheckForNull Collection<FlowNode> blackListNodes,
+                                   com.google.common.base.Predicate<FlowNode> matchCondition) {
+        return findFirstMatch(heads, blackListNodes, (Predicate<FlowNode>) matchCondition::apply);
+    }
+
     // Polymorphic methods for syntactic sugar
 
     /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is no denyList */
     @CheckForNull
-    @Deprecated
     public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.findFirstMatch(heads, null, matchPredicate);
     }
 
-    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is a single head and no denyList */
     @CheckForNull
     @Deprecated
+    public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @Nonnull com.google.common.base.Predicate<FlowNode> matchPredicate) {
+        return this.findFirstMatch(heads, (Predicate<FlowNode>) matchPredicate::apply);
+    }
+
+    /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is a single head and no denyList */
+    @CheckForNull
     public FlowNode findFirstMatch(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.findFirstMatch(Collections.singleton(head), null, matchPredicate);
     }
 
+    @Deprecated
+    public FlowNode findFirstMatch(@CheckForNull FlowNode head, @Nonnull com.google.common.base.Predicate<FlowNode> matchPredicate) {
+        return findFirstMatch(head, (Predicate<FlowNode>) matchPredicate::apply);
+    }
+
     /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} using {@link FlowExecution#getCurrentHeads()}  to get heads and no denyList */
     @CheckForNull
-    @Deprecated
     public FlowNode findFirstMatch(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
         if (exec != null && exec.getCurrentHeads() != null && !exec.getCurrentHeads().isEmpty()) {
             return this.findFirstMatch(exec.getCurrentHeads(), null, matchPredicate);
         }
         return null;
+    }
+
+    @Deprecated
+    public FlowNode findFirstMatch(@CheckForNull FlowExecution exec, @Nonnull com.google.common.base.Predicate<FlowNode> matchPredicate) {
+        return findFirstMatch(exec, (Predicate<FlowNode>) matchPredicate::apply);
     }
 
     /**
@@ -298,7 +329,6 @@ public abstract class AbstractFlowScanner implements Iterable<FlowNode>, Filtera
      * @return List of flownodes matching the predicate.
      */
     @Nonnull
-    @Deprecated
     public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads,
                                         @CheckForNull Collection<FlowNode> blackList,
                                         Predicate<FlowNode> matchCondition) {
@@ -313,6 +343,13 @@ public abstract class AbstractFlowScanner implements Iterable<FlowNode>, Filtera
             }
         }
         return nodes;
+    }
+
+    @Deprecated
+    public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads,
+                                        @CheckForNull Collection<FlowNode> blackList,
+                                        com.google.common.base.Predicate<FlowNode> matchCondition) {
+        return filteredNodes(heads, blackList, (Predicate<FlowNode>) matchCondition::apply);
     }
 
     /** Convenience method to get the list all flownodes in the iterator order. */
@@ -336,25 +373,40 @@ public abstract class AbstractFlowScanner implements Iterable<FlowNode>, Filtera
 
     /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with no denyList nodes */
     @Nonnull
-    @Deprecated
     public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(heads, null, matchPredicate);
     }
 
+    @Deprecated
+    public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull com.google.common.base.Predicate<FlowNode> matchPredicate) {
+        return this.filteredNodes(heads, (Predicate<FlowNode>) matchPredicate::apply);
+    }
+
     /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with a single head and no denyList nodes */
     @Nonnull
-    @Deprecated
     public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
     }
 
-    @Nonnull
     @Deprecated
+    public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull com.google.common.base.Predicate<FlowNode> matchPredicate) {
+        return this.filteredNodes(head, (Predicate<FlowNode>) matchPredicate::apply);
+    }
+
+    @Nonnull
     public List<FlowNode> filteredNodes(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
         if (exec == null) {
             return Collections.emptyList();
         }
         return this.filteredNodes(exec.getCurrentHeads(), null, matchPredicate);
+    }
+
+    @Deprecated
+    public List<FlowNode> filteredNodes(@CheckForNull FlowExecution exec, @Nonnull com.google.common.base.Predicate<FlowNode> matchPredicate) {
+        if (exec == null) {
+            return Collections.emptyList();
+        }
+        return this.filteredNodes(exec, (Predicate<FlowNode>) matchPredicate::apply);
     }
 
     /**

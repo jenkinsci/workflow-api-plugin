@@ -95,7 +95,7 @@ public class FlowScannerTest {
         Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(null));
         Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(new ArrayList<>()));
 
-        Collection<FlowNode> coll = linear.convertToFastCheckable(Arrays.asList(intermediateNode));
+        Collection<FlowNode> coll = linear.convertToFastCheckable(Collections.singletonList(intermediateNode));
         Assert.assertTrue("Singleton set used for one element", coll instanceof AbstractSet);
         Assert.assertEquals(1, coll.size());
 
@@ -163,7 +163,7 @@ public class FlowScannerTest {
         // Filtered nodes
         assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, MATCH_ECHO_STEP), 5, 4);
         assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, Collections.singleton(intermediateNode), MATCH_ECHO_STEP), 5);
-        Assert.assertEquals(0, linear.filteredNodes(heads, null, input -> false));
+        Assert.assertEquals(0, linear.filteredNodes(heads, null, (Predicate<FlowNode>) input -> false).size());
         Assert.assertEquals(0, linear.filteredNodes(nullNode, MATCH_ECHO_STEP).size());
         Assert.assertEquals(0, linear.filteredNodes(Collections.EMPTY_SET, MATCH_ECHO_STEP).size());
 
@@ -246,7 +246,7 @@ public class FlowScannerTest {
             // Blacklist tests
             scan.setup(heads, Collections.singleton(exec.getNode("4")));
             assertNodeOrder("Testing full scan for scanner " + scan.getClass(), scan, 6, 5);
-            FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), input -> true);
+            FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), (Predicate<FlowNode>) input -> true);
             Assert.assertNull(f);
         }
     }

@@ -39,7 +39,11 @@ public interface Filterator<T> extends Iterator<T> {
 
     /** Returns a filtered view of the iterator, which calls the iterator until matches are found */
     @Nonnull
-    @Deprecated
     Filterator<T> filter(@Nonnull Predicate<T> matchCondition);
+
+    /** Returns a filtered view of the iterator, which calls the iterator until matches are found */
+    @Nonnull
+    @Deprecated
+    Filterator<T> filter(@Nonnull com.google.common.base.Predicate<T> matchCondition);
 
 }
