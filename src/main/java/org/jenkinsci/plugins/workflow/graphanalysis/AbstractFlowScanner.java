@@ -231,7 +231,6 @@ public abstract class AbstractFlowScanner implements Iterable<FlowNode>, Filtera
      */
     @Override
     @Nonnull
-    @Deprecated
     public Filterator<FlowNode> filter(@Nonnull Predicate<FlowNode> filterCondition) {
         return new FilteratorImpl<>(this, filterCondition);
     }
