@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
@@ -53,6 +52,8 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
 
 /**
@@ -277,7 +278,7 @@ public class FlowScannerTest {
          */
 
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
-        Predicate<FlowNode> matchEchoStep = FlowTestUtils.predicateMatchStepDescriptor( "org.jenkinsci.plugins.workflow.steps.EchoStep");
+        Predicate<FlowNode> matchEchoStep = FlowTestUtils.predicateMatchStepDescriptor("org.jenkinsci.plugins.workflow.steps.EchoStep");
         FlowExecution exec = b.getExecution();
         Collection<FlowNode> heads = exec.getCurrentHeads();
 
@@ -471,11 +472,12 @@ public class FlowScannerTest {
         Assert.assertEquals(7, matches.size());
 
         scanner.setup(heads);
+
         MatcherAssert.assertThat("FlowGraphWalker differs from DepthFirstScanner",
                                  StreamSupport.stream(new FlowGraphWalker(exec).spliterator(), false)
                                      .collect(Collectors.toList()),
-                                 Matchers.containsInAnyOrder(StreamSupport.stream(scanner.spliterator(), false)
-                                    .collect(Collectors.toList()))) ;
+                                    is(equalTo(StreamSupport.stream(scanner.spliterator(), false)
+                                    .collect(Collectors.toList()))));
 
         // We're going to test the ForkScanner in more depth since this is its natural use
         scanner = new ForkScanner();

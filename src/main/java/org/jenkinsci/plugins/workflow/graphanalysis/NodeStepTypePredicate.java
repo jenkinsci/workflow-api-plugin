@@ -35,8 +35,7 @@ import java.lang.reflect.Method;
 import java.util.function.Predicate;
 
 /** Predicate that matches {@link FlowNode}s (specifically {@link StepNode}s) with a specific {@link StepDescriptor} type. */
-public final class NodeStepTypePredicate implements Predicate<FlowNode>
-{
+public final class NodeStepTypePredicate implements Predicate<FlowNode> {
     StepDescriptor stepDescriptor;
 
     public NodeStepTypePredicate(@Nonnull StepDescriptor descriptorType) {

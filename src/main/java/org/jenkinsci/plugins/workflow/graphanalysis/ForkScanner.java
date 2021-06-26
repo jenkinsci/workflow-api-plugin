@@ -375,7 +375,7 @@ public class ForkScanner extends AbstractFlowScanner {
         };
 
         for (FlowNode f : heads) {
-            iterators.add(new FilteratorImpl((Iterator)f.iterateEnclosingBlocks().iterator(), notAHead));  // We can do this because Parallels always meet at a BlockStartNode
+            iterators.add(new FilteratorImpl(f.iterateEnclosingBlocks().iterator(), notAHead));  // We can do this because Parallels always meet at a BlockStartNode
             FlowSegment b = new FlowSegment();
             b.add(f);
             livePieces.add(b);
