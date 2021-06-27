@@ -50,8 +50,14 @@ public final class FlowScanningUtils {
      * @return Predicate that will match when FlowNode has the action given
      */
     @Nonnull
-    public static Predicate<FlowNode> hasActionPredicate(@Nonnull final Class<? extends Action> actionClass) {
-        return input -> (input != null && input.getAction( actionClass) != null);
+    public static Predicate<FlowNode> hasActionAsPredicate(@Nonnull final Class<? extends Action> actionClass) {
+        return input -> (input != null && input.getAction(actionClass) != null);
+    }
+
+    @Nonnull
+    @Deprecated
+    public static com.google.common.base.Predicate<FlowNode> hasActionPredicate(@Nonnull final Class<? extends Action> actionClass) {
+        return input -> (input != null && input.getAction(actionClass) != null);
     }
 
     // Default predicates, which may be used for common conditions
@@ -116,6 +122,6 @@ public final class FlowScanningUtils {
     @Nonnull
     @Deprecated
     public static Filterator<FlowNode> fetchEnclosingBlocks(@Nonnull FlowNode f) {
-        return new FilteratorImpl<>((Iterator) f.iterateEnclosingBlocks().iterator(), o -> true);
+        return new FilteratorImpl<FlowNode>((Iterator) f.iterateEnclosingBlocks().iterator(), o -> true);
     }
 }
