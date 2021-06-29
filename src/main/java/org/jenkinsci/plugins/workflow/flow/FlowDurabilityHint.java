@@ -25,6 +25,8 @@ package org.jenkinsci.plugins.workflow.flow;
 
 import hudson.util.AtomicFileWriter;
 
+import java.nio.channels.FileChannel;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -43,7 +45,7 @@ public enum FlowDurabilityHint {
 
     private final boolean atomicWrite;
 
-    private final boolean fsync;
+    private final boolean force;
 
     private final boolean persistWithEveryStep;
 
@@ -56,15 +58,22 @@ public enum FlowDurabilityHint {
         this(useAtomicWrite, useAtomicWrite, persistWithEveryStep, description, tooltip);
     }
 
-    FlowDurabilityHint(boolean useAtomicWrite, boolean fsync, boolean persistWithEveryStep, @Nonnull String description, String tooltip) {
-        if (!useAtomicWrite && fsync) {
-            throw new IllegalArgumentException("Cannot specify fsync(2) without also specifying atomic writes");
+    FlowDurabilityHint(
+            boolean useAtomicWrite,
+            boolean force,
+            boolean persistWithEveryStep,
+            @Nonnull String description,
+            String tooltip) {
+        if (!useAtomicWrite && force) {
+            throw new IllegalArgumentException(
+                    "Cannot specify force without also specifying atomic writes");
         }
-        if (!persistWithEveryStep && (useAtomicWrite || fsync)) {
-            throw new IllegalArgumentException("Atomic writes or fsync(2) require persisting with every step");
+        if (!persistWithEveryStep && (useAtomicWrite || force)) {
+            throw new IllegalArgumentException(
+                    "Atomic writes or force require persisting with every step");
         }
         this.atomicWrite = useAtomicWrite;
-        this.fsync = fsync;
+        this.force = force;
         this.persistWithEveryStep = persistWithEveryStep;
         this.description = description;
         this.tooltip = tooltip;
@@ -75,9 +84,12 @@ public enum FlowDurabilityHint {
         return atomicWrite;
     }
 
-    /** Should we call {@code fsync(2)} after writing the file? */
-    public boolean isFsync() {
-        return fsync;
+    /**
+     * Should we call {@link FileChannel#force} (i.e., {@code fsync()}} or {@code
+     * FlushFileBuffers()}) after writing the file?
+     */
+    public boolean isForce() {
+        return force;
     }
 
     /** If false, the flow has to complete one way or the other in order to be persisted. */
