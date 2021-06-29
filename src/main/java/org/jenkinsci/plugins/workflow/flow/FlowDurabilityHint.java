@@ -23,6 +23,8 @@
  */
 package org.jenkinsci.plugins.workflow.flow;
 
+import hudson.util.AtomicFileWriter;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -33,13 +35,15 @@ import javax.annotation.Nonnull;
  * @author Sam Van Oort
  */
 public enum FlowDurabilityHint {
-    PERFORMANCE_OPTIMIZED(false, false, Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_description(), Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_tooltip()),
+    PERFORMANCE_OPTIMIZED(false, false, false, Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_description(), Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_tooltip()),
 
-    SURVIVABLE_NONATOMIC(false,  true, Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_description(), Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_tooltip()),
+    SURVIVABLE_NONATOMIC(true, false, true, Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_description(), Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_tooltip()),
 
-    MAX_SURVIVABILITY (true,  true, Messages.FlowDurabilityHint_MAX_SURVIVABILITY_description(), Messages.FlowDurabilityHint_MAX_SURVIVABILITY_tooltip());
+    MAX_SURVIVABILITY(true, true, true, Messages.FlowDurabilityHint_MAX_SURVIVABILITY_description(), Messages.FlowDurabilityHint_MAX_SURVIVABILITY_tooltip());
 
     private final boolean atomicWrite;
+
+    private final boolean fsync;
 
     private final boolean persistWithEveryStep;
 
@@ -47,16 +51,33 @@ public enum FlowDurabilityHint {
 
     private final String tooltip;
 
+    @Deprecated
     FlowDurabilityHint (boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description, String tooltip) {
+        this(useAtomicWrite, useAtomicWrite, persistWithEveryStep, description, tooltip);
+    }
+
+    FlowDurabilityHint(boolean useAtomicWrite, boolean fsync, boolean persistWithEveryStep, @Nonnull String description, String tooltip) {
+        if (!useAtomicWrite && fsync) {
+            throw new IllegalArgumentException("Cannot specify fsync(2) without also specifying atomic writes");
+        }
+        if (!persistWithEveryStep && (useAtomicWrite || fsync)) {
+            throw new IllegalArgumentException("Atomic writes or fsync(2) require persisting with every step");
+        }
         this.atomicWrite = useAtomicWrite;
+        this.fsync = fsync;
         this.persistWithEveryStep = persistWithEveryStep;
         this.description = description;
         this.tooltip = tooltip;
     }
 
-    /** Should we try to use an atomic write to protect from corrupting data with failures and errors during writes? */
+    /** Should we use {@link AtomicFileWriter} to write the file? */
     public boolean isAtomicWrite() {
         return atomicWrite;
+    }
+
+    /** Should we call {@code fsync(2)} after writing the file? */
+    public boolean isFsync() {
+        return fsync;
     }
 
     /** If false, the flow has to complete one way or the other in order to be persisted. */
