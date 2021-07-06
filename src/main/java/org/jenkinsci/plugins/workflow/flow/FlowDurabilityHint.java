@@ -53,11 +53,6 @@ public enum FlowDurabilityHint {
 
     private final String tooltip;
 
-    @Deprecated
-    FlowDurabilityHint (boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description, String tooltip) {
-        this(useAtomicWrite, useAtomicWrite, persistWithEveryStep, description, tooltip);
-    }
-
     FlowDurabilityHint(
             boolean useAtomicWrite,
             boolean force,
