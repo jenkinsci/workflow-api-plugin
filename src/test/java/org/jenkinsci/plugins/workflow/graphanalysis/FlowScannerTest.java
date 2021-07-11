@@ -24,9 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterators;
+import org.hamcrest.MatcherAssert;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
@@ -49,8 +47,13 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 // Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
 
 /**
@@ -93,7 +96,7 @@ public class FlowScannerTest {
         Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(null));
         Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(new ArrayList<>()));
 
-        Collection<FlowNode> coll = linear.convertToFastCheckable(Arrays.asList(intermediateNode));
+        Collection<FlowNode> coll = linear.convertToFastCheckable(Collections.singletonList(intermediateNode));
         Assert.assertTrue("Singleton set used for one element", coll instanceof AbstractSet);
         Assert.assertEquals(1, coll.size());
 
@@ -161,7 +164,7 @@ public class FlowScannerTest {
         // Filtered nodes
         assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, MATCH_ECHO_STEP), 5, 4);
         assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, Collections.singleton(intermediateNode), MATCH_ECHO_STEP), 5);
-        Assert.assertEquals(0, linear.filteredNodes(heads, null, (Predicate) Predicates.alwaysFalse()).size());
+        Assert.assertEquals(0, linear.filteredNodes(heads, null, (Predicate<FlowNode>) input -> false).size());
         Assert.assertEquals(0, linear.filteredNodes(nullNode, MATCH_ECHO_STEP).size());
         Assert.assertEquals(0, linear.filteredNodes(Collections.EMPTY_SET, MATCH_ECHO_STEP).size());
 
@@ -244,7 +247,7 @@ public class FlowScannerTest {
             // Blacklist tests
             scan.setup(heads, Collections.singleton(exec.getNode("4")));
             assertNodeOrder("Testing full scan for scanner " + scan.getClass(), scan, 6, 5);
-            FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), Predicates.alwaysTrue());
+            FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), (Predicate<FlowNode>) input -> true);
             Assert.assertNull(f);
         }
     }
@@ -469,8 +472,12 @@ public class FlowScannerTest {
         Assert.assertEquals(7, matches.size());
 
         scanner.setup(heads);
-        Assert.assertTrue("FlowGraphWalker differs from DepthFirstScanner", Iterators.elementsEqual(new FlowGraphWalker(exec).iterator(), scanner.iterator()));
 
+        MatcherAssert.assertThat("FlowGraphWalker differs from DepthFirstScanner",
+                                 StreamSupport.stream(new FlowGraphWalker(exec).spliterator(), false)
+                                     .collect(Collectors.toList()),
+                                    is(equalTo(StreamSupport.stream(scanner.spliterator(), false)
+                                    .collect(Collectors.toList()))));
 
         // We're going to test the ForkScanner in more depth since this is its natural use
         scanner = new ForkScanner();

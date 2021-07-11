@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import javax.annotation.Nonnull;
@@ -33,6 +32,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;

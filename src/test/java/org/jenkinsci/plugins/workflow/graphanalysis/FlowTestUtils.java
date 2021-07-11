@@ -23,7 +23,6 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
  * THE SOFTWARE.
  */
 
-import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -34,23 +33,21 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.function.Predicate;
 
 /**
  * Utilities for testing flow scanning
  * @author Sam Van Oort
  */
 public class FlowTestUtils {
-    public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {
-        return new Predicate<FlowNode>() {
-            @Override
-            public boolean apply(FlowNode input) {
-                if (input instanceof StepAtomNode) {
-                    StepAtomNode san = (StepAtomNode)input;
-                    StepDescriptor sd = san.getDescriptor();
-                    return sd != null && descriptorId.equals(sd.getId());
-                }
-                return false;
+    public static Predicate<FlowNode> predicateMatchStepDescriptor( @Nonnull final String descriptorId) {
+        return input -> {
+            if (input instanceof StepAtomNode) {
+                StepAtomNode san = (StepAtomNode)input;
+                StepDescriptor sd = san.getDescriptor();
+                return sd != null && descriptorId.equals(sd.getId());
             }
+            return false;
         };
     }
 

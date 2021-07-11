@@ -14,13 +14,10 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
-import com.google.common.annotations.GwtCompatible;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy;
 
 /**
  * Factory and utility methods for {@link java.util.concurrent.Executor}, {@link ExecutorService},
@@ -31,7 +28,6 @@ import java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy;
  * @author Justin Mahoney
  * @since 3.0
  */
-@GwtCompatible(emulated = true)
 @Restricted(NoExternalUse.class)
 public final class MoreExecutors {
   private MoreExecutors() {}
