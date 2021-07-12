@@ -28,6 +28,10 @@ import groovy.lang.GroovyClassLoader;
 import groovy.lang.MissingMethodException;
 import groovy.lang.MissingPropertyException;
 import hudson.remoting.ProxyException;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.annotation.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -45,7 +49,7 @@ public class ErrorAction implements PersistentAction {
     private final @Nonnull Throwable error;
 
     public ErrorAction(@Nonnull Throwable error) {
-        if (isUnserializableException(error)) {
+        if (isUnserializableException(error, new HashSet<Throwable>())) {
             error = new ProxyException(error);
         } else if (error != null) {
             try {
@@ -60,10 +64,11 @@ public class ErrorAction implements PersistentAction {
 
     /**
      * Some exceptions don't serialize properly. If so, we need to replace that with
-     * an equivalent that captures the same details but serializes nicely.
+     * an equivalent that captures the same details but serializes nicely. Tracking
+     * visited nodes is required in some corner cases that might result in a cycle.
      */
-    private boolean isUnserializableException(@CheckForNull Throwable error) {
-        if (error == null) {
+    private boolean isUnserializableException(@CheckForNull Throwable error, Set<Throwable> visited) {
+        if (error == null || visited.contains(error)) {
             return false;
         }
         // If the exception was defined in a Pipeline script, we don't want to serialize it
@@ -81,11 +86,14 @@ public class ErrorAction implements PersistentAction {
         if (error instanceof MultipleCompilationErrorsException || error instanceof MissingMethodException) {
             return true;
         }
-        if (isUnserializableException(error.getCause())) {
+        // Only need to add serializable visited nodes since any unserializable
+        // encountered results in ending the recursion and returning true
+        visited.add(error);
+        if (isUnserializableException(error.getCause(), visited)) {
             return true;
         }
         for (Throwable t : error.getSuppressed()) {
-            if (isUnserializableException(t)) {
+            if (isUnserializableException(t, visited)) {
                 return true;
             }
         }
