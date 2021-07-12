@@ -23,6 +23,10 @@
  */
 package org.jenkinsci.plugins.workflow.flow;
 
+import hudson.util.AtomicFileWriter;
+
+import java.nio.channels.FileChannel;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -33,13 +37,15 @@ import javax.annotation.Nonnull;
  * @author Sam Van Oort
  */
 public enum FlowDurabilityHint {
-    PERFORMANCE_OPTIMIZED(false, false, Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_description(), Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_tooltip()),
+    PERFORMANCE_OPTIMIZED(false, false, false, Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_description(), Messages.FlowDurabilityHint_PERFORMANCE_OPTIMIZED_tooltip()),
 
-    SURVIVABLE_NONATOMIC(false,  true, Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_description(), Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_tooltip()),
+    SURVIVABLE_NONATOMIC(true, false, true, Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_description(), Messages.FlowDurabilityHint_SURVIVABLE_NONATOMIC_tooltip()),
 
-    MAX_SURVIVABILITY (true,  true, Messages.FlowDurabilityHint_MAX_SURVIVABILITY_description(), Messages.FlowDurabilityHint_MAX_SURVIVABILITY_tooltip());
+    MAX_SURVIVABILITY(true, true, true, Messages.FlowDurabilityHint_MAX_SURVIVABILITY_description(), Messages.FlowDurabilityHint_MAX_SURVIVABILITY_tooltip());
 
     private final boolean atomicWrite;
+
+    private final boolean force;
 
     private final boolean persistWithEveryStep;
 
@@ -47,16 +53,38 @@ public enum FlowDurabilityHint {
 
     private final String tooltip;
 
-    FlowDurabilityHint (boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description, String tooltip) {
+    FlowDurabilityHint(
+            boolean useAtomicWrite,
+            boolean force,
+            boolean persistWithEveryStep,
+            @Nonnull String description,
+            String tooltip) {
+        if (!useAtomicWrite && force) {
+            throw new IllegalArgumentException(
+                    "Cannot specify force without also specifying atomic writes");
+        }
+        if (!persistWithEveryStep && (useAtomicWrite || force)) {
+            throw new IllegalArgumentException(
+                    "Atomic writes or force require persisting with every step");
+        }
         this.atomicWrite = useAtomicWrite;
+        this.force = force;
         this.persistWithEveryStep = persistWithEveryStep;
         this.description = description;
         this.tooltip = tooltip;
     }
 
-    /** Should we try to use an atomic write to protect from corrupting data with failures and errors during writes? */
+    /** Should we use {@link AtomicFileWriter} to write the file? */
     public boolean isAtomicWrite() {
         return atomicWrite;
+    }
+
+    /**
+     * Should we call {@link FileChannel#force} (i.e., {@code fsync()}} or {@code
+     * FlushFileBuffers()}) after writing the file?
+     */
+    public boolean isForce() {
+        return force;
     }
 
     /** If false, the flow has to complete one way or the other in order to be persisted. */
