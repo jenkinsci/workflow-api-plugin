@@ -123,7 +123,7 @@ public class StashManager {
             listener.getLogger().println("Warning: overwriting stash ‘" + name + "’");
         }
         try (OutputStream os = new FileOutputStream(storage)) {
-            int count = workspace.archive(ArchiverFactory.TARGZ, os, new DirScanner.Glob(Util.fixEmpty(includes) == null ? "**" : includes, excludes, useDefaultExcludes));
+            int count = workspace.archive(ArchiverFactory.TARGZ, os, new DirScanner.Glob(includes, excludes, useDefaultExcludes));
             if (count == 0 && !allowEmpty) {
                 throw new AbortException("No files included in stash ‘" + name + "’");
             }
