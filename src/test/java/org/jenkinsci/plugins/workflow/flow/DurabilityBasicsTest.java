@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.workflow.flow;
 
-import hudson.ExtensionList;
 import hudson.Functions;
 import hudson.model.Descriptor;
 import hudson.model.User;

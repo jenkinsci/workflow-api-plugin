@@ -58,9 +58,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-// Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
-import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
-
 /**
  * Tests for internals of ForkScanner
  */
@@ -362,7 +359,7 @@ public class ForkScannerTest {
         for (FlowNode f : mainBranch.visited) {
             nodeMap.put(f, mainBranch);
         }
-        assertNodeOrder("Visited nodes", mainBranch.visited, 9, 8, 6, 4, 3);
+        FlowTestUtils.assertNodeOrder("Visited nodes", mainBranch.visited, 9, 8, 6, 4, 3);
 
         // Branch 2
         sideBranch.add(BRANCH2_END);
@@ -372,16 +369,16 @@ public class ForkScannerTest {
         for (FlowNode f : sideBranch.visited) {
             nodeMap.put(f, sideBranch);
         }
-        assertNodeOrder("Visited nodes", sideBranch.visited, 12, 11, 10, 7);
+        FlowTestUtils.assertNodeOrder("Visited nodes", sideBranch.visited, 12, 11, 10, 7);
 
         ForkScanner.Fork forked = mainBranch.split(nodeMap, (BlockStartNode)exec.getNode("4"), sideBranch);
         ForkScanner.FlowSegment splitSegment = (ForkScanner.FlowSegment)nodeMap.get(BRANCH1_END); // New branch
         Assert.assertNull(splitSegment.after);
-        assertNodeOrder("Branch 1 split after fork", splitSegment.visited, 9, 8, 6);
+        FlowTestUtils.assertNodeOrder("Branch 1 split after fork", splitSegment.visited, 9, 8, 6);
 
         // Just the single node before the fork
         Assert.assertEquals(forked, mainBranch.after);
-        assertNodeOrder("Head of flow, pre-fork", mainBranch.visited, 3);
+        FlowTestUtils.assertNodeOrder("Head of flow, pre-fork", mainBranch.visited, 3);
 
         // Fork point
         Assert.assertEquals(forked, nodeMap.get(START_PARALLEL));
@@ -390,7 +387,7 @@ public class ForkScannerTest {
 
         // Branch 2
         Assert.assertEquals(sideBranch, nodeMap.get(BRANCH2_END));
-        assertNodeOrder("Branch 2", sideBranch.visited, 12, 11, 10, 7);
+        FlowTestUtils.assertNodeOrder("Branch 2", sideBranch.visited, 12, 11, 10, 7);
 
         // Test me where splitting right at a fork point, where we should have a fork with and main branch shoudl become following
         // Along with side branch (branch2)
@@ -410,9 +407,9 @@ public class ForkScannerTest {
         follows[0] = mainBranch;
         follows[1] = sideBranch;
         Assert.assertArrayEquals(follows, forked.following.toArray());
-        assertNodeOrder("Branch1", mainBranch.visited, 6);
+        FlowTestUtils.assertNodeOrder("Branch1", mainBranch.visited, 6);
         Assert.assertNull(mainBranch.after);
-        assertNodeOrder("Branch2", sideBranch.visited, 7);
+        FlowTestUtils.assertNodeOrder("Branch2", sideBranch.visited, 7);
         Assert.assertNull(sideBranch.after);
         Assert.assertEquals(forked, nodeMap.get(START_PARALLEL));
         Assert.assertEquals(mainBranch, nodeMap.get(exec.getNode("6")));
