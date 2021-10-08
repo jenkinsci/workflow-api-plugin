@@ -50,9 +50,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-// Slightly dirty but it removes a ton of FlowTestUtils.* class qualifiers
-import static org.jenkinsci.plugins.workflow.graphanalysis.FlowTestUtils.*;
-
 /**
  * Tests for all the core parts of graph analysis except the ForkScanner, internals which is complex enough to merit its own tests
  * @author Sam Van Oort
@@ -148,31 +145,31 @@ public class FlowScannerTest {
         FlowNode firstEchoNode = exec.getNode("5");
         FlowExecution nullExecution = null;
 
-        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(heads, Collections.EMPTY_LIST, MATCH_ECHO_STEP));
-        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(heads, MATCH_ECHO_STEP));
-        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(lastNode, MATCH_ECHO_STEP));
-        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(exec, MATCH_ECHO_STEP));
-        Assert.assertNull(linear.findFirstMatch(nullColl, MATCH_ECHO_STEP));
-        Assert.assertNull(linear.findFirstMatch(Collections.EMPTY_SET, MATCH_ECHO_STEP));
-        Assert.assertNull(linear.findFirstMatch(nullNode, MATCH_ECHO_STEP));
-        Assert.assertNull(linear.findFirstMatch(nullExecution, MATCH_ECHO_STEP));
+        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(heads, Collections.EMPTY_LIST, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(heads, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(lastNode, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(exec, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(nullColl, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(Collections.EMPTY_SET, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(nullNode, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(nullExecution, FlowTestUtils.MATCH_ECHO_STEP));
 
 
         // Filtered nodes
-        assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, MATCH_ECHO_STEP), 5, 4);
-        assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, Collections.singleton(intermediateNode), MATCH_ECHO_STEP), 5);
+        FlowTestUtils.assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, FlowTestUtils.MATCH_ECHO_STEP), 5, 4);
+        FlowTestUtils.assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, Collections.singleton(intermediateNode), FlowTestUtils.MATCH_ECHO_STEP), 5);
         Assert.assertEquals(0, linear.filteredNodes(heads, null, (Predicate) Predicates.alwaysFalse()).size());
-        Assert.assertEquals(0, linear.filteredNodes(nullNode, MATCH_ECHO_STEP).size());
-        Assert.assertEquals(0, linear.filteredNodes(Collections.EMPTY_SET, MATCH_ECHO_STEP).size());
+        Assert.assertEquals(0, linear.filteredNodes(nullNode, FlowTestUtils.MATCH_ECHO_STEP).size());
+        Assert.assertEquals(0, linear.filteredNodes(Collections.EMPTY_SET, FlowTestUtils.MATCH_ECHO_STEP).size());
 
         // Same filter using the filterator
         linear.setup(heads);
         ArrayList<FlowNode> collected = new ArrayList<>();
-        Filterator<FlowNode> filt = linear.filter(MATCH_ECHO_STEP);
+        Filterator<FlowNode> filt = linear.filter(FlowTestUtils.MATCH_ECHO_STEP);
         while (filt.hasNext()) {
             collected.add(filt.next());
         }
-        assertNodeOrder("Filterator filtered echo nodes", collected, 5, 4);
+        FlowTestUtils.assertNodeOrder("Filterator filtered echo nodes", collected, 5, 4);
 
 
         // Visitor pattern tests
@@ -182,12 +179,12 @@ public class FlowScannerTest {
         visitor.reset();
 
         linear.visitAll(heads, visitor);
-        assertNodeOrder("Visiting all nodes", visitor.getVisited(), 6, 5, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("Visiting all nodes", visitor.getVisited(), 6, 5, 4, 3, 2);
 
         // And visiting with blacklist
         visitor.reset();
         linear.visitAll(heads, Collections.singleton(intermediateNode), visitor);
-        assertNodeOrder("Visiting all nodes with blacklist", visitor.getVisited(), 6, 5);
+        FlowTestUtils.assertNodeOrder("Visiting all nodes with blacklist", visitor.getVisited(), 6, 5);
 
         // Tests for edge cases of the various basic APIs
         linear.myNext = null;
@@ -238,12 +235,12 @@ public class FlowScannerTest {
         for (AbstractFlowScanner scan : scans) {
             System.out.println("Iteration test with scanner: " + scan.getClass());
             scan.setup(heads, null);
-            assertNodeOrder("Testing full scan for scanner " + scan.getClass(), scan, 6, 5, 4, 3, 2);
+            FlowTestUtils.assertNodeOrder("Testing full scan for scanner " + scan.getClass(), scan, 6, 5, 4, 3, 2);
             Assert.assertFalse(scan.hasNext());
 
             // Blacklist tests
             scan.setup(heads, Collections.singleton(exec.getNode("4")));
-            assertNodeOrder("Testing full scan for scanner " + scan.getClass(), scan, 6, 5);
+            FlowTestUtils.assertNodeOrder("Testing full scan for scanner " + scan.getClass(), scan, 6, 5);
             FlowNode f = scan.findFirstMatch(heads, Collections.singleton(exec.getNode("6")), Predicates.alwaysTrue());
             Assert.assertNull(f);
         }
@@ -282,9 +279,9 @@ public class FlowScannerTest {
         // Linear analysis
         LinearScanner linearScanner = new LinearScanner();
         linearScanner.setup(heads);
-        assertNodeOrder("Linear scan with block", linearScanner, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("Linear scan with block", linearScanner, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2);
         linearScanner.setup(exec.getNode("7"));
-        assertNodeOrder("Linear scan with block from middle ", linearScanner, 7, 6, 5, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("Linear scan with block from middle ", linearScanner, 7, 6, 5, 4, 3, 2);
 
         LinearBlockHoppingScanner linearBlockHoppingScanner = new LinearBlockHoppingScanner();
 
@@ -297,9 +294,9 @@ public class FlowScannerTest {
         linearBlockHoppingScanner.setup(heads);
         Assert.assertFalse(linearBlockHoppingScanner.hasNext());
         linearBlockHoppingScanner.setup(exec.getNode("8"));
-        assertNodeOrder("Hopping over one block", linearBlockHoppingScanner, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("Hopping over one block", linearBlockHoppingScanner, 4, 3, 2);
         linearBlockHoppingScanner.setup(exec.getNode("7"));
-        assertNodeOrder("Hopping over one block", linearBlockHoppingScanner, 7, 6, 5, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("Hopping over one block", linearBlockHoppingScanner, 7, 6, 5, 4, 3, 2);
 
         // Test the black list in combination with hopping
         linearBlockHoppingScanner.setup(exec.getNode("8"), Collections.singleton(exec.getNode("5")));
@@ -349,9 +346,9 @@ public class FlowScannerTest {
 
         AbstractFlowScanner scanner = new LinearScanner();
         scanner.setup(heads);
-        assertNodeOrder("Linear", scanner, 15, 14, 13, 9, 8, 6, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("Linear", scanner, 15, 14, 13, 9, 8, 6, 4, 3, 2);
         scanner.setup(heads, Collections.singleton(exec.getNode("9")));
-        assertNodeOrder("Linear", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("Linear", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
 
 
         // Depth first scanner and with blacklist
@@ -359,33 +356,33 @@ public class FlowScannerTest {
         scanner.setup(heads);
 
         // Compatibility test for ordering
-        assertNodeOrder("FlowGraphWalker", new FlowGraphWalker(exec), 15, 14, 13,
+        FlowTestUtils.assertNodeOrder("FlowGraphWalker", new FlowGraphWalker(exec), 15, 14, 13,
                 9, 8, 6, // Branch 1
                 4, 3, 2, // Before parallel
                 12, 11, 10, 7); // Branch 2
-        assertNodeOrder("Depth first", new FlowGraphWalker(exec), 15, 14, 13,
+        FlowTestUtils.assertNodeOrder("Depth first", new FlowGraphWalker(exec), 15, 14, 13,
                 9, 8, 6, // Branch 1
                 4, 3, 2, // Before parallel
                 12, 11, 10, 7); // Branch 2
         scanner.setup(heads, Collections.singleton(exec.getNode("9")));
-        assertNodeOrder("Linear", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("Linear", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
 
         scanner.setup(Arrays.asList(exec.getNode("9"), exec.getNode("12")));
-        assertNodeOrder("Depth-first scanner from inside parallels", scanner, 9, 8, 6, 4, 3, 2, 12, 11, 10, 7);
+        FlowTestUtils.assertNodeOrder("Depth-first scanner from inside parallels", scanner, 9, 8, 6, 4, 3, 2, 12, 11, 10, 7);
 
         // We're going to test the ForkScanner in more depth since this is its natural use
         scanner = new ForkScanner();
         scanner.setup(heads);
-        assertNodeOrder("ForkedScanner", scanner, 15, 14, 13,
+        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 15, 14, 13,
                     12, 11, 10, 7,// One parallel
                     9, 8, 6, // other parallel
                 4, 3, 2); // end bit
         scanner.setup(heads, Collections.singleton(exec.getNode("9")));
-        assertNodeOrder("ForkedScanner", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 15, 14, 13, 12, 11, 10, 7, 4, 3, 2);
 
         // Test forkscanner midflow
         scanner.setup(exec.getNode("14"));
-        assertNodeOrder("ForkedScanner", scanner, 14, 13,
+        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 14, 13,
                     12, 11, 10, 7, // Last parallel
                     9, 8, 6, // First parallel
                 4, 3, 2); // end bit
@@ -393,19 +390,19 @@ public class FlowScannerTest {
         // Test forkscanner inside a parallel
         List<FlowNode> startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("12"));
         scanner.setup(startingPoints);
-        assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
 
         startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("11"));
         scanner.setup(startingPoints);
-        assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 11, 10, 7, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 11, 10, 7, 4, 3, 2);
 
 
         // Filtering at different points within branches
         List<FlowNode> blackList = Arrays.asList(exec.getNode("6"), exec.getNode("7"));
-        Assert.assertEquals(4, scanner.filteredNodes(heads, blackList, MATCH_ECHO_STEP).size());
-        Assert.assertEquals(4, scanner.filteredNodes(heads, Collections.singletonList(exec.getNode("4")), MATCH_ECHO_STEP).size());
+        Assert.assertEquals(4, scanner.filteredNodes(heads, blackList, FlowTestUtils.MATCH_ECHO_STEP).size());
+        Assert.assertEquals(4, scanner.filteredNodes(heads, Collections.singletonList(exec.getNode("4")), FlowTestUtils.MATCH_ECHO_STEP).size());
         blackList = Arrays.asList(exec.getNode("6"), exec.getNode("10"));
-        Assert.assertEquals(3, scanner.filteredNodes(heads, blackList, MATCH_ECHO_STEP).size());
+        Assert.assertEquals(3, scanner.filteredNodes(heads, blackList, FlowTestUtils.MATCH_ECHO_STEP).size());
     }
 
     @Test
@@ -465,7 +462,7 @@ public class FlowScannerTest {
 
         // Basic test of DepthFirstScanner
         AbstractFlowScanner scanner = new DepthFirstScanner();
-        Collection<FlowNode> matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
+        Collection<FlowNode> matches = scanner.filteredNodes(heads, null, FlowTestUtils.MATCH_ECHO_STEP);
         Assert.assertEquals(7, matches.size());
 
         scanner.setup(heads);
@@ -474,11 +471,11 @@ public class FlowScannerTest {
 
         // We're going to test the ForkScanner in more depth since this is its natural use
         scanner = new ForkScanner();
-        matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
+        matches = scanner.filteredNodes(heads, null, FlowTestUtils.MATCH_ECHO_STEP);
         Assert.assertEquals(7, matches.size());
 
         heads = Arrays.asList(exec.getNode("20"), exec.getNode("17"), exec.getNode("9"));
-        matches = scanner.filteredNodes(heads, null, MATCH_ECHO_STEP);
+        matches = scanner.filteredNodes(heads, null, FlowTestUtils.MATCH_ECHO_STEP);
         Assert.assertEquals(6, matches.size()); // Commented out since temporarily failing
     }
 }

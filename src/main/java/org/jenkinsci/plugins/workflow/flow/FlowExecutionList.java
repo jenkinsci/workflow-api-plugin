@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
 import javax.annotation.CheckForNull;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -69,7 +68,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                             return e;
                         }
                     } catch (Throwable e) {
-                        LOGGER.log(WARNING, "Failed to load " + o + ". Unregistering", e);
+                        LOGGER.log(Level.WARNING, "Failed to load " + o + ". Unregistering", e);
                         unregister(o);
                     }
                 }
@@ -97,9 +96,9 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         if (cf.exists()) {
             try {
                 runningTasks.replaceBy((List<FlowExecutionOwner>) cf.read());
-                LOGGER.log(FINE, "loaded: {0}", runningTasks);
+                LOGGER.log(Level.FINE, "loaded: {0}", runningTasks);
             } catch (Exception x) {
-                LOGGER.log(WARNING, "ignoring broken " + cf, x);
+                LOGGER.log(Level.WARNING, "ignoring broken " + cf, x);
             }
         }
     }
@@ -111,7 +110,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      */
     public synchronized void register(final FlowExecutionOwner self) {
         if (runningTasks.contains(self)) {
-            LOGGER.log(WARNING, "{0} was already in the list: {1}", new Object[] {self, runningTasks.getView()});
+            LOGGER.log(Level.WARNING, "{0} was already in the list: {1}", new Object[] {self, runningTasks.getView()});
         } else {
             runningTasks.add(self);
             saveLater();
@@ -120,16 +119,16 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
     public synchronized void unregister(final FlowExecutionOwner self) {
         if (runningTasks.remove(self)) {
-            LOGGER.log(FINE, "unregistered {0}", new Object[] {self});
+            LOGGER.log(Level.FINE, "unregistered {0}", new Object[] {self});
             saveLater();
         } else {
-            LOGGER.log(WARNING, "{0} was not in the list to begin with: {1}", new Object[] {self, runningTasks.getView()});
+            LOGGER.log(Level.WARNING, "{0} was not in the list to begin with: {1}", new Object[] {self, runningTasks.getView()});
         }
     }
 
     private synchronized void saveLater() {
         final List<FlowExecutionOwner> copy = new ArrayList<>(runningTasks.getView());
-        LOGGER.log(FINE, "scheduling save of {0}", copy);
+        LOGGER.log(Level.FINE, "scheduling save of {0}", copy);
         try {
             executor.submit(new Runnable() {
                 @Override public void run() {
@@ -137,20 +136,20 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 }
             });
         } catch (RejectedExecutionException x) {
-            LOGGER.log(FINE, "could not schedule save, perhaps because Jenkins is shutting down; saving immediately", x);
+            LOGGER.log(Level.FINE, "could not schedule save, perhaps because Jenkins is shutting down; saving immediately", x);
             save(copy);
         }
     }
     private void save(List<FlowExecutionOwner> copy) {
         XmlFile cf = configFile();
-        LOGGER.log(FINE, "saving {0} to {1}", new Object[] {copy, cf});
+        LOGGER.log(Level.FINE, "saving {0} to {1}", new Object[] {copy, cf});
         if (cf == null) {
             return; // oh well
         }
         try {
             cf.write(copy);
         } catch (IOException x) {
-            LOGGER.log(WARNING, null, x);
+            LOGGER.log(Level.WARNING, null, x);
         }
     }
 
@@ -176,11 +175,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         @Override
         public void onLoaded() {
             for (final FlowExecution e : list) {
-                LOGGER.log(FINE, "Eager loading {0}", e);
+                LOGGER.log(Level.FINE, "Eager loading {0}", e);
                 Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                     @Override
                     public void onSuccess(List<StepExecution> result) {
-                        LOGGER.log(FINE, "Will resume {0}", result);
+                        LOGGER.log(Level.FINE, "Will resume {0}", result);
                         for (StepExecution se : result) {
                             se.onResume();
                         }
@@ -191,7 +190,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                         if (t instanceof CancellationException) {
                             LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
                         } else {
-                            LOGGER.log(WARNING, "Failed to load " + e, t);
+                            LOGGER.log(Level.WARNING, "Failed to load " + e, t);
                         }
                     }
                 }, MoreExecutors.directExecutor());

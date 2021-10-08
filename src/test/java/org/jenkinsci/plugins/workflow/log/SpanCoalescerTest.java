@@ -24,10 +24,11 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
+import static org.junit.Assert.assertEquals;
+
 import hudson.console.AnnotatedLargeText;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import static org.junit.Assert.*;
 import org.junit.Test;
 
 public class SpanCoalescerTest {
