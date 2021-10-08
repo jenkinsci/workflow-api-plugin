@@ -75,6 +75,7 @@ public class ErrorAction implements PersistentAction {
         // contains references to the class loader for the Pipeline Script. Storing it leads
         // to memory leaks.
         if (error instanceof MissingPropertyException &&
+                ((MissingPropertyException)error).getType() != null &&
                 ((MissingPropertyException)error).getType().getClassLoader() instanceof GroovyClassLoader) {
             return true;
         }
