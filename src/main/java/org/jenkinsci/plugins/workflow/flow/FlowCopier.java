@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
-import com.google.common.collect.ImmutableList;
 import hudson.Extension;
 import hudson.ExtensionPoint;
 import hudson.model.Action;
@@ -33,6 +32,8 @@ import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import jenkins.scm.api.SCMRevisionAction;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -75,10 +76,10 @@ public abstract class FlowCopier implements ExtensionPoint {
     @Extension public static class StandardActions extends FlowCopier.ByRun {
 
         // TODO cloned from ReplayAction; consider whether it is appropriate to share these (related but not identical case)
-        private static final Iterable<Class<? extends Action>> COPIED_ACTIONS = ImmutableList.of(
+        private static final Iterable<Class<? extends Action>> COPIED_ACTIONS = Collections.unmodifiableList(Arrays.asList(
             ParametersAction.class,
             SCMRevisionAction.class
-        );
+        ));
 
         @Override public void copy(Run<?, ?> original, Run<?, ?> copy, TaskListener listener) throws IOException, InterruptedException {
             for (Class<? extends Action> type : COPIED_ACTIONS) {
