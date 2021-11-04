@@ -10,7 +10,6 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
 import hudson.init.Terminator;
-import hudson.model.listeners.ItemListener;
 import hudson.remoting.SingleLaneExecutorService;
 import hudson.util.CopyOnWriteList;
 import jenkins.model.Jenkins;
@@ -30,6 +29,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 
@@ -164,41 +164,6 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     }
 
     /**
-     * When Jenkins starts up and everything is loaded, be sure to proactively resurrect
-     * all the ongoing {@link FlowExecution}s so that they start running again.
-     */
-    @Extension
-    public static class ItemListenerImpl extends ItemListener {
-        @Inject
-        FlowExecutionList list;
-
-        @Override
-        public void onLoaded() {
-            for (final FlowExecution e : list) {
-                LOGGER.log(Level.FINE, "Eager loading {0}", e);
-                Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
-                    @Override
-                    public void onSuccess(List<StepExecution> result) {
-                        LOGGER.log(Level.FINE, "Will resume {0}", result);
-                        for (StepExecution se : result) {
-                            se.onResume();
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t) {
-                        if (t instanceof CancellationException) {
-                            LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
-                        } else {
-                            LOGGER.log(Level.WARNING, "Failed to load " + e, t);
-                        }
-                    }
-                }, MoreExecutors.directExecutor());
-            }
-        }
-    }
-
-    /**
      * Enumerates {@link StepExecution}s running inside {@link FlowExecution}.
      */
     @Extension
@@ -251,5 +216,37 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         SingleLaneExecutorService executor = get().executor;
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
+    }
+
+    /**
+     * Whenever a Pipeline resumes, resume all incomplete steps in its {@link FlowExecution}.
+     *
+     * Called by {@code WorkflowRun.onLoad}, so guaranteed to run if a Pipeline resumes regardless of its presence in
+     * {@link FlowExecutionList}.
+     */
+    @Extension
+    public static class ResumeStepExecutionListener extends FlowExecutionListener {
+        @Override
+        public void onResumed(@Nonnull FlowExecution e) {
+            Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
+                @Override
+                public void onSuccess(List<StepExecution> result) {
+                    LOGGER.log(Level.FINE, "Will resume {0}", result);
+                    for (StepExecution se : result) {
+                        se.onResume();
+                    }
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    if (t instanceof CancellationException) {
+                        LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
+                    } else {
+                        LOGGER.log(Level.WARNING, "Failed to load " + e, t);
+                    }
+                }
+
+            }, MoreExecutors.directExecutor()); // TODO: Unclear if we need to run this asynchronously or if StepExecution.onResume has any particular thread requirements.
+        }
     }
 }

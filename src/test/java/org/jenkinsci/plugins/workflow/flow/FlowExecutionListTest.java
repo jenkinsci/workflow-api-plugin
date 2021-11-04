@@ -26,15 +26,25 @@ package org.jenkinsci.plugins.workflow.flow;
 
 import static org.junit.Assert.assertNotNull;
 
+import hudson.AbortException;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
+import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Set;
 import java.util.logging.Level;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.Rule;
@@ -42,6 +52,8 @@ import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.JenkinsSessionRule;
+import org.jvnet.hudson.test.TestExtension;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 public class FlowExecutionListTest {
 
@@ -77,6 +89,62 @@ public class FlowExecutionListTest {
                 j.assertBuildStatusSuccess(j.waitForCompletion(b2));
                 j.assertBuildStatusSuccess(j.waitForCompletion(b3));
         });
+    }
+
+    @Issue("TODO")
+    @Test public void resumeStepExecutions() throws Throwable {
+        sessions.then(r -> {
+            WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+            p.setDefinition(new CpsFlowDefinition("noResume()", true));
+            WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+            r.waitForMessage("Starting non-resumable step", b);
+            // TODO: Unclear how this might happen in practice.
+            FlowExecutionList.get().unregister(b.asFlowExecutionOwner());
+        });
+        sessions.then(r -> {
+            WorkflowJob p = r.jenkins.getItemByFullName("p", WorkflowJob.class);
+            WorkflowRun b = p.getBuildByNumber(1);
+            r.waitForCompletion(b);
+            r.assertBuildStatus(Result.FAILURE, b);
+            r.assertLogContains("Unable to resume NonResumableStep", b);
+        });
+    }
+
+    public static class NonResumableStep extends Step implements Serializable {
+        public static final long serialVersionUID = 1L;
+        @DataBoundConstructor
+        public NonResumableStep() { }
+        @Override
+        public StepExecution start(StepContext sc) throws Exception {
+            return new ExecutionImpl(sc);
+        }
+
+        private static class ExecutionImpl extends StepExecution implements Serializable {
+            public static final long serialVersionUID = 1L;
+            private ExecutionImpl(StepContext sc) {
+                super(sc);
+            }
+            @Override
+            public boolean start() throws Exception {
+                getContext().get(TaskListener.class).getLogger().println("Starting non-resumable step");
+                return false;
+            }
+            @Override
+            public void onResume() {
+                getContext().onFailure(new AbortException("Unable to resume NonResumableStep"));
+            }
+        }
+
+        @TestExtension public static class DescriptorImpl extends StepDescriptor {
+            @Override
+            public Set<? extends Class<?>> getRequiredContext() {
+                return Collections.singleton(TaskListener.class);
+            }
+            @Override
+            public String getFunctionName() {
+                return "noResume";
+            }
+        }
     }
 
 }
