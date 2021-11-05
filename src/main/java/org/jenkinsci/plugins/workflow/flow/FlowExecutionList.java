@@ -5,7 +5,6 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.inject.Inject;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
@@ -184,14 +183,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      */
     @Extension
     public static class StepExecutionIteratorImpl extends StepExecutionIterator {
-        @Inject
-        FlowExecutionList list;
-
         @Override
         public ListenableFuture<?> apply(final Function<StepExecution, Void> f) {
             List<ListenableFuture<?>> all = new ArrayList<>();
 
-            for (FlowExecution e : list) {
+            for (FlowExecution e : FlowExecutionList.get()) {
                 ListenableFuture<List<StepExecution>> execs = e.getCurrentExecutions(false);
                 all.add(execs);
                 Futures.addCallback(execs,new FutureCallback<List<StepExecution>>() {
