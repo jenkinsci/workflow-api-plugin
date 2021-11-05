@@ -10,6 +10,7 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
 import hudson.init.Terminator;
+import hudson.model.listeners.ItemListener;
 import hudson.remoting.SingleLaneExecutorService;
 import hudson.util.CopyOnWriteList;
 import jenkins.model.Jenkins;
@@ -161,6 +162,21 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
             l = new FlowExecutionList();
         }
         return l;
+    }
+
+    /**
+     * When Jenkins starts up and everything is loaded, be sure to proactively resurrect
+     * all the ongoing {@link FlowExecution}s so that they start running again.
+     */
+    @Extension
+    public static class ItemListenerImpl extends ItemListener {
+        @Override
+        public void onLoaded() {
+            for (final FlowExecution e : FlowExecutionList.get()) {
+                // The call to FlowExecutionOwner.get in the implementation of iterator() is sufficent to load the Pipeline.
+                LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
+            }
+        }
     }
 
     /**

@@ -24,6 +24,9 @@
 
 package org.jenkinsci.plugins.workflow.flow;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertNotNull;
 
 import hudson.AbortException;
@@ -35,9 +38,13 @@ import hudson.model.StringParameterValue;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
 import java.io.Serializable;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.logging.Level;
+import org.hamcrest.Matcher;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -45,6 +52,7 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.Rule;
@@ -88,6 +96,48 @@ public class FlowExecutionListTest {
                 WorkflowRun b3 = p.getBuildByNumber(3);
                 j.assertBuildStatusSuccess(j.waitForCompletion(b2));
                 j.assertBuildStatusSuccess(j.waitForCompletion(b3));
+        });
+    }
+
+    @Test public void forceLoadRunningExecutionsAfterRestart() throws Throwable {
+        logging.capture(50);
+        sessions.then(r -> {
+            WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+            p.setDefinition(new CpsFlowDefinition("semaphore('wait')", true));
+            WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("wait/1", b);
+        });
+        sessions.then(r -> {
+            /*
+            Make sure that the build gets loaded automatically by FlowExecutionList$ItemListenerImpl before we load it explictly.
+            Expected call stack for resuming a Pipelines and its steps:
+                at org.jenkinsci.plugins.workflow.flow.FlowExecutionList$ResumeStepExecutionListener$1.onSuccess(FlowExecutionList.java:250)
+                at org.jenkinsci.plugins.workflow.flow.FlowExecutionList$ResumeStepExecutionListener$1.onSuccess(FlowExecutionList.java:247)
+                at com.google.common.util.concurrent.Futures$6.run(Futures.java:975)
+                at org.jenkinsci.plugins.workflow.flow.DirectExecutor.execute(DirectExecutor.java:33)
+                ... Guava Futures API internals ...
+                at com.google.common.util.concurrent.Futures.addCallback(Futures.java:985)
+                at org.jenkinsci.plugins.workflow.flow.FlowExecutionList$ResumeStepExecutionListener.onResumed(FlowExecutionList.java:247)
+                at org.jenkinsci.plugins.workflow.flow.FlowExecutionListener.fireResumed(FlowExecutionListener.java:84)
+                at org.jenkinsci.plugins.workflow.job.WorkflowRun.onLoad(WorkflowRun.java:528)
+                at hudson.model.RunMap.retrieve(RunMap.java:225)
+                ... RunMap internals ...
+                at hudson.model.RunMap.getById(RunMap.java:205)
+                at org.jenkinsci.plugins.workflow.job.WorkflowRun$Owner.run(WorkflowRun.java:937)
+                at org.jenkinsci.plugins.workflow.job.WorkflowRun$Owner.get(WorkflowRun.java:948)
+                at org.jenkinsci.plugins.workflow.flow.FlowExecutionList$1.computeNext(FlowExecutionList.java:65)
+                at org.jenkinsci.plugins.workflow.flow.FlowExecutionList$1.computeNext(FlowExecutionList.java:57)
+                at com.google.common.collect.AbstractIterator.tryToComputeNext(AbstractIterator.java:143)
+                at com.google.common.collect.AbstractIterator.hasNext(AbstractIterator.java:138)
+                at org.jenkinsci.plugins.workflow.flow.FlowExecutionList$ItemListenerImpl.onLoaded(FlowExecutionList.java:175)
+                at jenkins.model.Jenkins.<init>(Jenkins.java:1019)
+            */
+            waitFor(logging::getMessages, hasItem(containsString("Will resume [org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep")));
+            WorkflowJob p = r.jenkins.getItemByFullName("p", WorkflowJob.class);
+            SemaphoreStep.success("wait/1", null);
+            WorkflowRun b = p.getBuildByNumber(1);
+            r.waitForCompletion(b);
+            r.assertBuildStatus(Result.SUCCESS, b);
         });
     }
 
@@ -145,6 +195,17 @@ public class FlowExecutionListTest {
                 return "noResume";
             }
         }
+    }
+
+    /**
+     * Wait up to 5 seconds for the given supplier to return a matching value.
+     */
+    private static <T> void waitFor(Supplier<T> valueSupplier, Matcher<T> matcher) throws InterruptedException {
+        Instant end = Instant.now().plus(Duration.ofSeconds(5));
+        while (!matcher.matches(valueSupplier.get()) && Instant.now().isBefore(end)) {
+            Thread.sleep(100L);
+        }
+        assertThat("Matcher should have matched after 5s", valueSupplier.get(), matcher);
     }
 
 }
