@@ -247,6 +247,13 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
             Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                 @Override
                 public void onSuccess(List<StepExecution> result) {
+                    FlowExecutionList list = FlowExecutionList.get();
+                    FlowExecutionOwner owner = e.getOwner();
+                    if (!list.runningTasks.contains(owner)) {
+                        LOGGER.log(Level.WARNING, "Resuming {0}, which is missing from FlowExecutionList ({1}), so registering it now.",
+                                new Object[] {owner, list.runningTasks.getView()});
+                        list.register(owner);
+                    }
                     LOGGER.log(Level.FINE, "Will resume {0}", result);
                     for (StepExecution se : result) {
                         se.onResume();
