@@ -243,6 +243,16 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
             Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                 @Override
                 public void onSuccess(List<StepExecution> result) {
+                    if (e.isComplete()) {
+                        // WorkflowRun.onLoad will not fire onResumed if the serialized execution was already
+                        // complete when loaded, but right now (at least for workflow-cps), the execution resumes
+                        // asynchronously before WorkflowRun.onLoad completes, so it is possible that the execution
+                        // finishes before onResumed gets called.
+                        // That said, there is nothing to prevent the execution from completing right after we check
+                        // isComplete. If we want to fully prevent that, we would need to delay actual execution
+                        // resumption until WorkflowRun.onLoad completes or add some form of synchronization.
+                        return;
+                    }
                     FlowExecutionList list = FlowExecutionList.get();
                     FlowExecutionOwner owner = e.getOwner();
                     if (!list.runningTasks.contains(owner)) {
