@@ -5,6 +5,8 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
@@ -28,8 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 
@@ -239,7 +239,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     @Extension
     public static class ResumeStepExecutionListener extends FlowExecutionListener {
         @Override
-        public void onResumed(@Nonnull FlowExecution e) {
+        public void onResumed(@NonNull FlowExecution e) {
             Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                 @Override
                 public void onSuccess(List<StepExecution> result) {
