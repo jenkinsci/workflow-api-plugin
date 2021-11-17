@@ -141,7 +141,7 @@ public class FlowExecutionListTest {
         });
     }
 
-    @Issue("TODO")
+    @Issue("JENKINS-67164")
     @Test public void resumeStepExecutions() throws Throwable {
         sessions.then(r -> {
             WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
