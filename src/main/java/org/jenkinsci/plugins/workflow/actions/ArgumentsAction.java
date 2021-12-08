@@ -303,7 +303,7 @@ public abstract class ArgumentsAction implements PersistentAction {
     }
     // helper method to capture generic type
     private static <S extends Step> UninstantiatedDescribable resolve(DescribableModel<S> model, Map<String, Object> arguments) throws Exception {
-        return model.uninstantiate2(model.instantiate(arguments));
+        return model.uninstantiate2(model.instantiate(arguments, null));
     }
 
 
