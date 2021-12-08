@@ -70,7 +70,7 @@ public class ForkScannerTest {
 
     public static Predicate<TestVisitor.CallEntry> predicateForCallEntryType(final TestVisitor.CallType type) {
         return new Predicate<TestVisitor.CallEntry>() {
-            TestVisitor.CallType myType = type;
+            final TestVisitor.CallType myType = type;
 
             @Override
             public boolean test(TestVisitor.CallEntry input) {
@@ -430,9 +430,9 @@ public class ForkScannerTest {
         Assert.assertEquals(9, outputs.size());
     }
 
-    private Function<FlowNode, String> NODE_TO_ID = input -> input != null ? input.getId() : null;
+    private final Function<FlowNode, String> NODE_TO_ID = input -> input != null ? input.getId() : null;
 
-    private Function<TestVisitor.CallEntry, String> CALL_TO_NODE_ID =
+    private final Function<TestVisitor.CallEntry, String> CALL_TO_NODE_ID =
             input ->
                     input != null && input.getNodeId() != null
                             ? input.getNodeId().toString()
