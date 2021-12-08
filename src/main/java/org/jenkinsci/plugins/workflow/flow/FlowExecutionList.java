@@ -134,11 +134,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         final List<FlowExecutionOwner> copy = new ArrayList<>(runningTasks.getView());
         LOGGER.log(Level.FINE, "scheduling save of {0}", copy);
         try {
-            executor.submit(new Runnable() {
-                @Override public void run() {
-                    save(copy);
-                }
-            });
+            executor.submit(() -> save(copy));
         } catch (RejectedExecutionException x) {
             LOGGER.log(Level.FINE, "could not schedule save, perhaps because Jenkins is shutting down; saving immediately", x);
             save(copy);

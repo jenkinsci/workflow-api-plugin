@@ -52,12 +52,7 @@ public final class FlowScanningUtils {
      */
     @NonNull
     public static  Predicate<FlowNode> hasActionPredicate(@NonNull final Class<? extends Action> actionClass) {
-        return new Predicate<FlowNode>() {
-            @Override
-            public boolean apply(FlowNode input) {
-                return (input != null && input.getAction(actionClass) != null);
-            }
-        };
+        return input -> (input != null && input.getAction(actionClass) != null);
     }
 
     // Default predicates, which may be used for common conditions

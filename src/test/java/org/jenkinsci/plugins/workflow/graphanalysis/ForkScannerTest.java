@@ -180,7 +180,7 @@ public class ForkScannerTest {
         // Verify we have at least one appropriate parallel end event, for the mandatory parallel
         List<String> parallelEnds =
                 test.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).stream()
-                        .map(CALL_TO_NODE_ID::apply)
+                        .map(CALL_TO_NODE_ID)
                         .collect(Collectors.toList());
         boolean hasMatchingEnd = false;
         for (FlowNode f : heads) {
@@ -193,7 +193,7 @@ public class ForkScannerTest {
 
         List<String> branchEnds =
                 test.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_END).stream()
-                        .map(CALL_TO_NODE_ID::apply)
+                        .map(CALL_TO_NODE_ID)
                         .collect(Collectors.toList());
         // Verify each branch has a branch end event
         for (FlowNode f : heads) {
