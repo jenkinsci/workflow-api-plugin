@@ -87,8 +87,8 @@ public class FlowScannerTest {
         AbstractFlowScanner linear = new LinearScanner();
 
         // ## Bunch of tests for convertToFastCheckable ##
-        Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(null));
-        Assert.assertEquals(Collections.EMPTY_SET, linear.convertToFastCheckable(new ArrayList<>()));
+        Assert.assertEquals(Collections.emptySet(), linear.convertToFastCheckable(null));
+        Assert.assertEquals(Collections.emptySet(), linear.convertToFastCheckable(new ArrayList<>()));
 
         Collection<FlowNode> coll = linear.convertToFastCheckable(Arrays.asList(intermediateNode));
         Assert.assertTrue("Singleton set used for one element", coll instanceof AbstractSet);
@@ -125,13 +125,13 @@ public class FlowScannerTest {
         Collection<FlowNode> nullColl = null;
 
         Assert.assertTrue(linear.setup(heads, null));
-        Assert.assertTrue(linear.setup(heads, Collections.EMPTY_SET));
+        Assert.assertTrue(linear.setup(heads, Collections.emptySet()));
         Assert.assertFalse(linear.setup(nullColl, heads));
         Assert.assertFalse(linear.setup(nullColl, null));
         Assert.assertFalse(linear.setup(heads, heads));
         Assert.assertTrue(linear.setup(heads));
         Assert.assertFalse(linear.setup(nullColl));
-        Assert.assertFalse(linear.setup(Collections.EMPTY_SET));
+        Assert.assertFalse(linear.setup(Collections.emptySet()));
         Assert.assertTrue(linear.setup(lastNode));
         Assert.assertTrue(linear.setup(lastNode, nullColl));
         Assert.assertFalse(linear.setup(nullNode));
@@ -145,12 +145,12 @@ public class FlowScannerTest {
         FlowNode firstEchoNode = exec.getNode("5");
         FlowExecution nullExecution = null;
 
-        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(heads, Collections.EMPTY_LIST, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertEquals(firstEchoNode, linear.findFirstMatch(heads, Collections.emptySet(), FlowTestUtils.MATCH_ECHO_STEP));
         Assert.assertEquals(firstEchoNode, linear.findFirstMatch(heads, FlowTestUtils.MATCH_ECHO_STEP));
         Assert.assertEquals(firstEchoNode, linear.findFirstMatch(lastNode, FlowTestUtils.MATCH_ECHO_STEP));
         Assert.assertEquals(firstEchoNode, linear.findFirstMatch(exec, FlowTestUtils.MATCH_ECHO_STEP));
         Assert.assertNull(linear.findFirstMatch(nullColl, FlowTestUtils.MATCH_ECHO_STEP));
-        Assert.assertNull(linear.findFirstMatch(Collections.EMPTY_SET, FlowTestUtils.MATCH_ECHO_STEP));
+        Assert.assertNull(linear.findFirstMatch(Collections.emptySet(), FlowTestUtils.MATCH_ECHO_STEP));
         Assert.assertNull(linear.findFirstMatch(nullNode, FlowTestUtils.MATCH_ECHO_STEP));
         Assert.assertNull(linear.findFirstMatch(nullExecution, FlowTestUtils.MATCH_ECHO_STEP));
 
@@ -158,9 +158,9 @@ public class FlowScannerTest {
         // Filtered nodes
         FlowTestUtils.assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, FlowTestUtils.MATCH_ECHO_STEP), 5, 4);
         FlowTestUtils.assertNodeOrder("Filtered echo nodes", linear.filteredNodes(heads, Collections.singleton(intermediateNode), FlowTestUtils.MATCH_ECHO_STEP), 5);
-        Assert.assertEquals(0, linear.filteredNodes(heads, null, (Predicate) Predicates.alwaysFalse()).size());
+        Assert.assertEquals(0, linear.filteredNodes(heads, null, Predicates.alwaysFalse()).size());
         Assert.assertEquals(0, linear.filteredNodes(nullNode, FlowTestUtils.MATCH_ECHO_STEP).size());
-        Assert.assertEquals(0, linear.filteredNodes(Collections.EMPTY_SET, FlowTestUtils.MATCH_ECHO_STEP).size());
+        Assert.assertEquals(0, linear.filteredNodes(Collections.emptySet(), FlowTestUtils.MATCH_ECHO_STEP).size());
 
         // Same filter using the filterator
         linear.setup(heads);
@@ -174,7 +174,7 @@ public class FlowScannerTest {
 
         // Visitor pattern tests
         FlowTestUtils.CollectingVisitor visitor = new FlowTestUtils.CollectingVisitor();
-        linear.visitAll(Collections.EMPTY_SET, visitor);
+        linear.visitAll(Collections.emptySet(), visitor);
         Assert.assertEquals(0, visitor.getVisited().size());
         visitor.reset();
 
@@ -287,7 +287,7 @@ public class FlowScannerTest {
 
         // // Test block jump core
         FlowNode headCandidate = exec.getNode("8");
-        Assert.assertEquals(exec.getNode("4"), linearBlockHoppingScanner.jumpBlockScan(headCandidate, Collections.EMPTY_SET));
+        Assert.assertEquals(exec.getNode("4"), linearBlockHoppingScanner.jumpBlockScan(headCandidate, Collections.emptySet()));
         Assert.assertTrue("Setup should return true if we can iterate", linearBlockHoppingScanner.setup(headCandidate, null));
 
         // Test the actual iteration

@@ -145,7 +145,7 @@ public interface LogStorage {
          } catch (Exception x) {
              Logger.getLogger(LogStorage.class.getName()).log(Level.WARNING, null, x);
              if (build instanceof Run) {
-                 return new File(((Run) build).getRootDir(), "log");
+                 return new File(((Run<?, ?>) build).getRootDir(), "log");
              } else {
                  return new File("broken.log"); // not much we can do
              }

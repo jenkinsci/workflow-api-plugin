@@ -707,7 +707,7 @@ public class ForkScannerTest {
         FlowExecution exec = this.SIMPLE_PARALLEL_RUN.getExecution();
         ForkScanner f = new ForkScanner();
         f.setup(exec.getCurrentHeads());
-        Assert.assertArrayEquals(new HashSet(exec.getCurrentHeads()).toArray(), new HashSet(f.currentParallelHeads()).toArray());
+        Assert.assertArrayEquals(new HashSet<>(exec.getCurrentHeads()).toArray(), new HashSet<>(f.currentParallelHeads()).toArray());
         List<FlowNode> expectedHeads = f.currentParallelHeads();
 
         sanityTestIterationAndVisiter(exec.getCurrentHeads());

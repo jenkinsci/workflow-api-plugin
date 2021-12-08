@@ -195,7 +195,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
         @SuppressWarnings("deprecation") // the compatibility code in ConsoleLogFilter fails to delegate to the old overload when given a null argument
         @Override public OutputStream decorate(OutputStream logger) throws IOException, InterruptedException {
-            return filter.decorateLogger((AbstractBuild) null, logger);
+            return filter.decorateLogger((AbstractBuild<?, ?>) null, logger);
         }
 
         @Override public String toString() {

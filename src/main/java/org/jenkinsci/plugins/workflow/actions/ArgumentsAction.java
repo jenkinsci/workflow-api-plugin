@@ -229,13 +229,13 @@ public abstract class ArgumentsAction implements PersistentAction {
     public Object getArgumentValueOrReason(@NonNull String argumentName) {
         Object ob = getArgumentsInternal().get(argumentName);
         if (ob instanceof Map) {
-            return Collections.unmodifiableMap((Map)ob);
+            return Collections.unmodifiableMap((Map<?, ?>)ob);
         } else if (ob instanceof Set) {
-            return Collections.unmodifiableSet((Set)ob);
+            return Collections.unmodifiableSet((Set<?>)ob);
         } else if (ob instanceof List) {
-            return Collections.unmodifiableList((List)ob);
+            return Collections.unmodifiableList((List<?>)ob);
         } else if (ob instanceof Collection) {
-            return Collections.unmodifiableCollection((Collection)ob);
+            return Collections.unmodifiableCollection((Collection<?>)ob);
         }
         return ob;
     }
