@@ -148,7 +148,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
             dir = new File(Jenkins.get().getRootDir(), Util.getDigestOf(build.getExternalizableId()));
         }
 
-        @Override public boolean delete() throws IOException, InterruptedException {
+        @Override public boolean delete() throws IOException {
             if (!dir.exists()) {
                 return false;
             }

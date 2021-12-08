@@ -309,11 +309,11 @@ public abstract class LogStorageTestBase {
         return pos;
     }
 
-    protected final void assertLength(long length) throws Exception {
+    protected final void assertLength(long length) {
         assertLength(text(), length);
     }
 
-    protected final void assertLength(String id, long length) throws Exception {
+    protected final void assertLength(String id, long length) {
         assertLength(text(id), length);
     }
 
@@ -321,11 +321,11 @@ public abstract class LogStorageTestBase {
         assertEquals(length, text.length());
     }
 
-    private AnnotatedLargeText<?> text() throws Exception {
+    private AnnotatedLargeText<?> text() {
         return createStorage().overallLog(null, true);
     }
 
-    private AnnotatedLargeText<?> text(String id) throws Exception {
+    private AnnotatedLargeText<?> text(String id) {
         return createStorage().stepLog(new MockNode(id), true);
     }
 

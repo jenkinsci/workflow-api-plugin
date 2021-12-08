@@ -111,11 +111,11 @@ public final class FileLogStorage implements LogStorage {
         }
     }
 
-    @Override public BuildListener overallListener() throws IOException, InterruptedException {
+    @Override public BuildListener overallListener() throws IOException {
         return new BufferedBuildListener(new IndexOutputStream(null));
     }
 
-    @Override public TaskListener nodeListener(FlowNode node) throws IOException, InterruptedException {
+    @Override public TaskListener nodeListener(FlowNode node) throws IOException {
         return new BufferedBuildListener(new IndexOutputStream(node.getId()));
     }
 

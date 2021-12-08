@@ -174,7 +174,7 @@ public abstract class FlowExecutionOwner implements Serializable {
         @Override public int hashCode() {
             return 0;
         }
-        @Override public TaskListener getListener() throws IOException {
+        @Override public TaskListener getListener() {
             return TaskListener.NULL;
         }
     }

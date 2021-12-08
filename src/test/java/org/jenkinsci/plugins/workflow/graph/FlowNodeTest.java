@@ -593,7 +593,7 @@ Action format:
         public DoubleWarningStep() {}
 
         @Override
-        public StepExecution start(StepContext context) throws Exception {
+        public StepExecution start(StepContext context) {
             return new StepExecution(context) {
                 @Override
                 public boolean start() throws Exception {

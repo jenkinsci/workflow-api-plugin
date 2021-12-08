@@ -165,7 +165,7 @@ public class FlowExecutionListTest {
         @DataBoundConstructor
         public NonResumableStep() { }
         @Override
-        public StepExecution start(StepContext sc) throws Exception {
+        public StepExecution start(StepContext sc) {
             return new ExecutionImpl(sc);
         }
 

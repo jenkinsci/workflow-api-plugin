@@ -48,11 +48,11 @@ public final class BrokenLogStorage implements LogStorage {
         this.x = x;
     }
     
-    @Override public BuildListener overallListener() throws IOException, InterruptedException {
+    @Override public BuildListener overallListener() throws IOException {
         throw new IOException(x);
     }
     
-    @Override public TaskListener nodeListener(FlowNode node) throws IOException, InterruptedException {
+    @Override public TaskListener nodeListener(FlowNode node) throws IOException {
         throw new IOException(x);
     }
     

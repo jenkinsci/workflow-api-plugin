@@ -204,7 +204,7 @@ public class ForkScannerTest {
     }
 
     /** Runs a fairly extensive suite of sanity tests of iteration and visitor use */
-    private void sanityTestIterationAndVisiter(List<FlowNode> heads) throws Exception {
+    private void sanityTestIterationAndVisiter(List<FlowNode> heads) {
         ForkScanner scan = new ForkScanner();
         TestVisitor test = new TestVisitor();
         scan.setup(heads);
