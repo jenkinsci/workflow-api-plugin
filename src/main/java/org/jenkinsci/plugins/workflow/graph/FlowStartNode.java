@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.graph;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
 import java.util.List;
@@ -44,6 +45,7 @@ public class FlowStartNode extends BlockStartNode {
      * @deprecated
      *      Why are you calling a method that always return empty list?
      */
+    @NonNull
     @Override
     public List<FlowNode> getParents() {
         return super.getParents();

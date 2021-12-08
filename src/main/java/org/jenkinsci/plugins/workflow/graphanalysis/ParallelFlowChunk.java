@@ -12,6 +12,5 @@ public interface ParallelFlowChunk <ChunkType extends FlowChunk> extends FlowChu
     @NonNull
     Map<String, ChunkType> getBranches();
 
-    @NonNull
     void setBranch(@NonNull String branchName, @NonNull ChunkType branchBlock);
 }

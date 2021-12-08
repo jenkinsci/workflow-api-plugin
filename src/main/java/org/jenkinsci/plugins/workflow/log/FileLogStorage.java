@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
@@ -111,11 +112,13 @@ public final class FileLogStorage implements LogStorage {
         }
     }
 
+    @NonNull
     @Override public BuildListener overallListener() throws IOException {
         return new BufferedBuildListener(new IndexOutputStream(null));
     }
 
-    @Override public TaskListener nodeListener(FlowNode node) throws IOException {
+    @NonNull
+    @Override public TaskListener nodeListener(@NonNull FlowNode node) throws IOException {
         return new BufferedBuildListener(new IndexOutputStream(node.getId()));
     }
 
@@ -153,14 +156,14 @@ public final class FileLogStorage implements LogStorage {
             }
         }
 
-        @Override public void write(byte[] b) throws IOException {
+        @Override public void write(@NonNull byte[] b) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
                 bos.write(b);
             }
         }
 
-        @Override public void write(byte[] b, int off, int len) throws IOException {
+        @Override public void write(@NonNull byte[] b, int off, int len) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
                 bos.write(b, off, len);
@@ -194,7 +197,8 @@ public final class FileLogStorage implements LogStorage {
         }
     }
 
-    @Override public AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(FlowExecutionOwner.Executable build, boolean complete) {
+    @NonNull
+    @Override public AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(@NonNull FlowExecutionOwner.Executable build, boolean complete) {
         maybeFlush();
         return new AnnotatedLargeText<FlowExecutionOwner.Executable>(log, StandardCharsets.UTF_8, complete, build) {
             @Override public long writeHtmlTo(long start, Writer w) throws IOException {
@@ -252,7 +256,8 @@ public final class FileLogStorage implements LogStorage {
         };
     }
 
-    @Override public AnnotatedLargeText<FlowNode> stepLog(FlowNode node, boolean complete) {
+    @NonNull
+    @Override public AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete) {
         maybeFlush();
         String id = node.getId();
         try (ByteBuffer buf = new ByteBuffer();
@@ -323,7 +328,8 @@ public final class FileLogStorage implements LogStorage {
     }
 
     @Deprecated
-    @Override public File getLogFile(FlowExecutionOwner.Executable build, boolean complete) {
+    @NonNull
+    @Override public File getLogFile(@NonNull FlowExecutionOwner.Executable build, boolean complete) {
         return log;
     }
 

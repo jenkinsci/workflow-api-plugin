@@ -32,6 +32,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
         /** Null to use the platform default, which may change over time as enhanced options are available. */
         private FlowDurabilityHint durabilityHint = null;
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Global Default Pipeline Durability Level";

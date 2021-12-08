@@ -33,6 +33,8 @@ import java.lang.ref.ReferenceQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.util.Timer;
 
 /**
@@ -48,7 +50,7 @@ final class GCFlushedOutputStream extends FilterOutputStream {
         FlushRef.register(this, out);
     }
 
-    @Override public void write(byte[] b, int off, int len) throws IOException {
+    @Override public void write(@NonNull byte[] b, int off, int len) throws IOException {
         out.write(b, off, len); // super method is surprising
     }
 

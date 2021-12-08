@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -192,10 +193,12 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
             }
         }
 
+        @NonNull
         @Override public String getName() {
             return delegate.getName();
         }
 
+        @NonNull
         @Override public URI toURI() {
             return delegate.toURI();
         }
@@ -220,15 +223,18 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
             return delegate.exists();
         }
 
+        @NonNull
         @Override public VirtualFile[] list() throws IOException {
             return Arrays.stream(delegate.list()).map(vf -> new NoOpenVF(vf, baseURL)).toArray(VirtualFile[]::new);
         }
 
-        @Override public Collection<String> list(String includes, String excludes, boolean useDefaultExcludes) throws IOException {
+        @NonNull
+        @Override public Collection<String> list(@NonNull String includes, String excludes, boolean useDefaultExcludes) throws IOException {
             return delegate.list(includes, excludes, useDefaultExcludes);
         }
 
-        @Override public VirtualFile child(String string) {
+        @NonNull
+        @Override public VirtualFile child(@NonNull String string) {
             return new NoOpenVF(delegate.child(string), baseURL);
         }
 

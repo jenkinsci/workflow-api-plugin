@@ -28,6 +28,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.junit.Assert.assertEquals;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.HyperlinkNote;
 import hudson.model.Action;
@@ -370,6 +371,7 @@ public abstract class LogStorageTestBase {
             throw new UnsupportedOperationException();
         }
 
+        @NonNull
         @Override
         public Authentication getAuthentication() {
             throw new UnsupportedOperationException();
