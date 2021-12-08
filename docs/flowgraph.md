@@ -2,7 +2,7 @@
 
 The "Flow Graph" is how Pipeline stores structural information about Pipelines that have run or *are* running -- this is used for visualization and runtime activities. You won't find any class with this name but we refer to it like this because it's the best terminology we have.  "Flow" because originally the plugin was Workflow, and describing it as a flow reminds us that execution is a directional process with a start and end, "graph" because the data is structured as a directed acyclic graph to allow for parallel execution.
 
-This stucture describes all possible Pipelines, whether a simple set of steps, or a complex set of nested parallels, and is designed to grow at runtime as the Pipeline executes. This also means that for a running Pipeline it will be in an incomplete state, with un-terminated blocks.
+This structure describes all possible Pipelines, whether a simple set of steps, or a complex set of nested parallels, and is designed to grow at runtime as the Pipeline executes. This also means that for a running Pipeline it will be in an incomplete state, with un-terminated blocks.
 
 # Concepts
 
@@ -12,8 +12,8 @@ This may seem backwards, but it enables us to freely append to the Flow Graph as
 
 **Key information is stored in a couple ways:**
 
-* The specific subclass of the `FlowNode` used for a particular node is structurally imporant - for example `BlockStartNode` represents the start of a block
-* `StepDescriptor`: most `FlowNode`s come from running `Steps` and implement `StepNode`. This means they you can get the `StepDescriptor` to determine their `Step` that produced them.
+* The specific subclass of the `FlowNode` used for a particular node is structurally important - for example `BlockStartNode` represents the start of a block
+* `StepDescriptor`: most `FlowNode`s come from running `Steps` and implement `StepNode`. This means they can get the `StepDescriptor` to determine their `Step` that produced them.
 * Parent relationships allow us to so split into parallel branches and track them independently.  We may have multiple nodes with a given parent (at the start of a parallel) or one node with multiple parents (the end of a parallel)
 * `Action`s give us all the key attributes of the `FlowNode`, see the section below for a quick reference
 
