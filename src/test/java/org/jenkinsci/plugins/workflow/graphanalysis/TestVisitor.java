@@ -59,9 +59,7 @@ public class TestVisitor implements SimpleChunkVisitor {
 
         public CallEntry(CallType type, int... vals) {
             this.type = type;
-            for (int i=0; i<vals.length; i++){
-                ids[i]=vals[i];
-            }
+            System.arraycopy(vals, 0, ids, 0, vals.length);
         }
 
         @Override

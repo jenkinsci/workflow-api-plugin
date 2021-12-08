@@ -49,6 +49,7 @@ import org.junit.Assert;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -278,7 +279,7 @@ public class ForkScannerTest {
         Assert.assertNotNull(scanner.parallelBlockStartStack);
         Assert.assertEquals(0, scanner.parallelBlockStartStack.size());
         Assert.assertEquals(exec.getNode("4"), scanner.currentParallelStartNode);
-        sanityTestIterationAndVisiter(Arrays.asList(exec.getNode("13")));
+        sanityTestIterationAndVisiter(Collections.singletonList(exec.getNode("13")));
 
         ForkScanner.ParallelBlockStart start = scanner.currentParallelStart;
         Assert.assertEquals(1, start.unvisited.size());
@@ -518,7 +519,7 @@ public class ForkScannerTest {
         FlowNode echoNode = new DepthFirstScanner().findFirstMatch(b.getExecution(), new NodeStepTypePredicate(EchoStep.DescriptorImpl.byFunctionName("echo")));
         Assert.assertNotNull(echoNode);
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
-        sanityTestIterationAndVisiter(Arrays.asList(echoNode));
+        sanityTestIterationAndVisiter(Collections.singletonList(echoNode));
 
         TestVisitor visitor = new TestVisitor();
         ForkScanner scanner = new ForkScanner();
@@ -547,7 +548,7 @@ public class ForkScannerTest {
         Assert.assertArrayEquals(heads.toArray(), start.unvisited.toArray());
 
         // Ensure no issues with single start triggering least common ancestor
-        heads = new LinkedHashSet<>(Arrays.asList(exec.getNode("4")));
+        heads = new LinkedHashSet<>(Collections.singletonList(exec.getNode("4")));
         scan.setup(heads);
         Assert.assertNull(scan.currentParallelStart);
         Assert.assertTrue(scan.parallelBlockStartStack == null || scan.parallelBlockStartStack.isEmpty());

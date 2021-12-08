@@ -19,6 +19,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Optional;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -84,7 +85,7 @@ public class DurabilityBasicsTest {
 
             try (ACLContext c = ACL.as(User.getById(USER, true))) {
                 Collection<Descriptor> descriptors = Functions.getSortedDescriptorsForGlobalConfigUnclassified();
-                assertTrue("Global configuration should not be accessible to READ users", descriptors.size() == 0);
+                assertEquals("Global configuration should not be accessible to READ users", 0, descriptors.size());
             }
             try (ACLContext c = ACL.as(User.getById(MANAGER, true))) {
                 Collection<Descriptor> descriptors = Functions.getSortedDescriptorsForGlobalConfigUnclassified();
