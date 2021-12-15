@@ -275,7 +275,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     }
                 }
 
-            }, MoreExecutors.directExecutor()); // TODO: Unclear if we need to run this asynchronously or if StepExecution.onResume has any particular thread requirements.
+            }, Timer.get()); // We always hold RunMap and WorkflowRun locks here, so we resume steps on a different thread to avoid potential deadlocks. See JENKINS-67351.
         }
     }
 }
