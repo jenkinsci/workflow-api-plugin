@@ -10,6 +10,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
+import hudson.init.InitMilestone;
 import hudson.init.Terminator;
 import hudson.model.listeners.ItemListener;
 import hudson.remoting.SingleLaneExecutorService;
@@ -48,6 +49,8 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     private final CopyOnWriteList<FlowExecutionOwner> runningTasks = new CopyOnWriteList<>();
     private final SingleLaneExecutorService executor = new SingleLaneExecutorService(Timer.get());
     private XmlFile configFile;
+
+    private transient volatile boolean resumptionComplete;
 
     public FlowExecutionList() {
         load();
@@ -169,6 +172,17 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     }
 
     /**
+     * Returns true if all executions that were present in this {@link FlowExecutionList} have been loaded and resumed.
+     *
+     * This takes place slightly after {@link InitMilestone#COMPLETED} is reached during Jenkins startup.
+     *
+     * Useful to avoid resuming Pipelines in contexts that may lead to deadlock.
+     */
+    public boolean isResumptionComplete() {
+        return resumptionComplete;
+    }
+
+    /**
      * When Jenkins starts up and everything is loaded, be sure to proactively resurrect
      * all the ongoing {@link FlowExecution}s so that they start running again.
      */
@@ -176,10 +190,12 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     public static class ItemListenerImpl extends ItemListener {
         @Override
         public void onLoaded() {
-            for (final FlowExecution e : FlowExecutionList.get()) {
+            FlowExecutionList list = FlowExecutionList.get();
+            for (final FlowExecution e : list) {
                 // The call to FlowExecutionOwner.get in the implementation of iterator() is sufficent to load the Pipeline.
                 LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
             }
+            list.resumptionComplete = true;
         }
     }
 
