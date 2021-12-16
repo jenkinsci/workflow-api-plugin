@@ -37,6 +37,7 @@ import java.util.logging.Logger;
 import jenkins.util.ContextResettingExecutorService;
 
 import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 
 /**
@@ -178,6 +179,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      *
      * Useful to avoid resuming Pipelines in contexts that may lead to deadlock.
      */
+    @Restricted(Beta.class)
     public boolean isResumptionComplete() {
         return resumptionComplete;
     }
