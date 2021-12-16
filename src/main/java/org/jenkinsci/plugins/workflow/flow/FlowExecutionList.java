@@ -15,8 +15,6 @@ import hudson.init.Terminator;
 import hudson.model.listeners.ItemListener;
 import hudson.remoting.SingleLaneExecutorService;
 import hudson.util.CopyOnWriteList;
-import hudson.util.DaemonThreadFactory;
-import hudson.util.NamingThreadFactory;;
 import jenkins.model.Jenkins;
 import jenkins.util.Timer;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
@@ -28,13 +26,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jenkins.util.ContextResettingExecutorService;
 
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -298,10 +293,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     }
                 }
 
-            }, STEP_RESUMPTION_EXECUTOR_SERVICE); // We always hold RunMap and WorkflowRun locks here, so we resume steps on a different thread to avoid potential deadlocks. See JENKINS-67351.
+            }, Timer.get()); // We always hold RunMap and WorkflowRun locks here, so we resume steps on a different thread to avoid potential deadlocks. See JENKINS-67351.
         }
     }
-
-    // Using an unbounded thread pool to avoid potential deadlock as in JENKINS-25890. TODO: Unclear if this is actually necessary.
-    private static final ExecutorService STEP_RESUMPTION_EXECUTOR_SERVICE = new ContextResettingExecutorService(Executors.newCachedThreadPool(new NamingThreadFactory(new DaemonThreadFactory(), "FlowExecutionList$ResumeStepExecutionListener.onResumed")));
 }
