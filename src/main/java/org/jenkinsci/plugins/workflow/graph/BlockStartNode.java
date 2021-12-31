@@ -26,7 +26,7 @@ package org.jenkinsci.plugins.workflow.graph;
 
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import java.util.List;
 
 /**

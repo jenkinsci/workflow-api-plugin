@@ -27,8 +27,8 @@ import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * This visitor's callbacks are invoked as we walk through a pipeline flow graph, and it splits it into chunks.
@@ -85,7 +85,7 @@ public interface SimpleChunkVisitor {
      * @param beforeBlock First node before chunk (null if none exist)
      * @param scanner Forkscanner used (for state tracking)
      */
-    void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner);
+    void chunkStart(@NonNull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @NonNull ForkScanner scanner);
 
     /**
      * Called when hitting the end of a chunk.
@@ -93,7 +93,7 @@ public interface SimpleChunkVisitor {
      * @param afterChunk Node after chunk (null if we are on the last node)
      * @param scanner Forkscanner used (for state tracking)
      */
-    void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterChunk, @Nonnull ForkScanner scanner);
+    void chunkEnd(@NonNull FlowNode endNode, @CheckForNull FlowNode afterChunk, @NonNull ForkScanner scanner);
 
     /**
      * Notifies that we've hit the start of a parallel block (the point where it branches out).
@@ -101,7 +101,7 @@ public interface SimpleChunkVisitor {
      * @param branchNode {@link org.jenkinsci.plugins.workflow.graph.BlockStartNode} for one of the branches (it will be labelled)
      * @param scanner ForkScanner used
      */
-    void parallelStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchNode, @Nonnull ForkScanner scanner);
+    void parallelStart(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchNode, @NonNull ForkScanner scanner);
 
     /**
      * Notifies that we've seen the end of a parallel block
@@ -109,7 +109,7 @@ public interface SimpleChunkVisitor {
      * @param parallelEndNode Last node of parallel ({@link BlockEndNode})
      * @param scanner ForkScanner used
      */
-    void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner);
+    void parallelEnd(@NonNull FlowNode parallelStartNode, @NonNull FlowNode parallelEndNode, @NonNull ForkScanner scanner);
 
     /**
      * Hit the start of a parallel branch
@@ -117,7 +117,7 @@ public interface SimpleChunkVisitor {
      * @param branchStartNode BlockStartNode beginning the branch (this will have the ThreadNameAction giving its name)
      * @param scanner ForkScanner used
      */
-    void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner);
+    void parallelBranchStart(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchStartNode, @NonNull ForkScanner scanner);
 
     /**
      * Hit the end start of a parallel branch
@@ -126,7 +126,7 @@ public interface SimpleChunkVisitor {
      * @param branchEndNode Final node of the branch (may be BlockEndNode if done, otherwise just the last one executed)
      * @param scanner ForkScanner used
      */
-    void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner);
+    void parallelBranchEnd(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchEndNode, @NonNull ForkScanner scanner);
 
     /**
      * Called for a flownode neither start nor end.
@@ -137,5 +137,5 @@ public interface SimpleChunkVisitor {
      * @param after Node after the current
      * @param scan Reference to our forkscanner, if we want to poke at the state within
      */
-    void atomNode(@CheckForNull FlowNode before, @Nonnull FlowNode atomNode, @CheckForNull FlowNode after, @Nonnull ForkScanner scan);
+    void atomNode(@CheckForNull FlowNode before, @NonNull FlowNode atomNode, @CheckForNull FlowNode after, @NonNull ForkScanner scan);
 }

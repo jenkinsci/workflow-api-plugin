@@ -50,8 +50,8 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.ArtifactManager;
 import jenkins.model.Jenkins;
 import jenkins.util.BuildListenerAdapter;
@@ -77,19 +77,19 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 public class StashManager {
 
     @Deprecated
-    public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
+    public static void stash(@NonNull Run<?,?> build, @NonNull String name, @NonNull FilePath workspace, @NonNull TaskListener listener,
                              @CheckForNull String includes, @CheckForNull String excludes) throws IOException, InterruptedException {
         stash(build, name, workspace, listener, includes, excludes, true, false);
     }
 
     @Deprecated
-    public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
+    public static void stash(@NonNull Run<?,?> build, @NonNull String name, @NonNull FilePath workspace, @NonNull TaskListener listener,
                              @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes) throws IOException, InterruptedException {
         stash(build, name, workspace, listener, includes, excludes, useDefaultExcludes, false);
     }
 
     @Deprecated
-    public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener,
+    public static void stash(@NonNull Run<?,?> build, @NonNull String name, @NonNull FilePath workspace, @NonNull TaskListener listener,
                              @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException {
         stash(build, name, workspace, launcherFor(workspace, listener), envFor(build, workspace, listener), listener, includes, excludes, useDefaultExcludes, allowEmpty);
     }
@@ -109,7 +109,7 @@ public class StashManager {
      * @see StashAwareArtifactManager#stash
      */
     @SuppressFBWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", justification="fine if mkdirs returns false")
-    public static void stash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener,
+    public static void stash(@NonNull Run<?,?> build, @NonNull String name, @NonNull FilePath workspace, @NonNull Launcher launcher, @NonNull EnvVars env, @NonNull TaskListener listener,
                              @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
         StashAwareArtifactManager saam = stashAwareArtifactManager(build);
@@ -132,7 +132,7 @@ public class StashManager {
     }
 
     @Deprecated
-    public static void unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public static void unstash(@NonNull Run<?,?> build, @NonNull String name, @NonNull FilePath workspace, @NonNull TaskListener listener) throws IOException, InterruptedException {
         unstash(build, name, workspace, launcherFor(workspace, listener), envFor(build, workspace, listener), listener);
     }
 
@@ -147,7 +147,7 @@ public class StashManager {
      * @throws AbortException in case there is no such saved stash
      * @see StashAwareArtifactManager#unstash
      */
-    public static void unstash(@Nonnull Run<?,?> build, @Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public static void unstash(@NonNull Run<?,?> build, @NonNull String name, @NonNull FilePath workspace, @NonNull Launcher launcher, @NonNull EnvVars env, @NonNull TaskListener listener) throws IOException, InterruptedException {
         Jenkins.checkGoodName(name);
         StashAwareArtifactManager saam = stashAwareArtifactManager(build);
         if (saam != null) {
@@ -162,7 +162,7 @@ public class StashManager {
     }
 
     @Deprecated
-    public static void clearAll(@Nonnull Run<?,?> build) throws IOException {
+    public static void clearAll(@NonNull Run<?,?> build) throws IOException {
         try {
             clearAll(build, TaskListener.NULL);
         } catch (InterruptedException x) {
@@ -176,7 +176,7 @@ public class StashManager {
      * @param listener a way to report progress or problems
      * @see StashAwareArtifactManager#clearAllStashes
      */
-    public static void clearAll(@Nonnull Run<?,?> build, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public static void clearAll(@NonNull Run<?,?> build, @NonNull TaskListener listener) throws IOException, InterruptedException {
         StashAwareArtifactManager saam = stashAwareArtifactManager(build);
         if (saam != null) {
             saam.clearAllStashes(listener);
@@ -186,7 +186,7 @@ public class StashManager {
     }
 
     @Deprecated
-    public static void maybeClearAll(@Nonnull Run<?,?> build) throws IOException {
+    public static void maybeClearAll(@NonNull Run<?,?> build) throws IOException {
         try {
             maybeClearAll(build, TaskListener.NULL);
         } catch (InterruptedException x) {
@@ -200,7 +200,7 @@ public class StashManager {
      * @param build a build possibly passed to {@link #stash} in the past
      * @see #clearAll(Run, TaskListener)
      */
-    public static void maybeClearAll(@Nonnull Run<?,?> build, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public static void maybeClearAll(@NonNull Run<?,?> build, @NonNull TaskListener listener) throws IOException, InterruptedException {
         for (StashBehavior behavior : ExtensionList.lookup(StashBehavior.class)) {
             if (!behavior.shouldClearAll(build)) {
                 return;
@@ -213,7 +213,7 @@ public class StashManager {
      * @deprecated without replacement; only used from {@link CopyStashesAndArtifacts} anyway
      */
     @Deprecated
-    public static void copyAll(@Nonnull Run<?,?> from, @Nonnull Run<?,?> to) throws IOException {
+    public static void copyAll(@NonNull Run<?,?> from, @NonNull Run<?,?> to) throws IOException {
         File fromStorage = storage(from);
         if (!fromStorage.isDirectory()) {
             return;
@@ -223,7 +223,7 @@ public class StashManager {
 
     @Restricted(DoNotUse.class) // just for tests, and incompatible with StashAwareArtifactManager
     @SuppressFBWarnings(value="DM_DEFAULT_ENCODING", justification="test code")
-    public static Map<String,Map<String,String>> stashesOf(@Nonnull Run<?,?> build) throws IOException {
+    public static Map<String,Map<String,String>> stashesOf(@NonNull Run<?,?> build) throws IOException {
         Map<String,Map<String,String>> result = new TreeMap<>();
         File[] kids = storage(build).listFiles();
         if (kids != null) {
@@ -248,12 +248,12 @@ public class StashManager {
         return result;
     }
 
-    private static @Nonnull File storage(@Nonnull Run<?,?> build) throws IOException {
+    private static @NonNull File storage(@NonNull Run<?,?> build) throws IOException {
         assert stashAwareArtifactManager(build) == null;
         return new File(build.getRootDir(), "stashes");
     }
 
-    private static @Nonnull File storage(@Nonnull Run<?,?> build, @Nonnull String name) throws IOException {
+    private static @NonNull File storage(@NonNull Run<?,?> build, @NonNull String name) throws IOException {
         File dir = storage(build);
         File f = new File(dir, name + SUFFIX);
         if (!f.getParentFile().equals(dir)) {
@@ -276,7 +276,7 @@ public class StashManager {
          * @param build a build which has finished
          * @return true (the default) to go ahead and call {@link #clearAll}, false to stop
          */
-        public boolean shouldClearAll(@Nonnull Run<?,?> build) {
+        public boolean shouldClearAll(@NonNull Run<?,?> build) {
             return true;
         }
 
@@ -298,13 +298,13 @@ public class StashManager {
     public interface StashAwareArtifactManager /* extends ArtifactManager */ {
 
         /** @see StashManager#stash(Run, String, FilePath, Launcher, EnvVars, TaskListener, String, String, boolean, boolean) */
-        void stash(@Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener, @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException;
+        void stash(@NonNull String name, @NonNull FilePath workspace, @NonNull Launcher launcher, @NonNull EnvVars env, @NonNull TaskListener listener, @CheckForNull String includes, @CheckForNull String excludes, boolean useDefaultExcludes, boolean allowEmpty) throws IOException, InterruptedException;
 
         /** @see StashManager#unstash(Run, String, FilePath, Launcher, EnvVars, TaskListener) */
-        void unstash(@Nonnull String name, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException;
+        void unstash(@NonNull String name, @NonNull FilePath workspace, @NonNull Launcher launcher, @NonNull EnvVars env, @NonNull TaskListener listener) throws IOException, InterruptedException;
 
         /** @see StashManager#clearAll(Run, TaskListener) */
-        void clearAllStashes(@Nonnull TaskListener listener) throws IOException, InterruptedException;
+        void clearAllStashes(@NonNull TaskListener listener) throws IOException, InterruptedException;
 
         /**
          * Copy all stashes and artifacts from one build to another.
@@ -312,17 +312,17 @@ public class StashManager {
          * If the implementation cannot handle {@code to} for whatever reason, it may throw {@link AbortException}.
          * @see CopyStashesAndArtifacts
          */
-        void copyAllArtifactsAndStashes(@Nonnull Run<?,?> to, @Nonnull TaskListener listener) throws IOException, InterruptedException;
+        void copyAllArtifactsAndStashes(@NonNull Run<?,?> to, @NonNull TaskListener listener) throws IOException, InterruptedException;
 
     }
 
-    private static @CheckForNull StashAwareArtifactManager stashAwareArtifactManager(@Nonnull Run<?, ?> build) throws IOException {
+    private static @CheckForNull StashAwareArtifactManager stashAwareArtifactManager(@NonNull Run<?, ?> build) throws IOException {
         ArtifactManager am = build.pickArtifactManager();
         return am instanceof StashAwareArtifactManager ? (StashAwareArtifactManager) am : null;
     }
 
     @Deprecated
-    private static @Nonnull Launcher launcherFor(@Nonnull FilePath workspace, @Nonnull TaskListener listener) {
+    private static @NonNull Launcher launcherFor(@NonNull FilePath workspace, @NonNull TaskListener listener) {
         Computer c = workspace.toComputer();
         if (c != null) {
             Node n = c.getNode();
@@ -339,7 +339,7 @@ public class StashManager {
     }
 
     @Deprecated
-    private static @Nonnull EnvVars envFor(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    private static @NonNull EnvVars envFor(@NonNull Run<?, ?> build, @NonNull FilePath workspace, @NonNull TaskListener listener) throws IOException, InterruptedException {
         Computer c = workspace.toComputer();
         if (c != null) {
             EnvVars e = c.getEnvironment();

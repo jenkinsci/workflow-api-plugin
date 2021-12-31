@@ -25,8 +25,8 @@
 package org.jenkinsci.plugins.workflow.log;
 
 import hudson.ExtensionPoint;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -42,6 +42,6 @@ public interface LogStorageFactory extends ExtensionPoint {
      * @param b a build about to start
      * @return a mechanism for handling this build, or null to fall back to the next implementation or the default
      */
-    @CheckForNull LogStorage forBuild(@Nonnull FlowExecutionOwner b);
+    @CheckForNull LogStorage forBuild(@NonNull FlowExecutionOwner b);
 
 }

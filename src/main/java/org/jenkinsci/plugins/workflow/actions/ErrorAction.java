@@ -28,10 +28,10 @@ import groovy.lang.GroovyClassLoader;
 import groovy.lang.MissingMethodException;
 import groovy.lang.MissingPropertyException;
 import hudson.remoting.ProxyException;
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
 
@@ -42,9 +42,9 @@ import org.apache.commons.io.output.NullOutputStream;
  */
 public class ErrorAction implements PersistentAction {
 
-    private final @Nonnull Throwable error;
+    private final @NonNull Throwable error;
 
-    public ErrorAction(@Nonnull Throwable error) {
+    public ErrorAction(@NonNull Throwable error) {
         if (isUnserializableException(error)) {
             error = new ProxyException(error);
         } else if (error != null) {
@@ -93,7 +93,7 @@ public class ErrorAction implements PersistentAction {
         return false;
     }
 
-    public @Nonnull Throwable getError() {
+    public @NonNull Throwable getError() {
         return error;
     }
 

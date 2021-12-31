@@ -43,8 +43,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
@@ -143,14 +143,14 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return getPersistentAction(ErrorAction.class);
     }
 
-    public @Nonnull FlowExecution getExecution() {
+    public @NonNull FlowExecution getExecution() {
         return exec;
     }
 
     /**
      * Returns a read-only view of parents.
      */
-    @Nonnull
+    @NonNull
     public List<FlowNode> getParents() {
         if (parents == null) {
             parents = loadParents(parentIds);
@@ -158,7 +158,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return parents;
     }
 
-    @Nonnull
+    @NonNull
     private List<FlowNode> loadParents(List<String> parentIds) {
         try {
             if (parentIds.size() == 1) {
@@ -190,14 +190,14 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * Get the list of enclosing {@link BlockStartNode}s, starting from innermost, for this node.
      * May be empty if we are the {@link FlowStartNode} or {@link FlowEndNode}
      */
-    @Nonnull
+    @NonNull
     public List<? extends BlockStartNode> getEnclosingBlocks() {
         return this.exec.findAllEnclosingBlockStarts(this);
     }
 
     /** Return an iterator over all enclosing blocks, from the nearest-enclosing outward ("inside-out" order).
      *  Prefer this to {@link #getEnclosingBlocks()} unless you need ALL nodes, because it can evaluate lazily. */
-    @Nonnull
+    @NonNull
     public Iterable<BlockStartNode> iterateEnclosingBlocks() {
         return this.exec.iterateEnclosingBlocks(this);
     }
@@ -205,7 +205,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     /**
      * Returns a read-only view of the IDs for enclosing blocks of this flow node, innermost first. May be empty.
      */
-    @Nonnull
+    @NonNull
     public List<String> getAllEnclosingIds() {
         List<? extends BlockStartNode> nodes = getEnclosingBlocks();
         ArrayList<String> output = new ArrayList<>(nodes.size());
@@ -217,7 +217,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
 
     @Restricted(DoNotUse.class)
     @Exported(name="parents")
-    @Nonnull
+    @NonNull
     public List<String> getParentIds() {
         if (parentIds != null) {
             return Collections.unmodifiableList(parentIds);
@@ -297,7 +297,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
         return c;
     }
 
-    private static BallColor resultToBallColor(@Nonnull Result result) {
+    private static BallColor resultToBallColor(@NonNull Result result) {
         if (result == Result.SUCCESS) {
             return BallColor.BLUE;
         } else if (result == Result.UNSTABLE) {
@@ -370,7 +370,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
      * @return First nontransient action or null if not found.
      */
     @CheckForNull
-    public final <T extends Action> T getPersistentAction(@Nonnull Class<T> type) {
+    public final <T extends Action> T getPersistentAction(@NonNull Class<T> type) {
         loadActions();
         for (Action a : actions) {
             if (type.isInstance(a)) {

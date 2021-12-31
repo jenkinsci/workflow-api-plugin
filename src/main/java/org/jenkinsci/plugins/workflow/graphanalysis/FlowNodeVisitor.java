@@ -26,7 +26,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collection;
 
 /**
@@ -42,5 +42,5 @@ public interface FlowNodeVisitor {
      * @param f Node to visit
      * @return False if we should stop visiting nodes
      */
-    boolean visit(@Nonnull FlowNode f);
+    boolean visit(@NonNull FlowNode f);
 }

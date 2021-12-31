@@ -27,7 +27,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -65,7 +65,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
     }
 
     @Override
-    protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+    protected void setHeads(@NonNull Collection<FlowNode> heads) {
         if (heads.isEmpty()) {
             return;
         }
@@ -87,7 +87,7 @@ public class DepthFirstScanner extends AbstractFlowScanner {
     }
 
     @Override
-    protected FlowNode next(@Nonnull FlowNode current, @Nonnull final Collection<FlowNode> blackList) {
+    protected FlowNode next(@NonNull FlowNode current, @NonNull final Collection<FlowNode> blackList) {
         FlowNode output = null;
 
         // Walk through parents of current node

@@ -26,7 +26,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * <p>Common container interface for a series of {@link FlowNode}s with a logical start and end.
@@ -45,9 +45,9 @@ import javax.annotation.Nonnull;
  * @author Sam Van Oort
  */
 public interface FlowChunk {
-    @Nonnull
+    @NonNull
     FlowNode getFirstNode();
 
-    @Nonnull
+    @NonNull
     FlowNode getLastNode();
 }

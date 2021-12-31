@@ -5,7 +5,7 @@ import hudson.ExtensionPoint;
 import hudson.model.Descriptor;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import java.util.ArrayList;
 import java.util.List;
 

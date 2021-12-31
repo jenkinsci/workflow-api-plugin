@@ -26,8 +26,8 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * FlowChunk that holds direct references to the {@link FlowNode} instances and context info
@@ -41,7 +41,7 @@ public class MemoryFlowChunk implements FlowChunkWithContext {
     protected FlowNode nodeAfter = null;
     private long pauseTimeMillis = 0;
 
-    public MemoryFlowChunk(@CheckForNull FlowNode before, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
+    public MemoryFlowChunk(@CheckForNull FlowNode before, @NonNull FlowNode firstNode, @NonNull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
         this.setNodeBefore(before);
         this.setFirstNode(firstNode);
         this.setLastNode(lastNode);

@@ -28,8 +28,8 @@ import hudson.FilePath;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import java.util.Set;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.FilePathUtils;
 
@@ -39,10 +39,10 @@ import org.jenkinsci.plugins.workflow.FilePathUtils;
 public abstract class WorkspaceAction implements PersistentAction {
 
     /** The {@link Node#getNodeName} of the workspace. */
-    public abstract @Nonnull String getNode();
+    public abstract @NonNull String getNode();
 
     /** The {@link FilePath#getRemote} of the workspace. */
-    public abstract @Nonnull String getPath();
+    public abstract @NonNull String getPath();
 
     /**
      * The {@link Node#getAssignedLabels} of the node owning the workspace.
@@ -50,7 +50,7 @@ public abstract class WorkspaceAction implements PersistentAction {
      * (Could be reconstructed in most cases via {@link Jenkins#getNode} on {@link #getNode},
      * but not for an agent which has since been removed, common with clouds.)
      */
-    public abstract @Nonnull Set<LabelAtom> getLabels();
+    public abstract @NonNull Set<LabelAtom> getLabels();
 
     /** Reconstructs the live workspace, if possible. */
     public final @CheckForNull FilePath getWorkspace() {

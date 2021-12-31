@@ -4,8 +4,8 @@ import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.model.Item;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Provides a way to indirectly register durability settings to apply to pipelines.
@@ -16,9 +16,9 @@ public interface DurabilityHintProvider extends ExtensionPoint {
     int ordinal();
 
     @CheckForNull
-    FlowDurabilityHint suggestFor(@Nonnull Item x);
+    FlowDurabilityHint suggestFor(@NonNull Item x);
 
-    static @Nonnull FlowDurabilityHint suggestedFor(@Nonnull Item x) {
+    static @NonNull FlowDurabilityHint suggestedFor(@NonNull Item x) {
         int ordinal = Integer.MAX_VALUE;
         FlowDurabilityHint hint = GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint();
 

@@ -2,7 +2,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 
 /** FlowChunk with information about what comes before/after */
 public interface FlowChunkWithContext extends FlowChunk {

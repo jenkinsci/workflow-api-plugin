@@ -2,8 +2,8 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * For test use: a ChunkFinder that never returns chunks, to use in testing parallel handling only.
@@ -16,12 +16,12 @@ public class NoOpChunkFinder implements ChunkFinder {
     }
 
     @Override
-    public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
+    public boolean isChunkStart(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         return false;
     }
 
     @Override
-    public boolean isChunkEnd(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
+    public boolean isChunkEnd(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         return false;
     }
 }

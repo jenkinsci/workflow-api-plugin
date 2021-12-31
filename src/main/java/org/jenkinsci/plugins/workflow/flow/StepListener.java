@@ -29,7 +29,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * {@link StepListener}s are fired before invoking a step but after the {@link FlowNode} has been created and the
@@ -41,5 +41,5 @@ public interface StepListener extends ExtensionPoint {
      * Called before a {@link Step} is invoked, but after its {@link FlowNode} and {@link StepContext} have been created.
      * Listeners can make the step fail by calling {@link StepContext#onFailure}.
      */
-    void notifyOfNewStep(@Nonnull Step step, @Nonnull StepContext context);
+    void notifyOfNewStep(@NonNull Step step, @NonNull StepContext context);
 }

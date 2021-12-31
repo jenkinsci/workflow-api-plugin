@@ -28,7 +28,7 @@ import java.io.IOException;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 
 import java.util.List;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * End of a block.
@@ -55,7 +55,7 @@ public abstract class BlockEndNode<START extends BlockStartNode> extends FlowNod
      * @return an earlier node matching this block
      * @throws IllegalStateException if the start node could not be reloaded after deserialization
      */
-    public @Nonnull START getStartNode() {
+    public @NonNull START getStartNode() {
         if (start == null) {
             try {
                 start = (START) getExecution().getNode(startId);

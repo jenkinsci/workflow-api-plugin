@@ -4,8 +4,8 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.junit.Assert;
 import org.jvnet.hudson.test.Issue;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -142,37 +142,37 @@ public class TestVisitor implements SimpleChunkVisitor {
     public ArrayList<CallEntry> calls = new ArrayList<>();
 
     @Override
-    public void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner) {
+    public void chunkStart(@NonNull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @NonNull ForkScanner scanner) {
         calls.add(new CallEntry(CallType.CHUNK_START, startNode, beforeBlock));
     }
 
     @Override
-    public void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterChunk, @Nonnull ForkScanner scanner) {
+    public void chunkEnd(@NonNull FlowNode endNode, @CheckForNull FlowNode afterChunk, @NonNull ForkScanner scanner) {
         calls.add(new CallEntry(CallType.CHUNK_END, endNode, afterChunk));
     }
 
     @Override
-    public void parallelStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchNode, @Nonnull ForkScanner scanner) {
+    public void parallelStart(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchNode, @NonNull ForkScanner scanner) {
         calls.add(new CallEntry(CallType.PARALLEL_START, parallelStartNode, branchNode));
     }
 
     @Override
-    public void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner) {
+    public void parallelEnd(@NonNull FlowNode parallelStartNode, @NonNull FlowNode parallelEndNode, @NonNull ForkScanner scanner) {
         calls.add(new CallEntry(CallType.PARALLEL_END, parallelStartNode, parallelEndNode));
     }
 
     @Override
-    public void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner) {
+    public void parallelBranchStart(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchStartNode, @NonNull ForkScanner scanner) {
         calls.add(new CallEntry(CallType.PARALLEL_BRANCH_START, parallelStartNode, branchStartNode));
     }
 
     @Override
-    public void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner) {
+    public void parallelBranchEnd(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchEndNode, @NonNull ForkScanner scanner) {
         calls.add(new CallEntry(CallType.PARALLEL_BRANCH_END, parallelStartNode, branchEndNode));
     }
 
     @Override
-    public void atomNode(@CheckForNull FlowNode before, @Nonnull FlowNode atomNode, @CheckForNull FlowNode after, @Nonnull ForkScanner scan) {
+    public void atomNode(@CheckForNull FlowNode before, @NonNull FlowNode atomNode, @CheckForNull FlowNode after, @NonNull ForkScanner scan) {
         calls.add(new CallEntry(CallType.ATOM_NODE, before, atomNode, after));
     }
 

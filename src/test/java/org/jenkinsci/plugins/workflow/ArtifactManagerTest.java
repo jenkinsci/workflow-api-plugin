@@ -61,8 +61,8 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.logging.Level;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.ArtifactManager;
 import jenkins.model.ArtifactManagerConfiguration;
 import jenkins.model.ArtifactManagerFactory;
@@ -112,7 +112,7 @@ public class ArtifactManagerTest {
     /**
      * Creates an agent, in a Docker container when possible, calls {@link #setUpWorkspace}, then runs some tests.
      */
-    private static void wrapInContainer(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory,
+    private static void wrapInContainer(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory,
             boolean weirdCharacters, TestFunction f) throws Exception {
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
@@ -151,7 +151,7 @@ public class ArtifactManagerTest {
      * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
      * @param image as in {@link #artifactArchiveAndDelete}
      */
-    public static void artifactArchive(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    public static void artifactArchive(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
             VirtualFile root = b.getArtifactManager().root();
             new Verify(agent, root, weirdCharacters).run();
@@ -166,7 +166,7 @@ public class ArtifactManagerTest {
      * @param weirdCharacters check behavior of files with Unicode and various unusual characters in the name
      * @param image use {@link #prepareImage} in a {@link BeforeClass} block
      */
-    public static void artifactArchiveAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    public static void artifactArchiveAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
             VirtualFile root = b.getArtifactManager().root();
             new Verify(agent, root, weirdCharacters).run();
@@ -182,7 +182,7 @@ public class ArtifactManagerTest {
      * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
      * @param image as in {@link #artifactArchiveAndDelete}
      */
-    public static void artifactStash(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    public static void artifactStash(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters,
                 new StashFunction(r, weirdCharacters, (p, b, ws, launcher, env, listener) -> {
                     // should not have deleted
@@ -196,7 +196,7 @@ public class ArtifactManagerTest {
      * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
      * @param image as in {@link #artifactArchiveAndDelete}
      */
-    public static void artifactStashAndDelete(@Nonnull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    public static void artifactStashAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
         wrapInContainer(r, factory, weirdCharacters,
                 new StashFunction(r, weirdCharacters, (p, b, ws, launcher, env, listener) -> {
                     try {
@@ -257,7 +257,7 @@ public class ArtifactManagerTest {
         private final boolean weirdCharacters;
         private final TestStashFunction f;
 
-        StashFunction(@Nonnull JenkinsRule r, boolean weirdCharacters, TestStashFunction f) {
+        StashFunction(@NonNull JenkinsRule r, boolean weirdCharacters, TestStashFunction f) {
             this.r = r;
             this.weirdCharacters = weirdCharacters;
             this.f = f;

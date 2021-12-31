@@ -34,9 +34,9 @@ import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -122,11 +122,11 @@ public class ForkScanner extends AbstractFlowScanner {
 
     }
 
-    public ForkScanner(@Nonnull Collection<FlowNode> heads) {
+    public ForkScanner(@NonNull Collection<FlowNode> heads) {
         this.setup(heads);
     }
 
-    public ForkScanner(@Nonnull Collection<FlowNode> heads, @Nonnull Collection<FlowNode> blackList) {
+    public ForkScanner(@NonNull Collection<FlowNode> heads, @NonNull Collection<FlowNode> blackList) {
         this.setup(heads, blackList);
     }
 
@@ -158,7 +158,7 @@ public class ForkScanner extends AbstractFlowScanner {
      *  Specifically, requiring classes from workflow-cps to detect if something is a parallel step.
      */
     @Deprecated
-    public static void setParallelStartPredicate(@Nonnull Predicate<FlowNode> pred) {
+    public static void setParallelStartPredicate(@NonNull Predicate<FlowNode> pred) {
     }
 
     // Needed because the *next* node might be a parallel start if we start in middle and we don't know it
@@ -217,7 +217,7 @@ public class ForkScanner extends AbstractFlowScanner {
         BlockStartNode forkStart; // This is the node with child branches
         ArrayDeque<FlowNode> unvisited = new ArrayDeque<>();  // Remaining branches of this that we have have not visited yet
 
-        ParallelBlockStart(@Nonnull BlockStartNode forkStart) {
+        ParallelBlockStart(@NonNull BlockStartNode forkStart) {
             this.forkStart = forkStart;
         }
 
@@ -251,7 +251,7 @@ public class ForkScanner extends AbstractFlowScanner {
          * @throws IllegalStateException When you try to split a segment on a node that it doesn't contain, or invalid graph structure
          * @return Recreated fork
          */
-        Fork split(@Nonnull HashMap<FlowNode, FlowPiece> nodeMapping, @Nonnull BlockStartNode joinPoint, @Nonnull FlowPiece joiningBranch) {
+        Fork split(@NonNull HashMap<FlowNode, FlowPiece> nodeMapping, @NonNull BlockStartNode joinPoint, @NonNull FlowPiece joiningBranch) {
             int index = visited.lastIndexOf(joinPoint);  // Fork will be closer to end, so this is better than indexOf
             Fork newFork = new Fork(joinPoint);
 
@@ -360,7 +360,7 @@ public class ForkScanner extends AbstractFlowScanner {
      *     <li>Heads are all separate branches</li>
      * </ul>
      */
-    ArrayDeque<ParallelBlockStart> leastCommonAncestor(@Nonnull final Set<FlowNode> heads) {
+    ArrayDeque<ParallelBlockStart> leastCommonAncestor(@NonNull final Set<FlowNode> heads) {
         HashMap<FlowNode, FlowPiece> branches = new HashMap<>();
         ArrayList<Filterator<FlowNode>> iterators = new ArrayList<>();
         ArrayList<FlowPiece> livePieces = new ArrayList<>();
@@ -444,7 +444,7 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     @Override
-    protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+    protected void setHeads(@NonNull Collection<FlowNode> heads) {
         if (heads.size() > 1) {
             for (FlowNode f : heads) {
                 headIds.add(f.getId());
@@ -566,7 +566,7 @@ public class ForkScanner extends AbstractFlowScanner {
     @Override
     @SuppressFBWarnings(value = "DLS_DEAD_LOCAL_STORE",
             justification = "Function call to modify state, special case where we don't need the returnVal")
-    protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
+    protected FlowNode next(@NonNull FlowNode current, @NonNull Collection<FlowNode> blackList) {
         FlowNode output = null;
 
         // First we look at the parents of the current node if present
@@ -619,13 +619,13 @@ public class ForkScanner extends AbstractFlowScanner {
         return output;
     }
 
-    public static void visitSimpleChunks(@Nonnull Collection<FlowNode> heads, @Nonnull Collection<FlowNode> blacklist, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
+    public static void visitSimpleChunks(@NonNull Collection<FlowNode> heads, @NonNull Collection<FlowNode> blacklist, @NonNull SimpleChunkVisitor visitor, @NonNull ChunkFinder finder) {
         ForkScanner scanner = new ForkScanner();
         scanner.setup(heads, blacklist);
         scanner.visitSimpleChunks(visitor, finder);
     }
 
-    public static void visitSimpleChunks(@Nonnull Collection<FlowNode> heads, @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
+    public static void visitSimpleChunks(@NonNull Collection<FlowNode> heads, @NonNull SimpleChunkVisitor visitor, @NonNull ChunkFinder finder) {
         ForkScanner scanner = new ForkScanner();
         scanner.setup(heads);
         scanner.visitSimpleChunks(visitor, finder);
@@ -638,7 +638,7 @@ public class ForkScanner extends AbstractFlowScanner {
      *    not just the last declared branch. (See issue JENKINS-38536)
      */
     @CheckForNull
-    static FlowNode findLastRunningNode(@Nonnull List<FlowNode> candidates) {
+    static FlowNode findLastRunningNode(@NonNull List<FlowNode> candidates) {
         if (candidates.size() == 0) {
             return null;
         } else if (candidates.size() == 1) {
@@ -679,7 +679,7 @@ public class ForkScanner extends AbstractFlowScanner {
 
     /** Pulls out firing the callbacks for parallels */
     static void fireVisitParallelCallbacks(@CheckForNull FlowNode next, @CheckForNull FlowNode current, @CheckForNull FlowNode prev,
-                                           @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder, @Nonnull ForkScanner scanner) {
+                                           @NonNull SimpleChunkVisitor visitor, @NonNull ChunkFinder finder, @NonNull ForkScanner scanner) {
         // Trigger on parallels
         switch (scanner.currentType) {
             case NORMAL:
@@ -726,8 +726,8 @@ public class ForkScanner extends AbstractFlowScanner {
     /** Abstracts out the simpleChunkVisitor callback-triggering logic.
      *  Note that a null value of "prev" is assumed to mean we're the last node. */
     @SuppressFBWarnings(value="NP_LOAD_OF_KNOWN_NULL_VALUE", justification = "FindBugs doesn't like passing nulls to a method that can take null")
-    static void fireVisitChunkCallbacks(@CheckForNull FlowNode next, @Nonnull FlowNode current, @CheckForNull FlowNode prev,
-                                        @Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder, @Nonnull ForkScanner scanner) {
+    static void fireVisitChunkCallbacks(@CheckForNull FlowNode next, @NonNull FlowNode current, @CheckForNull FlowNode prev,
+                                        @NonNull SimpleChunkVisitor visitor, @NonNull ChunkFinder finder, @NonNull ForkScanner scanner) {
         boolean boundary = false;
         if (prev == null && finder.isStartInsideChunk()) { // Last node, need to fire end event to start inside chunk
             visitor.chunkEnd(current, prev, scanner);
@@ -751,7 +751,7 @@ public class ForkScanner extends AbstractFlowScanner {
     }
 
     /** Walk through flows */
-    public void visitSimpleChunks(@Nonnull SimpleChunkVisitor visitor, @Nonnull ChunkFinder finder) {
+    public void visitSimpleChunks(@NonNull SimpleChunkVisitor visitor, @NonNull ChunkFinder finder) {
         FlowNode prev;
 
         if (this.currentParallelStart != null) {

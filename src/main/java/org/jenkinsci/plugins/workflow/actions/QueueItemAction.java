@@ -4,8 +4,8 @@ import hudson.model.InvisibleAction;
 import hudson.model.Queue;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Records information for a {@code node} block.
@@ -57,8 +57,8 @@ public abstract class QueueItemAction extends InvisibleAction implements Persist
      * @param node A non-null {@link FlowNode}
      * @return The current queue state of the flownode.
      */
-    @Nonnull
-    public static QueueState getNodeState(@Nonnull FlowNode node) {
+    @NonNull
+    public static QueueState getNodeState(@NonNull FlowNode node) {
         WorkspaceAction workspaceAction = node.getPersistentAction(WorkspaceAction.class);
         if (workspaceAction != null) {
             return QueueState.LAUNCHED;
@@ -88,7 +88,7 @@ public abstract class QueueItemAction extends InvisibleAction implements Persist
     }
 
     @CheckForNull
-    public static Queue.Item getQueueItem(@Nonnull FlowNode node) {
+    public static Queue.Item getQueueItem(@NonNull FlowNode node) {
         QueueItemAction action = node.getPersistentAction(QueueItemAction.class);
         return action != null ? action.itemInQueue() : null;
     }

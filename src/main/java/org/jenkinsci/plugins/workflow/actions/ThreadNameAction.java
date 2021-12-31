@@ -23,7 +23,7 @@
  */
 package org.jenkinsci.plugins.workflow.actions;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Thread name action.
@@ -32,6 +32,6 @@ import javax.annotation.Nonnull;
  */
 public interface ThreadNameAction extends PersistentAction {
 
-    @Nonnull
+    @NonNull
     String getThreadName();
 }

@@ -27,7 +27,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
 import java.util.Collections;
@@ -66,7 +66,7 @@ public class LinearScanner extends AbstractFlowScanner {
      * @param heads Head nodes that have been filtered against denyList. <strong>Do not pass multiple heads.</strong>
      */
     @Override
-    protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+    protected void setHeads(@NonNull Collection<FlowNode> heads) {
         Iterator<FlowNode> it = heads.iterator();
         if (it.hasNext()) {
             this.myCurrent = it.next();
@@ -78,7 +78,7 @@ public class LinearScanner extends AbstractFlowScanner {
     }
 
     @Override
-    protected FlowNode next(FlowNode current, @Nonnull Collection<FlowNode> blackList) {
+    protected FlowNode next(FlowNode current, @NonNull Collection<FlowNode> blackList) {
         if (current == null) {
             return null;
         }

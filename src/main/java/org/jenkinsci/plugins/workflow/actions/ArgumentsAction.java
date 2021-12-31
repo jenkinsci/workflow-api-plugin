@@ -36,8 +36,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.commons.collections.CollectionUtils;
 import org.jenkinsci.plugins.structs.describable.DescribableModel;
 import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
@@ -131,7 +131,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      *  supplied in the executed pipeline step if that value is filtered for size or security.
      * @return The arguments for the {@link Step} as with {@link StepDescriptor#defineArguments(Step)}
      */
-    @Nonnull
+    @NonNull
     public Map<String,Object> getArguments() {
         Map<String,Object> args = getArgumentsInternal();
         if (args.isEmpty()) {
@@ -147,8 +147,8 @@ public abstract class ArgumentsAction implements PersistentAction {
      *
      * @param n FlowNode to fetch Step arguments for (including placeholders for masked values).
      */
-    @Nonnull
-    public static Map<String,Object> getArguments(@Nonnull FlowNode n) {
+    @NonNull
+    public static Map<String,Object> getArguments(@NonNull FlowNode n) {
         ArgumentsAction aa = n.getPersistentAction(ArgumentsAction.class);
         return aa != null ? aa.getArguments() : Collections.emptyMap();
     }
@@ -158,7 +158,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      * This means the arguments with all {@link NotStoredReason} or null values removed
      * @return Map of all completely stored arguments
      */
-    @Nonnull
+    @NonNull
     public Map<String, Object> getFilteredArguments() {
         Map<String, Object> internalArgs = this.getArgumentsInternal();
         if (internalArgs.size() == 0) {
@@ -180,8 +180,8 @@ public abstract class ArgumentsAction implements PersistentAction {
      * @param n FlowNode to get arguments for
      * @return Map of all completely stored arguments
      */
-    @Nonnull
-    public static Map<String, Object> getFilteredArguments(@Nonnull FlowNode n) {
+    @NonNull
+    public static Map<String, Object> getFilteredArguments(@NonNull FlowNode n) {
         ArgumentsAction act = n.getPersistentAction(ArgumentsAction.class);
         return act != null ? act.getFilteredArguments() : Collections.emptyMap();
     }
@@ -190,7 +190,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      *  See {@link StepDescriptor#argumentsToString(Map)} for the rules
      */
     @CheckForNull
-    public static String getStepArgumentsAsString(@Nonnull FlowNode n) {
+    public static String getStepArgumentsAsString(@NonNull FlowNode n) {
         if (n instanceof StepNode) {
             StepDescriptor descriptor = ((StepNode) n).getDescriptor();
             if (descriptor != null) {  // Null if plugin providing descriptor was uninstalled
@@ -205,7 +205,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      * Return a fast view of internal arguments, without creating immutable wrappers
      * @return Internal arguments
      */
-    @Nonnull
+    @NonNull
     protected abstract Map<String, Object> getArgumentsInternal();
 
     /**
@@ -215,7 +215,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      * @return Argument value or null if not present/not stored.
      */
     @CheckForNull
-    public Object getArgumentValue(@Nonnull String argumentName) {
+    public Object getArgumentValue(@NonNull String argumentName) {
         Object val = getArgumentValueOrReason(argumentName);
         return (val instanceof NotStoredReason) ? null : val;
     }
@@ -226,7 +226,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      * @return Argument value, null if nonexistent/null, or NotStoredReason if it existed by was masked out.
      */
     @CheckForNull
-    public Object getArgumentValueOrReason(@Nonnull String argumentName) {
+    public Object getArgumentValueOrReason(@NonNull String argumentName) {
         Object ob = getArgumentsInternal().get(argumentName);
         if (ob instanceof Map) {
             return Collections.unmodifiableMap((Map)ob);
@@ -246,7 +246,7 @@ public abstract class ArgumentsAction implements PersistentAction {
      * @param namedArgs Set of argument name and argument value pairs, as from {@link StepDescriptor#defineArguments(Step)}
      * @return True if no argument has a {@link NotStoredReason} placeholder value, else false
      */
-    static boolean checkArgumentsLackPlaceholders(@Nonnull Map<String,Object> namedArgs) {
+    static boolean checkArgumentsLackPlaceholders(@NonNull Map<String,Object> namedArgs) {
         for(Object ob : namedArgs.values()) {
             if (ob instanceof NotStoredReason) {
                 return false;
@@ -279,8 +279,8 @@ public abstract class ArgumentsAction implements PersistentAction {
      * You could use {@link UninstantiatedDescribable#getModel} (where available) and {@link DescribableModel#getType} to access live classes.
      * Where information is missing, this will just return the best it can.
      */
-    @Nonnull
-    public static Map<String, ?> getResolvedArguments(@Nonnull FlowNode n) {
+    @NonNull
+    public static Map<String, ?> getResolvedArguments(@NonNull FlowNode n) {
         ArgumentsAction aa = n.getPersistentAction(ArgumentsAction.class);
         if (aa == null) {
             return Collections.emptyMap();

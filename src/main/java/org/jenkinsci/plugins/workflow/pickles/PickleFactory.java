@@ -27,15 +27,15 @@ package org.jenkinsci.plugins.workflow.pickles;
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Provides a way of converting transient objects into {@link Pickle}s.
  */
 public abstract class PickleFactory implements ExtensionPoint {
 
-    public abstract @CheckForNull Pickle writeReplace(@Nonnull Object object);
+    public abstract @CheckForNull Pickle writeReplace(@NonNull Object object);
 
     public static ExtensionList<PickleFactory> all() {
         return ExtensionList.lookup(PickleFactory.class);

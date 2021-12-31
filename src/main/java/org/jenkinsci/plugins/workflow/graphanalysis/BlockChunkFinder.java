@@ -4,8 +4,8 @@ import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Matches start and end of a block.  Any block!
@@ -21,12 +21,12 @@ public class BlockChunkFinder implements ChunkFinder {
     }
 
     @Override
-    public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
+    public boolean isChunkStart(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         return current instanceof BlockStartNode;
     }
 
     @Override
-    public boolean isChunkEnd(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
+    public boolean isChunkEnd(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         return current instanceof BlockEndNode;
     }
 }

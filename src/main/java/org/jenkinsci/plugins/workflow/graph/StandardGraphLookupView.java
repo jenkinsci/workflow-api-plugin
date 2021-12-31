@@ -6,8 +6,8 @@ import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,7 +37,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
 
     /** Update with a new node added to the flowgraph */
     @Override
-    public void onNewHead(@Nonnull FlowNode newHead) {
+    public void onNewHead(@NonNull FlowNode newHead) {
         if (newHead instanceof BlockEndNode) {
             String startNodeId = ((BlockEndNode)newHead).getStartNode().getId();
             blockStartToEnd.put(startNodeId, newHead.getId());
@@ -77,7 +77,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     }
 
     @Override
-    public boolean isActive(@Nonnull FlowNode node) {
+    public boolean isActive(@NonNull FlowNode node) {
         if (node instanceof FlowEndNode) { // cf. JENKINS-26139
             return !node.getExecution().isComplete();
         } else if (node instanceof BlockStartNode){  // BlockStartNode
@@ -88,7 +88,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     }
 
     // Do a brute-force scan for the block end matching the start, caching info along the way for future use
-    BlockEndNode bruteForceScanForEnd(@Nonnull BlockStartNode start) {
+    BlockEndNode bruteForceScanForEnd(@NonNull BlockStartNode start) {
         DepthFirstScanner scan = new DepthFirstScanner();
         scan.setup(start.getExecution().getCurrentHeads());
         for (FlowNode f : scan) {
@@ -117,7 +117,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
 
 
     /** Do a brute-force scan for the enclosing blocks **/
-    BlockStartNode bruteForceScanForEnclosingBlock(@Nonnull final FlowNode node) {
+    BlockStartNode bruteForceScanForEnclosingBlock(@NonNull final FlowNode node) {
         FlowNode current = node;
 
         while (!(current instanceof FlowStartNode)) {  // Hunt back for enclosing blocks, a potentially expensive operation
@@ -158,7 +158,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
 
     @CheckForNull
     @Override
-    public BlockEndNode getEndNode(@Nonnull final BlockStartNode startNode) {
+    public BlockEndNode getEndNode(@NonNull final BlockStartNode startNode) {
 
         String id = blockStartToEnd.get(startNode.getId());
         if (id != null) {
@@ -176,7 +176,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
 
     @CheckForNull
     @Override
-    public BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node) {
+    public BlockStartNode findEnclosingBlockStart(@NonNull FlowNode node) {
         if (node instanceof FlowStartNode || node instanceof FlowEndNode) {
             return null;
         }
@@ -195,13 +195,13 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     }
 
     @Override
-    public Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node) {
+    public Iterable<BlockStartNode> iterateEnclosingBlocks(@NonNull FlowNode node) {
         return new EnclosingBlocksIterable(this, node);
     }
 
-    @Nonnull
+    @NonNull
     @Override
-    public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node) {
+    public List<BlockStartNode> findAllEnclosingBlockStarts(@NonNull FlowNode node) {
         if (node instanceof FlowStartNode || node instanceof FlowEndNode) {
             return Collections.emptyList();
         }

@@ -2,8 +2,8 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Think of this as setting conditions to mark a region of interest in the graph of {@link FlowNode} from a {@link org.jenkinsci.plugins.workflow.flow.FlowExecution}.
@@ -42,7 +42,7 @@ public interface ChunkFinder {
      * @param previous Previous node, to use in testing chunk
      * @return True if current node is the beginning of chunk
      */
-    boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous);
+    boolean isChunkStart(@NonNull FlowNode current, @CheckForNull FlowNode previous);
 
     /**
      * Test if the current node is the end of a chunk (inclusive)
@@ -52,5 +52,5 @@ public interface ChunkFinder {
      * @param previous Previous node, to use in testing chunk
      * @return True if current is the end of a chunk (inclusive)
      */
-    boolean isChunkEnd(@Nonnull FlowNode current, @CheckForNull FlowNode previous);
+    boolean isChunkEnd(@NonNull FlowNode current, @CheckForNull FlowNode previous);
 }

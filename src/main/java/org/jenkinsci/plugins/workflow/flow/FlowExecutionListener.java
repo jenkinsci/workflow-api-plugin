@@ -5,7 +5,7 @@ import hudson.ExtensionPoint;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Listens for significant status updates for a {@link FlowExecution}, such as started running or completed.
@@ -24,7 +24,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      *
      * @param execution The {@link FlowExecution} that has been created.
      */
-    public void onCreated(@Nonnull FlowExecution execution) {
+    public void onCreated(@NonNull FlowExecution execution) {
     }
 
     /**
@@ -34,7 +34,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      *
      * @param execution The {@link FlowExecution} that has started running.
      */
-    public void onRunning(@Nonnull FlowExecution execution) {
+    public void onRunning(@NonNull FlowExecution execution) {
     }
 
     /**
@@ -42,7 +42,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      *
      * @param execution The {@link FlowExecution} that has resumed.
      */
-    public void onResumed(@Nonnull FlowExecution execution) {
+    public void onResumed(@NonNull FlowExecution execution) {
     }
 
     /**
@@ -55,13 +55,13 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      *
      * @param execution The {@link FlowExecution} that has completed.
      */
-    public void onCompleted(@Nonnull FlowExecution execution) {
+    public void onCompleted(@NonNull FlowExecution execution) {
     }
 
     /**
      * Fires the {@link #onCreated(FlowExecution)} event.
      */
-    public static void fireCreated(@Nonnull FlowExecution execution) {
+    public static void fireCreated(@NonNull FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onCreated(execution);
         }
@@ -70,7 +70,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     /**
      * Fires the {@link #onRunning(FlowExecution)} event.
      */
-    public static void fireRunning(@Nonnull FlowExecution execution) {
+    public static void fireRunning(@NonNull FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onRunning(execution);
         }
@@ -79,7 +79,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     /**
      * Fires the {@link #onResumed(FlowExecution)} event.
      */
-    public static void fireResumed(@Nonnull FlowExecution execution) {
+    public static void fireResumed(@NonNull FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onResumed(execution);
         }
@@ -88,7 +88,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
     /**
      * Fires the {@link #onCompleted(FlowExecution)} event.
      */
-    public static void fireCompleted(@Nonnull FlowExecution execution) {
+    public static void fireCompleted(@NonNull FlowExecution execution) {
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onCompleted(execution);
         }
