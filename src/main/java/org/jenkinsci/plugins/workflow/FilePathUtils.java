@@ -39,8 +39,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -65,7 +65,7 @@ public class FilePathUtils {
      * @param f a file, possibly remote
      * @return a node name ({@code ""} for the controller), if known, else null
      */
-    public static @CheckForNull String getNodeNameOrNull(@Nonnull FilePath f) {
+    public static @CheckForNull String getNodeNameOrNull(@NonNull FilePath f) {
         return Listener.getChannelName(f.getChannel());
     }
 
@@ -75,7 +75,7 @@ public class FilePathUtils {
      * @return a node name ({@code ""} for the controller), if known
      * @throws IllegalStateException if the association to a node is unknown
      */
-    public static @Nonnull String getNodeName(@Nonnull FilePath f) throws IllegalStateException {
+    public static @NonNull String getNodeName(@NonNull FilePath f) throws IllegalStateException {
         String name = getNodeNameOrNull(f);
         if (name != null) {
             return name;
@@ -90,7 +90,7 @@ public class FilePathUtils {
      * @param path a path as returned by {@link FilePath#getRemote}
      * @return a corresponding file handle, if a node with that name is online, else null
      */
-    public static @CheckForNull FilePath find(@Nonnull String node, @Nonnull String path) {
+    public static @CheckForNull FilePath find(@NonNull String node, @NonNull String path) {
         Jenkins j = Jenkins.getInstanceOrNull();
         if (j == null) {
             return null;
@@ -113,7 +113,7 @@ public class FilePathUtils {
 
         private static final Map<VirtualChannel,String> channelNames = Collections.synchronizedMap(new WeakHashMap<>());
 
-        static String getChannelName(@Nonnull VirtualChannel channel) {
+        static String getChannelName(@NonNull VirtualChannel channel) {
             String channelName = channelNames.get(channel);
 
             if (channelName == null) {

@@ -23,7 +23,7 @@
  */
 package org.jenkinsci.plugins.workflow.flow;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Provides hints about just how hard we should try to protect our workflow from failures of the controller.
@@ -47,7 +47,7 @@ public enum FlowDurabilityHint {
 
     private final String tooltip;
 
-    FlowDurabilityHint (boolean useAtomicWrite, boolean persistWithEveryStep, @Nonnull String description, String tooltip) {
+    FlowDurabilityHint (boolean useAtomicWrite, boolean persistWithEveryStep, @NonNull String description, String tooltip) {
         this.atomicWrite = useAtomicWrite;
         this.persistWithEveryStep = persistWithEveryStep;
         this.description = description;

@@ -32,8 +32,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.TransientActionFactory;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -50,7 +50,7 @@ public abstract class FlowExecutionOwner implements Serializable {
      * @throws IOException
      *      if fails to find {@link FlowExecution}.
      */
-    @Nonnull
+    @NonNull
     public abstract FlowExecution get() throws IOException;
 
     /** Invoked in {@link FlowExecutionList#saveAll()} to notify that execution has been suspended */
@@ -125,7 +125,7 @@ public abstract class FlowExecutionOwner implements Serializable {
      * <p>The listener should be remotable: if sent to an agent, messages printed to it should still appear in the log.
      * The same will then apply to calls to {@link StepContext#get} on {@link TaskListener}.
      */
-    public @Nonnull TaskListener getListener() throws IOException {
+    public @NonNull TaskListener getListener() throws IOException {
         try {
             return LogStorage.of(this).overallListener();
         } catch (InterruptedException x) {

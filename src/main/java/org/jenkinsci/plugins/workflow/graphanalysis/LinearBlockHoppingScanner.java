@@ -28,8 +28,8 @@ import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
 import java.util.Iterator;
@@ -70,7 +70,7 @@ public class LinearBlockHoppingScanner extends LinearScanner {
     }
 
     @Override
-    protected void setHeads(@Nonnull Collection<FlowNode> heads) {
+    protected void setHeads(@NonNull Collection<FlowNode> heads) {
         Iterator<FlowNode> it = heads.iterator();
         if (it.hasNext()) {
             this.myCurrent = jumpBlockScan(it.next(), myBlackList);
@@ -83,7 +83,7 @@ public class LinearBlockHoppingScanner extends LinearScanner {
 
     /** Keeps jumping over blocks until we hit the first node preceding a block */
     @CheckForNull
-    protected FlowNode jumpBlockScan(@CheckForNull FlowNode node, @Nonnull Collection<FlowNode> blacklistNodes) {
+    protected FlowNode jumpBlockScan(@CheckForNull FlowNode node, @NonNull Collection<FlowNode> blacklistNodes) {
         FlowNode candidate = node;
 
         // Find the first candidate node preceding a block... and filtering by blacklist
@@ -113,7 +113,7 @@ public class LinearBlockHoppingScanner extends LinearScanner {
     }
 
     @Override
-    protected FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList) {
+    protected FlowNode next(@NonNull FlowNode current, @NonNull Collection<FlowNode> blackList) {
         if (current == null) {
             return null;
         }

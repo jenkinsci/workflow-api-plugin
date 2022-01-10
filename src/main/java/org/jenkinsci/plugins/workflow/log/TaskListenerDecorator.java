@@ -46,9 +46,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import jenkins.util.BuildListenerAdapter;
 import jenkins.util.JenkinsJVM;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -77,7 +77,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
      * @param logger a base logger
      * @return a possibly patched result
      */
-    public abstract @Nonnull OutputStream decorate(@Nonnull OutputStream logger) throws IOException, InterruptedException;
+    public abstract @NonNull OutputStream decorate(@NonNull OutputStream logger) throws IOException, InterruptedException;
 
     /**
      * Merges two decorators.
@@ -129,7 +129,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
          * @param owner a build
          * @return a decorator, optionally
          */
-        @CheckForNull TaskListenerDecorator of(@Nonnull FlowExecutionOwner owner);
+        @CheckForNull TaskListenerDecorator of(@NonNull FlowExecutionOwner owner);
 
     }
 
@@ -143,7 +143,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
      * @param mainDecorator an additional contextual decorator to apply, if any
      * @return a possibly wrapped {@code listener}
      */
-    public static BuildListener apply(@Nonnull TaskListener listener, @Nonnull FlowExecutionOwner owner, @CheckForNull TaskListenerDecorator mainDecorator) {
+    public static BuildListener apply(@NonNull TaskListener listener, @NonNull FlowExecutionOwner owner, @CheckForNull TaskListenerDecorator mainDecorator) {
         JenkinsJVM.checkJenkinsJVM();
         List<TaskListenerDecorator> decorators = Stream.concat(
                 ExtensionList.lookup(TaskListenerDecorator.Factory.class).stream().map(f -> f.of(owner)),
@@ -162,8 +162,8 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
         private static final long serialVersionUID = 1;
 
-        private final @Nonnull TaskListenerDecorator original;
-        private final @Nonnull TaskListenerDecorator subsequent;
+        private final @NonNull TaskListenerDecorator original;
+        private final @NonNull TaskListenerDecorator subsequent;
 
         MergedTaskListenerDecorator(TaskListenerDecorator original, TaskListenerDecorator subsequent) {
             this.original = original;
@@ -186,7 +186,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         private static final long serialVersionUID = 1;
 
         @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "Explicitly checking for serializability.")
-        private final @Nonnull ConsoleLogFilter filter;
+        private final @NonNull ConsoleLogFilter filter;
 
         ConsoleLogFilterAdapter(ConsoleLogFilter filter) {
             assert filter instanceof Serializable;
@@ -212,13 +212,13 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
          * The listener we are delegating to, which was expected to be remotable.
          * Note that we ignore all of its methods other than {@link TaskListener#getLogger}.
          */
-        private final @Nonnull TaskListener delegate;
+        private final @NonNull TaskListener delegate;
 
         /**
          * A (nonempty) list of decorators we delegate to.
          * They are applied in reverse order, so the first one has the final say in what gets printed.
          */
-        private final @Nonnull List<TaskListenerDecorator> decorators;
+        private final @NonNull List<TaskListenerDecorator> decorators;
 
         private transient PrintStream logger;
 
@@ -266,8 +266,8 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
         private static final long serialVersionUID = 1;
 
-        private final @Nonnull TaskListener mainDelegate;
-        private final @Nonnull TaskListener closeDelegate;
+        private final @NonNull TaskListener mainDelegate;
+        private final @NonNull TaskListener closeDelegate;
 
         private CloseableTaskListener(TaskListener mainDelegate, TaskListener closeDelegate) {
             this.mainDelegate = mainDelegate;

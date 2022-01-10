@@ -26,8 +26,8 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,21 +41,21 @@ public class ParallelMemoryFlowChunk extends MemoryFlowChunk implements Parallel
     // LinkedHashMap to preserve insert order
     private LinkedHashMap<String, MemoryFlowChunk> branches = new LinkedHashMap<>();
 
-    public ParallelMemoryFlowChunk(@Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode) {
+    public ParallelMemoryFlowChunk(@NonNull FlowNode firstNode, @NonNull FlowNode lastNode) {
         super (null,firstNode, lastNode, null);
     }
 
-    public ParallelMemoryFlowChunk(@CheckForNull FlowNode nodeBefore, @Nonnull FlowNode firstNode, @Nonnull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
+    public ParallelMemoryFlowChunk(@CheckForNull FlowNode nodeBefore, @NonNull FlowNode firstNode, @NonNull FlowNode lastNode, @CheckForNull FlowNode nodeAfter) {
         super (nodeBefore,firstNode, lastNode, nodeAfter);
     }
 
     @Override
-    public void setBranch(@Nonnull String branchName, @Nonnull MemoryFlowChunk branchBlock) {
+    public void setBranch(@NonNull String branchName, @NonNull MemoryFlowChunk branchBlock) {
         branches.put(branchName, branchBlock);
     }
 
     @Override
-    @Nonnull
+    @NonNull
     public Map<String,MemoryFlowChunk> getBranches() {
         return Collections.unmodifiableMap(branches);
     }

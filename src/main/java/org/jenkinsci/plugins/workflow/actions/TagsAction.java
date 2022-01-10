@@ -26,8 +26,8 @@ package org.jenkinsci.plugins.workflow.actions;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -86,7 +86,7 @@ public class TagsAction implements PersistentAction {
      * Get the tag-value mappings
      * @return Unmodifiable view of tag-value mappings
      */
-    @Nonnull
+    @NonNull
     public Map<String,String> getTags() {
         return Collections.unmodifiableMap(tags);
     }
@@ -97,8 +97,8 @@ public class TagsAction implements PersistentAction {
      * Get the set of tag-value mappings for a node
      * @return Unmodifiable view of tag-value mappings
      */
-    @Nonnull
-    public static Map<String,String> getTags(@Nonnull  FlowNode node) {
+    @NonNull
+    public static Map<String,String> getTags(@NonNull  FlowNode node) {
         TagsAction tagAction = node.getAction(TagsAction.class);
         return (tagAction == null) ? Collections.emptyMap() : tagAction.getTags();
     }
@@ -110,7 +110,7 @@ public class TagsAction implements PersistentAction {
      * @return Tag value or null if not set
      */
     @CheckForNull
-    public static String getTagValue(@Nonnull FlowNode node, @CheckForNull String tag) {
+    public static String getTagValue(@NonNull FlowNode node, @CheckForNull String tag) {
         if (tag == null || tag.isEmpty()) {
             return null;
         }

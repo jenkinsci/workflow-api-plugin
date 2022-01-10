@@ -30,7 +30,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.junit.Assert;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,7 +40,7 @@ import java.util.Collection;
  * @author Sam Van Oort
  */
 public class FlowTestUtils {
-    public static Predicate<FlowNode> predicateMatchStepDescriptor(@Nonnull final String descriptorId) {
+    public static Predicate<FlowNode> predicateMatchStepDescriptor(@NonNull final String descriptorId) {
         return new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
@@ -58,7 +58,7 @@ public class FlowTestUtils {
         ArrayList<FlowNode> visited = new ArrayList<>();
 
         @Override
-        public boolean visit(@Nonnull FlowNode f) {
+        public boolean visit(@NonNull FlowNode f) {
             visited.add(f);
             return true;
         }

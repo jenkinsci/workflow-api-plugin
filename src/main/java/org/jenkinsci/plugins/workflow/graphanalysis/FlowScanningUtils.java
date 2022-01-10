@@ -31,8 +31,8 @@ import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Comparator;
 import java.util.Iterator;
 
@@ -50,8 +50,8 @@ public final class FlowScanningUtils {
      * @param actionClass Action class to look for
      * @return Predicate that will match when FlowNode has the action given
      */
-    @Nonnull
-    public static  Predicate<FlowNode> hasActionPredicate(@Nonnull final Class<? extends Action> actionClass) {
+    @NonNull
+    public static  Predicate<FlowNode> hasActionPredicate(@NonNull final Class<? extends Action> actionClass) {
         return new Predicate<FlowNode>() {
             @Override
             public boolean apply(FlowNode input) {
@@ -119,9 +119,9 @@ public final class FlowScanningUtils {
      * @param f {@link FlowNode} to start from.
      * @return Iterator that returns all enclosing BlockStartNodes from the inside out.
      */
-    @Nonnull
+    @NonNull
     @Deprecated
-    public static Filterator<FlowNode> fetchEnclosingBlocks(@Nonnull FlowNode f) {
+    public static Filterator<FlowNode> fetchEnclosingBlocks(@NonNull FlowNode f) {
         return new FilteratorImpl<>((Iterator) f.iterateEnclosingBlocks().iterator(), Predicates.<FlowNode>alwaysTrue());
     }
 }

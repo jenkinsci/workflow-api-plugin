@@ -1,6 +1,6 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Map;
 
 /**
@@ -9,9 +9,9 @@ import java.util.Map;
 public interface ParallelFlowChunk <ChunkType extends FlowChunk> extends FlowChunk  {
 
     /** Returns the branches of a parallel flow chunk, mapped by branch name and parallel branch block */
-    @Nonnull
+    @NonNull
     Map<String, ChunkType> getBranches();
 
-    @Nonnull
-    void setBranch(@Nonnull String branchName, @Nonnull ChunkType branchBlock);
+    @NonNull
+    void setBranch(@NonNull String branchName, @NonNull ChunkType branchBlock);
 }

@@ -26,7 +26,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import com.google.common.base.Predicate;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Iterator;
 
@@ -45,7 +45,7 @@ class FilteratorImpl<T> implements Filterator<T> {
         return new FilteratorImpl<>(this, matchCondition);
     }
 
-    public FilteratorImpl(@Nonnull Iterator<T> it, @Nonnull Predicate<T> matchCondition) {
+    public FilteratorImpl(@NonNull Iterator<T> it, @NonNull Predicate<T> matchCondition) {
         this.wrapped = it;
         this.matchCondition = matchCondition;
 

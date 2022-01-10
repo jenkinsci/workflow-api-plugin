@@ -28,8 +28,8 @@ import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -103,7 +103,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     protected static final int MAX_LIST_CHECK_SIZE = 5;
 
     /** Helper: convert stop nodes to a collection that can efficiently be checked for membership, handling null if needed */
-    @Nonnull
+    @NonNull
     protected Collection<FlowNode> convertToFastCheckable(@CheckForNull Collection<FlowNode> nodeCollection) {
         if (nodeCollection == null || nodeCollection.size()==0) {
             return Collections.emptySet();
@@ -185,7 +185,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      *   - none of the filteredHeads are null
      * @param filteredHeads Head nodes that have been filtered against denyList
      */
-    protected abstract void setHeads(@Nonnull Collection<FlowNode> filteredHeads);
+    protected abstract void setHeads(@NonNull Collection<FlowNode> filteredHeads);
 
     /**
      * Actual meat of the iteration, get the next node to visit, using and updating state as needed
@@ -194,7 +194,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * @return Next node to visit, or null if we've exhausted the node list
      */
     @CheckForNull
-    protected abstract FlowNode next(@Nonnull FlowNode current, @Nonnull Collection<FlowNode> blackList);
+    protected abstract FlowNode next(@NonNull FlowNode current, @NonNull Collection<FlowNode> blackList);
 
     @Override
     public boolean hasNext() {
@@ -218,7 +218,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     @Override
-    @Nonnull
+    @NonNull
     public Iterator<FlowNode> iterator() {
         return this;
     }
@@ -229,8 +229,8 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * @return A {@link Filterator} against this FlowScanner, which can be filtered in additional ways.
      */
     @Override
-    @Nonnull
-    public Filterator<FlowNode> filter(@Nonnull Predicate<FlowNode> filterCondition) {
+    @NonNull
+    public Filterator<FlowNode> filter(@NonNull Predicate<FlowNode> filterCondition) {
         return new FilteratorImpl<>(this, filterCondition);
     }
 
@@ -263,19 +263,19 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
 
     /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is no denyList */
     @CheckForNull
-    public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
+    public FlowNode findFirstMatch(@CheckForNull Collection<FlowNode> heads, @NonNull Predicate<FlowNode> matchPredicate) {
         return this.findFirstMatch(heads, null, matchPredicate);
     }
 
     /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} where there is a single head and no denyList */
     @CheckForNull
-    public FlowNode findFirstMatch(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
+    public FlowNode findFirstMatch(@CheckForNull FlowNode head, @NonNull Predicate<FlowNode> matchPredicate) {
         return this.findFirstMatch(Collections.singleton(head), null, matchPredicate);
     }
 
     /** Syntactic sugar for {@link #findFirstMatch(Collection, Collection, Predicate)} using {@link FlowExecution#getCurrentHeads()}  to get heads and no denyList */
     @CheckForNull
-    public FlowNode findFirstMatch(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
+    public FlowNode findFirstMatch(@CheckForNull FlowExecution exec, @NonNull Predicate<FlowNode> matchPredicate) {
         if (exec != null && exec.getCurrentHeads() != null && !exec.getCurrentHeads().isEmpty()) {
             return this.findFirstMatch(exec.getCurrentHeads(), null, matchPredicate);
         }
@@ -290,7 +290,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * @param matchCondition Predicate that must be met for nodes to be included in output.  Input is always non-null.
      * @return List of flownodes matching the predicate.
      */
-    @Nonnull
+    @NonNull
     public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads,
                                         @CheckForNull Collection<FlowNode> blackList,
                                         Predicate<FlowNode> matchCondition) {
@@ -308,7 +308,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     /** Convenience method to get the list all flownodes in the iterator order. */
-    @Nonnull
+    @NonNull
     public List<FlowNode> allNodes(@CheckForNull Collection<FlowNode> heads) {
         if (!setup(heads)) {
             return Collections.emptyList();
@@ -321,25 +321,25 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     /** Convenience method to get the list of all {@link FlowNode}s for the execution, in iterator order. */
-    @Nonnull
+    @NonNull
     public List<FlowNode> allNodes(@CheckForNull FlowExecution exec) {
         return (exec == null) ? Collections.emptyList() : allNodes(exec.getCurrentHeads());
     }
 
     /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with no denyList nodes */
-    @Nonnull
-    public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @Nonnull Predicate<FlowNode> matchPredicate) {
+    @NonNull
+    public List<FlowNode> filteredNodes(@CheckForNull Collection<FlowNode> heads, @NonNull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(heads, null, matchPredicate);
     }
 
     /** Syntactic sugar for {@link #filteredNodes(Collection, Collection, Predicate)} with a single head and no denyList nodes */
-    @Nonnull
-    public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @Nonnull Predicate<FlowNode> matchPredicate) {
+    @NonNull
+    public List<FlowNode> filteredNodes(@CheckForNull FlowNode head, @NonNull Predicate<FlowNode> matchPredicate) {
         return this.filteredNodes(Collections.singleton(head), null, matchPredicate);
     }
 
-    @Nonnull
-    public List<FlowNode> filteredNodes(@CheckForNull FlowExecution exec, @Nonnull Predicate<FlowNode> matchPredicate) {
+    @NonNull
+    public List<FlowNode> filteredNodes(@CheckForNull FlowExecution exec, @NonNull Predicate<FlowNode> matchPredicate) {
         if (exec == null) {
             return Collections.emptyList();
         }
@@ -356,7 +356,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
      * @param blackList Nodes we can't visit or pass beyond.
      * @param visitor Visitor that will see each FlowNode encountered.
      */
-    public void visitAll(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList, @Nonnull FlowNodeVisitor visitor) {
+    public void visitAll(@CheckForNull Collection<FlowNode> heads, @CheckForNull Collection<FlowNode> blackList, @NonNull FlowNodeVisitor visitor) {
         if (!setup(heads, blackList)) {
             return;
         }
@@ -369,7 +369,7 @@ public abstract class AbstractFlowScanner implements Iterable <FlowNode>, Filter
     }
 
     /** Syntactic sugar for {@link #visitAll(Collection, Collection, FlowNodeVisitor)} where we don't denylist any nodes */
-    public void visitAll(@CheckForNull Collection<FlowNode> heads, @Nonnull FlowNodeVisitor visitor) {
+    public void visitAll(@CheckForNull Collection<FlowNode> heads, @NonNull FlowNodeVisitor visitor) {
         visitAll(heads, null, visitor);
     }
 }

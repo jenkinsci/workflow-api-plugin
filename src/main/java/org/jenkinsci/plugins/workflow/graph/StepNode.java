@@ -26,7 +26,7 @@ package org.jenkinsci.plugins.workflow.graph;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 
 /**
  * Optional interface for a {@link FlowNode} that has an associated {@link StepDescriptor}.

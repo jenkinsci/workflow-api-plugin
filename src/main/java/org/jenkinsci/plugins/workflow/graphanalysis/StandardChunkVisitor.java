@@ -2,8 +2,8 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Simple handler for linear {@link FlowChunk}s (basic stages, etc), and designed to be extended.
@@ -21,11 +21,11 @@ public class StandardChunkVisitor implements SimpleChunkVisitor {
     /** Override me to do something once the chunk is finished (such as add it to a list).
      *  Note: the chunk will be mutated directly, so you need to copy it if you want to do something.
      */
-    protected void handleChunkDone(@Nonnull MemoryFlowChunk chunk) {
+    protected void handleChunkDone(@NonNull MemoryFlowChunk chunk) {
         // NO-OP initially
     }
 
-    protected void resetChunk(@Nonnull MemoryFlowChunk chunk) {
+    protected void resetChunk(@NonNull MemoryFlowChunk chunk) {
         chunk.setFirstNode(null);
         chunk.setLastNode(null);
         chunk.setNodeBefore(null);
@@ -34,7 +34,7 @@ public class StandardChunkVisitor implements SimpleChunkVisitor {
     }
 
     @Override
-    public void chunkStart(@Nonnull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @Nonnull ForkScanner scanner) {
+    public void chunkStart(@NonNull FlowNode startNode, @CheckForNull FlowNode beforeBlock, @NonNull ForkScanner scanner) {
         chunk.setNodeBefore(beforeBlock);
         chunk.setFirstNode(startNode);
         handleChunkDone(chunk);
@@ -42,24 +42,24 @@ public class StandardChunkVisitor implements SimpleChunkVisitor {
     }
 
     @Override
-    public void chunkEnd(@Nonnull FlowNode endNode, @CheckForNull FlowNode afterChunk, @Nonnull ForkScanner scanner) {
+    public void chunkEnd(@NonNull FlowNode endNode, @CheckForNull FlowNode afterChunk, @NonNull ForkScanner scanner) {
         chunk.setLastNode(endNode);
         chunk.setNodeAfter(afterChunk);
     }
 
     @Override
-    public void parallelStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchNode, @Nonnull ForkScanner scanner) {}
+    public void parallelStart(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchNode, @NonNull ForkScanner scanner) {}
 
     @Override
-    public void parallelEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode parallelEndNode, @Nonnull ForkScanner scanner) {}
+    public void parallelEnd(@NonNull FlowNode parallelStartNode, @NonNull FlowNode parallelEndNode, @NonNull ForkScanner scanner) {}
 
     @Override
-    public void parallelBranchStart(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchStartNode, @Nonnull ForkScanner scanner) {}
+    public void parallelBranchStart(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchStartNode, @NonNull ForkScanner scanner) {}
 
     @Override
-    public void parallelBranchEnd(@Nonnull FlowNode parallelStartNode, @Nonnull FlowNode branchEndNode, @Nonnull ForkScanner scanner) {}
+    public void parallelBranchEnd(@NonNull FlowNode parallelStartNode, @NonNull FlowNode branchEndNode, @NonNull ForkScanner scanner) {}
 
     /** Extend me to do something with nodes inside a chunk */
     @Override
-    public void atomNode(@CheckForNull FlowNode before, @Nonnull FlowNode atomNode, @CheckForNull FlowNode after, @Nonnull ForkScanner scan) {}
+    public void atomNode(@CheckForNull FlowNode before, @NonNull FlowNode atomNode, @CheckForNull FlowNode after, @NonNull ForkScanner scan) {}
 }

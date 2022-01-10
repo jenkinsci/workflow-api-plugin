@@ -5,8 +5,8 @@ import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Splits a flow execution into {@link FlowChunk}s whenever you have a label.
@@ -24,7 +24,7 @@ public class LabelledChunkFinder implements ChunkFinder {
 
     /** Start is anywhere with a {@link LabelAction} */
     @Override
-    public boolean isChunkStart(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
+    public boolean isChunkStart(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         LabelAction la = current.getPersistentAction(LabelAction.class);
         return la != null;
     }
@@ -32,7 +32,7 @@ public class LabelledChunkFinder implements ChunkFinder {
     /** End is where the previous node is a chunk start
      * or this is a {@link BlockEndNode} whose {@link BlockStartNode} has a label action */
     @Override
-    public boolean isChunkEnd(@Nonnull FlowNode current, @CheckForNull FlowNode previous) {
+    public boolean isChunkEnd(@NonNull FlowNode current, @CheckForNull FlowNode previous) {
         if (previous == null) {
             return false;
         }

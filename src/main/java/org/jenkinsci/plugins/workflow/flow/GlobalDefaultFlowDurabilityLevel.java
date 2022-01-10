@@ -9,8 +9,8 @@ import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.lang.reflect.InvocationTargetException;
 
 /**
@@ -73,7 +73,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
             return FlowDurabilityHint.values();
         }
 
-        @Nonnull
+        @NonNull
         // TODO: Add @Override when Jenkins core baseline is 2.222+
         public Permission getRequiredGlobalConfigPagePermission() {
             return getJenkinsManageOrAdmin();

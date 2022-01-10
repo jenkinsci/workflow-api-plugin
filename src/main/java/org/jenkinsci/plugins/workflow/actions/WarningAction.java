@@ -1,8 +1,8 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import hudson.model.Result;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 /**
@@ -13,10 +13,10 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
  * Visualizations should treat FlowNodes with this action as if the FlowNode's result was {@link #result}.
  */
 public class WarningAction implements PersistentAction {
-    private @Nonnull Result result;
+    private @NonNull Result result;
     private @CheckForNull String message;
 
-    public WarningAction(@Nonnull Result result) {
+    public WarningAction(@NonNull Result result) {
         this.result = result;
     }
 
@@ -29,7 +29,7 @@ public class WarningAction implements PersistentAction {
         return message;
     }
 
-    public @Nonnull Result getResult() {
+    public @NonNull Result getResult() {
         return result;
     }
 

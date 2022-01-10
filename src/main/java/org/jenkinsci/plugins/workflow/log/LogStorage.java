@@ -37,7 +37,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -62,7 +62,7 @@ public interface LogStorage {
      * @return a (remotable) build listener; do not bother overriding anything except {@link TaskListener#getLogger}
      * @see FlowExecutionOwner#getListener
      */
-    @Nonnull BuildListener overallListener() throws IOException, InterruptedException;
+    @NonNull BuildListener overallListener() throws IOException, InterruptedException;
 
     /**
      * Provides an alternate way of emitting output from a node (such as a step).
@@ -73,7 +73,7 @@ public interface LogStorage {
      * @return a (remotable) task listener; do not bother overriding anything except {@link TaskListener#getLogger}
      * @see StepContext#get
      */
-    @Nonnull TaskListener nodeListener(@Nonnull FlowNode node) throws IOException, InterruptedException;
+    @NonNull TaskListener nodeListener(@NonNull FlowNode node) throws IOException, InterruptedException;
 
     /**
      * Provides an alternate way of retrieving output from a build.
@@ -84,14 +84,14 @@ public interface LogStorage {
      *                  so implementations should be sure to retrieve final log lines
      * @return a log
      */
-    @Nonnull AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(@Nonnull FlowExecutionOwner.Executable build, boolean complete);
+    @NonNull AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(@NonNull FlowExecutionOwner.Executable build, boolean complete);
 
     /**
      * Introduces an HTML block with a {@code pipeline-node-<ID>} CSS class based on {@link FlowNode#getId}.
      * @see #endStep
      * @see #overallLog
      */
-    static @Nonnull String startStep(@Nonnull String id) {
+    static @NonNull String startStep(@NonNull String id) {
         return "<span class=\"pipeline-node-" + id + "\">";
     }
 
@@ -100,7 +100,7 @@ public interface LogStorage {
      * @see #startStep
      * @see #overallLog
      */
-    static @Nonnull String endStep() {
+    static @NonNull String endStep() {
         return "</span>";
     }
 
@@ -112,7 +112,7 @@ public interface LogStorage {
      * @return a log for this just this node
      * @see LogAction
      */
-     @Nonnull AnnotatedLargeText<FlowNode> stepLog(@Nonnull FlowNode node, boolean complete);
+     @NonNull AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete);
 
      /**
       * Provide a file containing the log text.
@@ -124,7 +124,7 @@ public interface LogStorage {
       */
      @SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "silly rule")
      @Deprecated
-     default @Nonnull File getLogFile(@Nonnull FlowExecutionOwner.Executable build, boolean complete) {
+     default @NonNull File getLogFile(@NonNull FlowExecutionOwner.Executable build, boolean complete) {
          try {
              AnnotatedLargeText<FlowExecutionOwner.Executable> logText = overallLog(build, complete);
              FlowExecutionOwner owner = build.asFlowExecutionOwner();
@@ -158,7 +158,7 @@ public interface LogStorage {
      * @return the mechanism for handling this build, including any necessary fallback
      * @see LogStorageFactory
      */
-    static @Nonnull LogStorage of(@Nonnull FlowExecutionOwner b) {
+    static @NonNull LogStorage of(@NonNull FlowExecutionOwner b) {
         try {
             for (LogStorageFactory factory : ExtensionList.lookup(LogStorageFactory.class)) {
                 LogStorage storage = factory.forBuild(b);

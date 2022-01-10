@@ -43,8 +43,8 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 
 import java.io.IOException;
 import java.util.List;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import jenkins.model.queue.AsynchronousExecution;
 import org.acegisecurity.Authentication;
@@ -91,7 +91,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      * Get the durability level we're aiming for, or a default value if none is set (defaults may change as implementation evolve).
      * @return Durability level we are aiming for with this execution.
      */
-    @Nonnull
+    @NonNull
     public FlowDurabilityHint getDurabilityHint() {
         // MAX_SURVIVABILITY is the behavior of builds before the change was introduced.
         return (durabilityHint != null) ? durabilityHint : FlowDurabilityHint.MAX_SURVIVABILITY;
@@ -250,7 +250,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      * A flow run triggered by a user manually might be associated with the runtime, or it might not.
      * @return an authentication; {@link ACL#SYSTEM} as a fallback, or {@link Jenkins#ANONYMOUS} if the flow is supposed to be limited to a specific user but that user cannot now be looked up
      */
-    public abstract @Nonnull Authentication getAuthentication();
+    public abstract @NonNull Authentication getAuthentication();
 
 
     /** @see GraphLookupView#isActive(FlowNode)
@@ -258,7 +258,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      */
     @Override
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
-    public boolean isActive(@Nonnull  FlowNode node) {
+    public boolean isActive(@NonNull  FlowNode node) {
         if (!this.equals(node.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
         }
@@ -271,7 +271,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     @CheckForNull
     @Override
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
-    public BlockEndNode getEndNode(@Nonnull BlockStartNode startNode) {
+    public BlockEndNode getEndNode(@NonNull BlockStartNode startNode) {
         if (!this.equals(startNode.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
         }
@@ -284,7 +284,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     @CheckForNull
     @Override
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
-    public BlockStartNode findEnclosingBlockStart(@Nonnull FlowNode node) {
+    public BlockStartNode findEnclosingBlockStart(@NonNull FlowNode node) {
         if (!this.equals(node.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
         }
@@ -294,10 +294,10 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     /** @see GraphLookupView#findAllEnclosingBlockStarts(FlowNode)
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
-    @Nonnull
+    @NonNull
     @Override
     @Restricted(NoExternalUse.class)  // Only public because graph, flow, and graphanalysis are separate packages
-    public List<BlockStartNode> findAllEnclosingBlockStarts(@Nonnull FlowNode node) {
+    public List<BlockStartNode> findAllEnclosingBlockStarts(@NonNull FlowNode node) {
         if (!this.equals(node.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
         }
@@ -307,10 +307,10 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     /** @see GraphLookupView#iterateEnclosingBlocks(FlowNode)
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
      */
-    @Nonnull
+    @NonNull
     @Override
     @Restricted(NoExternalUse.class)
-    public Iterable<BlockStartNode> iterateEnclosingBlocks(@Nonnull FlowNode node) {
+    public Iterable<BlockStartNode> iterateEnclosingBlocks(@NonNull FlowNode node) {
         if (!this.equals(node.getExecution())) {
             throw new IllegalArgumentException("Can't look up info for a FlowNode that doesn't belong to this execution!");
         }

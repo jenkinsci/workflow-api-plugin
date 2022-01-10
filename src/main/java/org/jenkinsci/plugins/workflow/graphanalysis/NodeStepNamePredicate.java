@@ -30,8 +30,8 @@ import org.jenkinsci.plugins.workflow.graph.FlowStartNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -42,7 +42,7 @@ import java.lang.reflect.Method;
 public final class NodeStepNamePredicate implements Predicate<FlowNode> {
     String descriptorId;
 
-    public NodeStepNamePredicate(@Nonnull String descriptorId) {
+    public NodeStepNamePredicate(@NonNull String descriptorId) {
         this.descriptorId = descriptorId;
     }
 
