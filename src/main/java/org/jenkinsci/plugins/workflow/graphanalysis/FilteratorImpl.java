@@ -27,7 +27,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import javax.annotation.concurrent.NotThreadSafe;
+import net.jcip.annotations.NotThreadSafe;
 import java.util.Iterator;
 
 /** Filters an iterator against a match predicate by wrapping an iterator

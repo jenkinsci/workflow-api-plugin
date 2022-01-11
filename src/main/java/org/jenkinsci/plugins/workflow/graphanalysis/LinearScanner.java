@@ -28,7 +28,7 @@ import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import javax.annotation.concurrent.NotThreadSafe;
+import net.jcip.annotations.NotThreadSafe;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
