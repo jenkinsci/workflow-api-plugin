@@ -59,6 +59,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.logging.Level;
@@ -402,7 +403,7 @@ public class ArtifactManagerTest {
             assertEquals(contents.length(), f.length());
             assertThat(f.lastModified(), not(is(0)));
             try (InputStream is = f.open()) {
-                assertEquals(contents, IOUtils.toString(is, Charset.defaultCharset()));
+                assertEquals(contents, IOUtils.toString(is, StandardCharsets.UTF_8));
             }
             URL url = f.toExternalURL();
             if (url != null) {
@@ -417,7 +418,7 @@ public class ArtifactManagerTest {
                 this.u = u;
             }
             @Override public String call() throws IOException {
-                return IOUtils.toString(u, Charset.defaultCharset());
+                return IOUtils.toString(u, StandardCharsets.UTF_8);
             }
         }
 
