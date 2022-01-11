@@ -19,6 +19,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Optional;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -85,7 +87,7 @@ public class DurabilityBasicsTest {
 
             try (ACLContext c = ACL.as(User.getById(USER, true))) {
                 Collection<Descriptor> descriptors = Functions.getSortedDescriptorsForGlobalConfigUnclassified();
-                assertEquals("Global configuration should not be accessible to READ users", 0, descriptors.size());
+                assertThat("Global configuration should not be accessible to READ users", descriptors, empty());
             }
             try (ACLContext c = ACL.as(User.getById(MANAGER, true))) {
                 Collection<Descriptor> descriptors = Functions.getSortedDescriptorsForGlobalConfigUnclassified();
