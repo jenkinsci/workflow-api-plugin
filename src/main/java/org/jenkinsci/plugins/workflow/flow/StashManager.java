@@ -367,11 +367,8 @@ public class StashManager {
                 Map<String,String> files = new HashMap<>();
                 for (String path : srcroot.list("**/*", null, false)) {
                     files.put(path, path);
-                    InputStream in = srcroot.child(path).open();
-                    try {
+                    try(InputStream in = srcroot.child(path).open()) {
                         dstDir.child(path).copyFrom(in);
-                    } finally {
-                        IOUtils.closeQuietly(in);
                     }
                 }
                 if (!files.isEmpty()) {

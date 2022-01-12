@@ -41,16 +41,13 @@ import java.util.Collection;
  */
 public class FlowTestUtils {
     public static Predicate<FlowNode> predicateMatchStepDescriptor(@NonNull final String descriptorId) {
-        return new Predicate<FlowNode>() {
-            @Override
-            public boolean apply(FlowNode input) {
-                if (input instanceof StepAtomNode) {
-                    StepAtomNode san = (StepAtomNode)input;
-                    StepDescriptor sd = san.getDescriptor();
-                    return sd != null && descriptorId.equals(sd.getId());
-                }
-                return false;
+        return input -> {
+            if (input instanceof StepAtomNode) {
+                StepAtomNode san = (StepAtomNode)input;
+                StepDescriptor sd = san.getDescriptor();
+                return sd != null && descriptorId.equals(sd.getId());
             }
+            return false;
         };
     }
 

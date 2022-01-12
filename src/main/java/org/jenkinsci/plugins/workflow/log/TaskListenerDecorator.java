@@ -165,12 +165,13 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         private final @NonNull TaskListenerDecorator original;
         private final @NonNull TaskListenerDecorator subsequent;
 
-        MergedTaskListenerDecorator(TaskListenerDecorator original, TaskListenerDecorator subsequent) {
+        MergedTaskListenerDecorator(@NonNull TaskListenerDecorator original, @NonNull TaskListenerDecorator subsequent) {
             this.original = original;
             this.subsequent = subsequent;
         }
-        
-        @Override public OutputStream decorate(OutputStream logger) throws IOException, InterruptedException {
+
+        @NonNull
+        @Override public OutputStream decorate(@NonNull OutputStream logger) throws IOException, InterruptedException {
             // TODO BodyInvoker.MergedFilter probably has these backwards
             return original.decorate(subsequent.decorate(logger));
         }
@@ -188,14 +189,15 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "Explicitly checking for serializability.")
         private final @NonNull ConsoleLogFilter filter;
 
-        ConsoleLogFilterAdapter(ConsoleLogFilter filter) {
+        ConsoleLogFilterAdapter(@NonNull ConsoleLogFilter filter) {
             assert filter instanceof Serializable;
             this.filter = filter;
         }
 
+        @NonNull
         @SuppressWarnings("deprecation") // the compatibility code in ConsoleLogFilter fails to delegate to the old overload when given a null argument
-        @Override public OutputStream decorate(OutputStream logger) throws IOException, InterruptedException {
-            return filter.decorateLogger((AbstractBuild) null, logger);
+        @Override public OutputStream decorate(@NonNull OutputStream logger) throws IOException, InterruptedException {
+            return filter.decorateLogger((AbstractBuild<?, ?>) null, logger);
         }
 
         @Override public String toString() {
@@ -222,13 +224,14 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
         private transient PrintStream logger;
 
-        DecoratedTaskListener(TaskListener delegate, List<TaskListenerDecorator> decorators) {
+        DecoratedTaskListener(@NonNull TaskListener delegate, @NonNull List<TaskListenerDecorator> decorators) {
             this.delegate = delegate;
             assert !decorators.isEmpty();
             assert !decorators.contains(null);
             this.decorators = decorators;
         }
 
+        @NonNull
         @Override public PrintStream getLogger() {
             if (logger == null) {
                 OutputStream base = delegate.getLogger();
@@ -269,12 +272,13 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         private final @NonNull TaskListener mainDelegate;
         private final @NonNull TaskListener closeDelegate;
 
-        private CloseableTaskListener(TaskListener mainDelegate, TaskListener closeDelegate) {
+        private CloseableTaskListener(@NonNull TaskListener mainDelegate, @NonNull TaskListener closeDelegate) {
             this.mainDelegate = mainDelegate;
             this.closeDelegate = closeDelegate;
             assert closeDelegate instanceof AutoCloseable;
         }
 
+        @NonNull
         @Override public PrintStream getLogger() {
             return mainDelegate.getLogger();
         }

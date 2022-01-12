@@ -59,9 +59,7 @@ public class TestVisitor implements SimpleChunkVisitor {
 
         public CallEntry(CallType type, int... vals) {
             this.type = type;
-            for (int i=0; i<vals.length; i++){
-                ids[i]=vals[i];
-            }
+            System.arraycopy(vals, 0, ids, 0, vals.length);
         }
 
         @Override
@@ -194,7 +192,7 @@ public class TestVisitor implements SimpleChunkVisitor {
 
     /** Tests that the rules laid out in {@link SimpleChunkVisitor} javadocs are followed.
      *  Specifically: no atomNode dupes for the same node, no atomNode with a start/end for the same node*/
-    public void assertNoDupes() throws Exception {
+    public void assertNoDupes() {
         // Full equality check
         List<CallEntry> entries = new ArrayList<>();
         HashSet<Integer> visitedAtomNodes = new HashSet<>();
@@ -236,7 +234,7 @@ public class TestVisitor implements SimpleChunkVisitor {
 
     /** Parallel callback events CANNOT have nulls for the parallel start node */
     @Issue("JENKINS-39841")
-    public void assertNoIllegalNullsInEvents() throws Exception {
+    public void assertNoIllegalNullsInEvents() {
         for (CallEntry ce : calls) {
             Integer id = ce.getNodeId();
             Assert.assertNotNull("Callback with illegally null node: "+ce, id);
@@ -263,7 +261,7 @@ public class TestVisitor implements SimpleChunkVisitor {
         }
     }
 
-    public void assertMatchingParallelBranchStartEnd() throws Exception {
+    public void assertMatchingParallelBranchStartEnd() {
         // Map the parallel start node to the start/end nodes for all branches
         HashMap<Integer, List<Integer>> branchStartIds = new HashMap<>();
         HashMap<Integer, List<Integer>> branchEndIds = new HashMap<>();
@@ -308,7 +306,7 @@ public class TestVisitor implements SimpleChunkVisitor {
     }
 
     /** Verify that we have balanced start/end for parallels */
-    public void assertMatchingParallelStartEnd() throws Exception {
+    public void assertMatchingParallelStartEnd() {
         // It's like balancing parentheses, starts and ends must be equal
         ArrayDeque<Integer> openParallelStarts = new ArrayDeque<>();
 
@@ -334,7 +332,7 @@ public class TestVisitor implements SimpleChunkVisitor {
             for (Integer parallelStartId : openParallelStarts) {
                 sb.append(parallelStartId).append(',');
             }
-            Assert.fail("Parallel ends with no starts, for parallel(s) with start nodes IDs: "+sb.toString());
+            Assert.fail("Parallel ends with no starts, for parallel(s) with start nodes IDs: " + sb);
         }
     }
 }

@@ -32,6 +32,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
         /** Null to use the platform default, which may change over time as enhanced options are available. */
         private FlowDurabilityHint durabilityHint = null;
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Global Default Pipeline Durability Level";
@@ -48,7 +49,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
         }
 
         @Override
-        public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
+        public boolean configure(StaplerRequest req, JSONObject json) {
             // TODO verify if this is covered by permissions checks or we need an explicit check here.
             Object ob = json.opt("durabilityHint");
             FlowDurabilityHint hint = null;

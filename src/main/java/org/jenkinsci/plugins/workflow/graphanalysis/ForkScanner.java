@@ -368,7 +368,7 @@ public class ForkScanner extends AbstractFlowScanner {
         ArrayDeque<Fork> parallelForks = new ArrayDeque<>();  // Tracks the discovered forks in order of encounter
 
         Predicate<FlowNode> notAHead = new Predicate<FlowNode>() {  // Filter out pre-existing heads
-            Collection<FlowNode> checkHeads = convertToFastCheckable(heads);
+            final Collection<FlowNode> checkHeads = convertToFastCheckable(heads);
 
             @Override
             public boolean apply(FlowNode input) { return !checkHeads.contains(input); }

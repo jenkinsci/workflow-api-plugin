@@ -416,6 +416,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
     }
 
     @Exported
+    @NonNull
     @SuppressWarnings("deprecation") // of override
     @Override
     @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "CopyOnWrite ArrayList, and field load & modification is synchronized")
@@ -466,7 +467,7 @@ public abstract class FlowNode extends Actionable implements Saveable {
                 }
 
                 @Override
-                public boolean removeAll(Collection<?> c) {
+                public boolean removeAll(@NonNull Collection<?> c) {
                     boolean changed = actions.removeAll(c);
                     if (changed) {
                         persistSafe();

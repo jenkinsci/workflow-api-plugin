@@ -40,8 +40,9 @@ class FilteratorImpl<T> implements Filterator<T> {
     private Iterator<T> wrapped = null;
     private Predicate<T> matchCondition = null;
 
+    @NonNull
     @Override
-    public FilteratorImpl<T> filter(Predicate<T> matchCondition) {
+    public FilteratorImpl<T> filter(@NonNull Predicate<T> matchCondition) {
         return new FilteratorImpl<>(this, matchCondition);
     }
 

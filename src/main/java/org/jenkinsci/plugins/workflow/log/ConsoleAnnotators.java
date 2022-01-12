@@ -76,7 +76,7 @@ public class ConsoleAnnotators {
                         ClassFilter.DEFAULT)) {
                     long timestamp = ois.readLong();
                     if (TimeUnit.HOURS.toMillis(1) > abs(System.currentTimeMillis() - timestamp)) {
-                        @SuppressWarnings("unchecked") ConsoleAnnotator<T> annotator = (ConsoleAnnotator) ois.readObject();
+                        @SuppressWarnings("unchecked") ConsoleAnnotator<T> annotator = (ConsoleAnnotator<T>) ois.readObject();
                         return annotator;
                     }
                 }

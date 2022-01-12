@@ -66,7 +66,7 @@ public abstract class FlowCopier implements ExtensionPoint {
             Queue.Executable originalExec = original.getExecutable();
             Queue.Executable copyExec = copy.getExecutable();
             if (originalExec instanceof Run && copyExec instanceof Run) {
-                copy((Run) originalExec, (Run) copyExec, copy.getListener());
+                copy((Run<?, ?>) originalExec, (Run<?, ?>) copyExec, copy.getListener());
             }
         }
 

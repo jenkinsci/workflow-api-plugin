@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Functions;
 import hudson.console.AnnotatedLargeText;
 import hudson.model.BuildListener;
@@ -47,20 +48,24 @@ public final class BrokenLogStorage implements LogStorage {
     public BrokenLogStorage(Throwable x) {
         this.x = x;
     }
-    
-    @Override public BuildListener overallListener() throws IOException, InterruptedException {
+
+    @NonNull
+    @Override public BuildListener overallListener() throws IOException {
         throw new IOException(x);
     }
-    
-    @Override public TaskListener nodeListener(FlowNode node) throws IOException, InterruptedException {
+
+    @NonNull
+    @Override public TaskListener nodeListener(@NonNull FlowNode node) throws IOException {
         throw new IOException(x);
     }
-    
-    @Override public AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(FlowExecutionOwner.Executable build, boolean complete) {
+
+    @NonNull
+    @Override public AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(@NonNull FlowExecutionOwner.Executable build, boolean complete) {
         return new BrokenAnnotatedLargeText<>();
     }
-    
-    @Override public AnnotatedLargeText<FlowNode> stepLog(FlowNode node, boolean complete) {
+
+    @NonNull
+    @Override public AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete) {
         return new BrokenAnnotatedLargeText<>();
     }
 

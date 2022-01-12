@@ -32,7 +32,6 @@ import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.remoting.VirtualChannel;
 import hudson.slaves.ComputerListener;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -143,7 +142,7 @@ public class FilePathUtils {
                 addChannel(c.getChannel(), c.getName());
             }
         }
-        @Override public void preOnline(Computer c, Channel channel, FilePath root, TaskListener listener) throws IOException, InterruptedException {
+        @Override public void preOnline(Computer c, Channel channel, FilePath root, TaskListener listener) {
             addChannel(channel, c.getName());
         }
 

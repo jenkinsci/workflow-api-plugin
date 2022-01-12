@@ -156,6 +156,7 @@ public abstract class FlowExecutionOwner implements Serializable {
 
     private static class DummyOwner extends FlowExecutionOwner {
         DummyOwner() {}
+        @NonNull
         @Override public FlowExecution get() throws IOException {
             throw new IOException("not implemented");
         }
@@ -174,7 +175,8 @@ public abstract class FlowExecutionOwner implements Serializable {
         @Override public int hashCode() {
             return 0;
         }
-        @Override public TaskListener getListener() throws IOException {
+        @NonNull
+        @Override public TaskListener getListener() {
             return TaskListener.NULL;
         }
     }

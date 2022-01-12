@@ -113,7 +113,7 @@ public class LinearBlockHoppingScanner extends LinearScanner {
     }
 
     @Override
-    protected FlowNode next(@NonNull FlowNode current, @NonNull Collection<FlowNode> blackList) {
+    protected FlowNode next(@CheckForNull FlowNode current, @NonNull Collection<FlowNode> blackList) {
         if (current == null) {
             return null;
         }

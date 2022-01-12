@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
 import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collection;
@@ -78,7 +79,7 @@ public class LinearScanner extends AbstractFlowScanner {
     }
 
     @Override
-    protected FlowNode next(FlowNode current, @NonNull Collection<FlowNode> blackList) {
+    protected FlowNode next(@CheckForNull FlowNode current, @NonNull Collection<FlowNode> blackList) {
         if (current == null) {
             return null;
         }
@@ -98,8 +99,9 @@ public class LinearScanner extends AbstractFlowScanner {
      * @deprecated prefer {@link #filteredNodes(FlowNode, Predicate)}
      */
     @Deprecated
+    @NonNull
     @Override
-    public List<FlowNode> filteredNodes(Collection<FlowNode> heads, Predicate<FlowNode> matchPredicate) {
+    public List<FlowNode> filteredNodes(Collection<FlowNode> heads, @NonNull Predicate<FlowNode> matchPredicate) {
         return super.filteredNodes(heads, matchPredicate);
     }
 
@@ -109,6 +111,7 @@ public class LinearScanner extends AbstractFlowScanner {
      * {@inheritDoc}
      * @param heads Nodes to start iterating backward from by visiting their parents. <strong>Do not pass multiple heads.</strong>
      */
+    @NonNull
     @Override
     public List<FlowNode> filteredNodes(Collection<FlowNode> heads, Collection<FlowNode> blackList, Predicate<FlowNode> matchCondition) {
         return super.filteredNodes(heads, blackList, matchCondition);
@@ -120,7 +123,7 @@ public class LinearScanner extends AbstractFlowScanner {
      */
     @Deprecated
     @Override
-    public FlowNode findFirstMatch(Collection<FlowNode> heads, Predicate<FlowNode> matchPredicate) {
+    public FlowNode findFirstMatch(Collection<FlowNode> heads, @NonNull Predicate<FlowNode> matchPredicate) {
         return super.findFirstMatch(heads, matchPredicate);
     }
 
@@ -142,7 +145,7 @@ public class LinearScanner extends AbstractFlowScanner {
      * @param heads <strong>Do not pass multiple heads.</strong>
      */
     @Override
-    public void visitAll(Collection<FlowNode> heads, FlowNodeVisitor visitor) {
+    public void visitAll(Collection<FlowNode> heads, @NonNull FlowNodeVisitor visitor) {
         super.visitAll(heads, visitor);
     }
 
@@ -153,7 +156,7 @@ public class LinearScanner extends AbstractFlowScanner {
      * @param heads Nodes to start walking the DAG backwards from. <strong>Do not pass multiple heads.</strong>
      */
     @Override
-    public void visitAll(Collection<FlowNode> heads, Collection<FlowNode> blackList, FlowNodeVisitor visitor) {
+    public void visitAll(Collection<FlowNode> heads, Collection<FlowNode> blackList, @NonNull FlowNodeVisitor visitor) {
         super.visitAll(heads, blackList, visitor);
     }
 
@@ -163,7 +166,7 @@ public class LinearScanner extends AbstractFlowScanner {
      */
     @Deprecated
     @Override
-    public FlowNode findFirstMatch(FlowExecution exec, Predicate<FlowNode> matchPredicate) {
+    public FlowNode findFirstMatch(FlowExecution exec, @NonNull Predicate<FlowNode> matchPredicate) {
         return super.findFirstMatch(exec, matchPredicate);
     }
 

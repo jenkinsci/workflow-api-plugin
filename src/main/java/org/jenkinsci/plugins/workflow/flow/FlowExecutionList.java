@@ -134,11 +134,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         final List<FlowExecutionOwner> copy = new ArrayList<>(runningTasks.getView());
         LOGGER.log(Level.FINE, "scheduling save of {0}", copy);
         try {
-            executor.submit(new Runnable() {
-                @Override public void run() {
-                    save(copy);
-                }
-            });
+            executor.submit(() -> save(copy));
         } catch (RejectedExecutionException x) {
             LOGGER.log(Level.FINE, "could not schedule save, perhaps because Jenkins is shutting down; saving immediately", x);
             save(copy);
@@ -210,7 +206,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 all.add(execs);
                 Futures.addCallback(execs,new FutureCallback<List<StepExecution>>() {
                     @Override
-                    public void onSuccess(List<StepExecution> result) {
+                    public void onSuccess(@NonNull List<StepExecution> result) {
                         for (StepExecution e : result) {
                             try {
                                 f.apply(e);
@@ -221,7 +217,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     }
 
                     @Override
-                    public void onFailure(Throwable t) {
+                    public void onFailure(@NonNull Throwable t) {
                         LOGGER.log(Level.WARNING, null, t);
                     }
                 }, MoreExecutors.directExecutor());
@@ -260,7 +256,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         public void onResumed(@NonNull FlowExecution e) {
             Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                 @Override
-                public void onSuccess(List<StepExecution> result) {
+                public void onSuccess(@NonNull List<StepExecution> result) {
                     if (e.isComplete()) {
                         // WorkflowRun.onLoad will not fire onResumed if the serialized execution was already
                         // complete when loaded, but right now (at least for workflow-cps), the execution resumes
@@ -289,7 +285,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 }
 
                 @Override
-                public void onFailure(Throwable t) {
+                public void onFailure(@NonNull Throwable t) {
                     if (t instanceof CancellationException) {
                         LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
                     } else {

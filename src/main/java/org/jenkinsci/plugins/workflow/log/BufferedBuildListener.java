@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.CloseProofOutputStream;
 import hudson.model.BuildListener;
@@ -49,7 +50,8 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
         this.out = out;
         ps = new PrintStream(out, false, "UTF-8");
     }
-    
+
+    @NonNull
     @Override public PrintStream getLogger() {
         return ps;
     }

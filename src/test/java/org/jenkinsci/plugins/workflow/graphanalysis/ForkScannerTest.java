@@ -49,6 +49,7 @@ import org.junit.Assert;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -70,7 +71,7 @@ public class ForkScannerTest {
 
     public static Predicate<TestVisitor.CallEntry> predicateForCallEntryType(final TestVisitor.CallType type) {
         return new Predicate<TestVisitor.CallEntry>() {
-            TestVisitor.CallType myType = type;
+            final TestVisitor.CallType myType = type;
 
             @Override
             public boolean test(TestVisitor.CallEntry input) {
@@ -180,7 +181,7 @@ public class ForkScannerTest {
         // Verify we have at least one appropriate parallel end event, for the mandatory parallel
         List<String> parallelEnds =
                 test.filteredCallsByType(TestVisitor.CallType.PARALLEL_END).stream()
-                        .map(CALL_TO_NODE_ID::apply)
+                        .map(CALL_TO_NODE_ID)
                         .collect(Collectors.toList());
         boolean hasMatchingEnd = false;
         for (FlowNode f : heads) {
@@ -193,7 +194,7 @@ public class ForkScannerTest {
 
         List<String> branchEnds =
                 test.filteredCallsByType(TestVisitor.CallType.PARALLEL_BRANCH_END).stream()
-                        .map(CALL_TO_NODE_ID::apply)
+                        .map(CALL_TO_NODE_ID)
                         .collect(Collectors.toList());
         // Verify each branch has a branch end event
         for (FlowNode f : heads) {
@@ -204,7 +205,7 @@ public class ForkScannerTest {
     }
 
     /** Runs a fairly extensive suite of sanity tests of iteration and visitor use */
-    private void sanityTestIterationAndVisiter(List<FlowNode> heads) throws Exception {
+    private void sanityTestIterationAndVisiter(List<FlowNode> heads) {
         ForkScanner scan = new ForkScanner();
         TestVisitor test = new TestVisitor();
         scan.setup(heads);
@@ -278,7 +279,7 @@ public class ForkScannerTest {
         Assert.assertNotNull(scanner.parallelBlockStartStack);
         Assert.assertEquals(0, scanner.parallelBlockStartStack.size());
         Assert.assertEquals(exec.getNode("4"), scanner.currentParallelStartNode);
-        sanityTestIterationAndVisiter(Arrays.asList(exec.getNode("13")));
+        sanityTestIterationAndVisiter(Collections.singletonList(exec.getNode("13")));
 
         ForkScanner.ParallelBlockStart start = scanner.currentParallelStart;
         Assert.assertEquals(1, start.unvisited.size());
@@ -430,9 +431,9 @@ public class ForkScannerTest {
         Assert.assertEquals(9, outputs.size());
     }
 
-    private Function<FlowNode, String> NODE_TO_ID = input -> input != null ? input.getId() : null;
+    private final Function<FlowNode, String> NODE_TO_ID = input -> input != null ? input.getId() : null;
 
-    private Function<TestVisitor.CallEntry, String> CALL_TO_NODE_ID =
+    private final Function<TestVisitor.CallEntry, String> CALL_TO_NODE_ID =
             input ->
                     input != null && input.getNodeId() != null
                             ? input.getNodeId().toString()
@@ -518,7 +519,7 @@ public class ForkScannerTest {
         FlowNode echoNode = new DepthFirstScanner().findFirstMatch(b.getExecution(), new NodeStepTypePredicate(EchoStep.DescriptorImpl.byFunctionName("echo")));
         Assert.assertNotNull(echoNode);
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
-        sanityTestIterationAndVisiter(Arrays.asList(echoNode));
+        sanityTestIterationAndVisiter(Collections.singletonList(echoNode));
 
         TestVisitor visitor = new TestVisitor();
         ForkScanner scanner = new ForkScanner();
@@ -547,7 +548,7 @@ public class ForkScannerTest {
         Assert.assertArrayEquals(heads.toArray(), start.unvisited.toArray());
 
         // Ensure no issues with single start triggering least common ancestor
-        heads = new LinkedHashSet<>(Arrays.asList(exec.getNode("4")));
+        heads = new LinkedHashSet<>(Collections.singletonList(exec.getNode("4")));
         scan.setup(heads);
         Assert.assertNull(scan.currentParallelStart);
         Assert.assertTrue(scan.parallelBlockStartStack == null || scan.parallelBlockStartStack.isEmpty());
@@ -707,7 +708,7 @@ public class ForkScannerTest {
         FlowExecution exec = this.SIMPLE_PARALLEL_RUN.getExecution();
         ForkScanner f = new ForkScanner();
         f.setup(exec.getCurrentHeads());
-        Assert.assertArrayEquals(new HashSet(exec.getCurrentHeads()).toArray(), new HashSet(f.currentParallelHeads()).toArray());
+        Assert.assertArrayEquals(new HashSet<>(exec.getCurrentHeads()).toArray(), new HashSet<>(f.currentParallelHeads()).toArray());
         List<FlowNode> expectedHeads = f.currentParallelHeads();
 
         sanityTestIterationAndVisiter(exec.getCurrentHeads());
