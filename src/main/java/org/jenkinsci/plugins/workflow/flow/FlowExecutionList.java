@@ -5,7 +5,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.inject.Inject;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.CheckForNull;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 
@@ -173,12 +172,9 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      */
     @Extension
     public static class ItemListenerImpl extends ItemListener {
-        @Inject
-        FlowExecutionList list;
-
         @Override
         public void onLoaded() {
-            for (final FlowExecution e : list) {
+            for (final FlowExecution e : FlowExecutionList.get()) {
                 LOGGER.log(Level.FINE, "Eager loading {0}", e);
                 Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                     @Override
@@ -207,14 +203,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      */
     @Extension
     public static class StepExecutionIteratorImpl extends StepExecutionIterator {
-        @Inject
-        FlowExecutionList list;
-
         @Override
         public ListenableFuture<?> apply(final Function<StepExecution, Void> f) {
             List<ListenableFuture<?>> all = new ArrayList<>();
 
-            for (FlowExecution e : list) {
+            for (FlowExecution e : FlowExecutionList.get()) {
                 ListenableFuture<List<StepExecution>> execs = e.getCurrentExecutions(false);
                 all.add(execs);
                 Futures.addCallback(execs,new FutureCallback<List<StepExecution>>() {
