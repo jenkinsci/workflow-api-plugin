@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
@@ -180,7 +181,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
                 Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                     @Override
-                    public void onSuccess(List<StepExecution> result) {
+                    public void onSuccess(@NonNull List<StepExecution> result) {
                         LOGGER.log(Level.FINE, "Will resume {0}", result);
                         for (StepExecution se : result) {
                             se.onResume();
@@ -188,7 +189,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     }
 
                     @Override
-                    public void onFailure(Throwable t) {
+                    public void onFailure(@NonNull Throwable t) {
                         if (t instanceof CancellationException) {
                             LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
                         } else {
@@ -214,7 +215,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 all.add(execs);
                 Futures.addCallback(execs,new FutureCallback<List<StepExecution>>() {
                     @Override
-                    public void onSuccess(List<StepExecution> result) {
+                    public void onSuccess(@NonNull List<StepExecution> result) {
                         for (StepExecution e : result) {
                             try {
                                 f.apply(e);
@@ -225,7 +226,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     }
 
                     @Override
-                    public void onFailure(Throwable t) {
+                    public void onFailure(@NonNull Throwable t) {
                         LOGGER.log(Level.WARNING, null, t);
                     }
                 }, MoreExecutors.directExecutor());
