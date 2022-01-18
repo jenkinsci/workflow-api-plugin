@@ -174,8 +174,10 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     public static class ItemListenerImpl extends ItemListener {
         @Override
         public void onLoaded() {
-            for (final FlowExecution e : FlowExecutionList.get()) {
-                LOGGER.log(Level.FINE, "Eager loading {0}", e);
+            FlowExecutionList list = FlowExecutionList.get();
+            for (final FlowExecution e : list) {
+                // The call to FlowExecutionOwner.get in the implementation of iterator() is sufficent to load the Pipeline.
+                LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
                 Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
                     @Override
                     public void onSuccess(List<StepExecution> result) {
