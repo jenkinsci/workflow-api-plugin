@@ -23,7 +23,7 @@ THE SOFTWARE.
 -->
 
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout">
   <st:documentation>
     Generate a caption for the main panel that renders the status of the flow node.
 
@@ -31,7 +31,7 @@ THE SOFTWARE.
   </st:documentation>
 
 	<h1 class="build-caption page-headline">
-	  <img class="build-caption-status-icon" src="${imagesURL}/48x48/${node.iconColor.image}" width="48" height="48"
+	  <l:icon class="${node.iconColor.iconClassName} icon-xlg"
          alt="${node.iconColor.description}" tooltip="${node.iconColor.description}" />
 	  <d:invokeBody />
 	</h1>
