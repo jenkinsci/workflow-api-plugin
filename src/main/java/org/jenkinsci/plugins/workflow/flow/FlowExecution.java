@@ -109,7 +109,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     /**
      * Should be called by the flow owner after it is deserialized.
      */
-    public /*abstract*/ void onLoad(FlowExecutionOwner owner) {
+    public /*abstract*/ void onLoad(FlowExecutionOwner owner) throws IOException {
         if (Util.isOverridden(FlowExecution.class, getClass(), "onLoad")) {
             onLoad();
         }
