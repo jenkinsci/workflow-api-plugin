@@ -4,7 +4,11 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.security.Permission;
+import hudson.util.ListBoxModel;
 import hudson.util.ReflectionUtils;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
@@ -72,6 +76,20 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
 
         public static FlowDurabilityHint[] getDurabilityHintValues() {
             return FlowDurabilityHint.values();
+        }
+
+        public ListBoxModel doFillDurabilityHintItems() {
+            ListBoxModel options = new ListBoxModel();
+
+            options.add("None: use pipeline default (" + getSuggestedDurabilityHint().name() + ")", "null");
+
+            List<ListBoxModel.Option> mappedOptions = Arrays.stream(getDurabilityHintValues())
+                    .map(hint -> new ListBoxModel.Option(hint.getDescription(), hint.name()))
+                    .collect(Collectors.toList());
+
+            options.addAll(mappedOptions);
+
+            return options;
         }
 
         @NonNull

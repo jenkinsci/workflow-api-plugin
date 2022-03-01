@@ -2,15 +2,7 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
     <f:section title="Pipeline Speed/Durability Settings">
         <f:entry title="${%Pipeline Default Speed/Durability Level}" field="durabilityHint">
-            <select class="setting-input" name="durabilityHint">
-                <f:option value="null" selected="${instance[field] == null}">None: use pipeline default (<j:out value="${descriptor.suggestedDurabilityHint.name()}" />)</f:option>
-                <j:forEach var="it" items="${descriptor.durabilityHintValues}">
-                    <j:set var="optionBody" encode="false">${it.description}</j:set>
-                    <option value="${it.name()}"
-                            selected="${(it==instance[field]) ? 'true':null}"
-                            tooltip="${it.tooltip}"><j:out value="${optionBody}"/></option>
-                </j:forEach>
-            </select>
+            <f:select />
         </f:entry>
     </f:section>
     <br/><br/>
