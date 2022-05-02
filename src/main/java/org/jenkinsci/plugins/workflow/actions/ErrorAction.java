@@ -32,8 +32,11 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.Functions;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
 
 /**
  * Attached to {@link FlowNode} that caused an error.
@@ -111,4 +114,39 @@ public class ErrorAction implements PersistentAction {
     public String getUrlName() {
         return null;
     }
+
+    /**
+     * Attempts to locate the first node of a build which threw an error.
+     * Typically an error will be rethrown by enclosing blocks,
+     * so this will look for the original node with an {@link ErrorAction}
+     * matching the given stack trace.
+     * @param error an error thrown at some point during a build
+     * @param execution the build
+     * @return the originating node, if one can be located
+     */
+    public static @CheckForNull FlowNode findOrigin(@NonNull Throwable error, @NonNull FlowExecution execution) {
+        FlowNode candidate = null;
+        for (FlowNode n : new ForkScanner().allNodes(execution)) {
+            ErrorAction errorAction = n.getPersistentAction(ErrorAction.class);
+            if (errorAction != null && equals(error, errorAction.getError())) {
+                candidate = n; // continue search for earlier one
+            }
+        }
+        return candidate;
+    }
+
+    /**
+     * {@link Throwable#equals} might not be reliable if the program has resumed
+     * and stuff is deserialized.
+     */
+    private static boolean equals(Throwable t1, Throwable t2) {
+        if (t1 == t2) {
+            return true;
+        } else if (t1.getClass() != t2.getClass()) {
+            return false;
+        } else {
+            return Functions.printThrowable(t1).equals(Functions.printThrowable(t2));
+        }
+    }
+
 }

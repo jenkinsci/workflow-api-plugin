@@ -28,10 +28,10 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.Describable;
 import hudson.model.Descriptor;
 import java.io.IOException;
 import java.io.Serializable;
+import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -44,6 +44,15 @@ import org.kohsuke.accmod.restrictions.Beta;
 @Restricted(Beta.class)
 public abstract class ErrorCondition extends AbstractDescribableImpl<ErrorCondition> implements ExtensionPoint, Serializable {
 
+    /**
+     * Checks whether a given error matches this condition.
+     * @param error some exception thrown during a build
+     * @param context the context in which the error is being <em>handled</em>, if available;
+     *                {@link ErrorAction#findOrigin} could be used to determine the part of the build in which the error was <em>thrown</em>
+     * @return true if the error is recognized
+     * @throws IOException as per {@link StepContext#get}
+     * @throws InterruptedException as per {@link StepContext#get}
+     */
     public abstract boolean test(@NonNull Throwable error, @CheckForNull StepContext context) throws IOException, InterruptedException;
 
     @Override public ErrorConditionDescriptor getDescriptor() {
