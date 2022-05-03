@@ -36,6 +36,8 @@ import hudson.Functions;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.graph.AtomNode;
+import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
 
 /**
@@ -122,7 +124,9 @@ public class ErrorAction implements PersistentAction {
      * matching the given stack trace.
      * @param error an error thrown at some point during a build
      * @param execution the build
-     * @return the originating node, if one can be located
+     * @return the originating node, if one can be located;
+     *         typically an {@link AtomNode} or {@link BlockEndNode}
+     *         (in the latter case you may want to use {@link BlockEndNode#getStartNode} to look up actions)
      */
     public static @CheckForNull FlowNode findOrigin(@NonNull Throwable error, @NonNull FlowExecution execution) {
         FlowNode candidate = null;
