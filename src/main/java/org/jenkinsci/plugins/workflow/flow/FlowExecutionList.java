@@ -184,7 +184,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     public void onSuccess(@NonNull List<StepExecution> result) {
                         LOGGER.log(Level.FINE, "Will resume {0}", result);
                         for (StepExecution se : result) {
-                            se.onResume();
+                            try {
+                                se.onResume();
+                            } catch (Throwable x) {
+                                se.getContext().onFailure(x);
+                            }
                         }
                     }
 
