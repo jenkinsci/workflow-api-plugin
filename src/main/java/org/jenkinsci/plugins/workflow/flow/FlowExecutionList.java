@@ -10,6 +10,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
+import hudson.init.InitMilestone;
 import hudson.init.Terminator;
 import hudson.model.listeners.ItemListener;
 import hudson.remoting.SingleLaneExecutorService;
@@ -31,6 +32,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 
 /**
@@ -43,6 +45,8 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     private final CopyOnWriteList<FlowExecutionOwner> runningTasks = new CopyOnWriteList<>();
     private final SingleLaneExecutorService executor = new SingleLaneExecutorService(Timer.get());
     private XmlFile configFile;
+
+    private transient volatile boolean resumptionComplete;
 
     public FlowExecutionList() {
         load();
@@ -160,11 +164,17 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     }
 
     /**
-     * @deprecated Only exists for binary compatibility.
+     * Returns true if all executions that were present in this {@link FlowExecutionList} have been loaded.
+     *
+     * <p>This takes place slightly after {@link InitMilestone#COMPLETED} is reached during Jenkins startup.
+     *
+     * <p>Useful to avoid resuming Pipelines in contexts that may lead to deadlock.
+     *
+     * <p>It is <em>not</em> guaranteed that {@link FlowExecution#afterStepExecutionsResumed} has been called at this point.
      */
-    @Deprecated
+    @Restricted(Beta.class)
     public boolean isResumptionComplete() {
-        return false;
+        return resumptionComplete;
     }
 
     /**
@@ -179,29 +189,8 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
             for (final FlowExecution e : list) {
                 // The call to FlowExecutionOwner.get in the implementation of iterator() is sufficent to load the Pipeline.
                 LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
-                Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
-                    @Override
-                    public void onSuccess(@NonNull List<StepExecution> result) {
-                        LOGGER.log(Level.FINE, "Will resume {0}", result);
-                        for (StepExecution se : result) {
-                            try {
-                                se.onResume();
-                            } catch (Throwable x) {
-                                se.getContext().onFailure(x);
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(@NonNull Throwable t) {
-                        if (t instanceof CancellationException) {
-                            LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
-                        } else {
-                            LOGGER.log(Level.WARNING, "Failed to load " + e, t);
-                        }
-                    }
-                }, MoreExecutors.directExecutor());
             }
+            list.resumptionComplete = true;
         }
     }
 
@@ -255,5 +244,57 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         SingleLaneExecutorService executor = get().executor;
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
+    }
+
+    /**
+     * Whenever a Pipeline resumes, resume all incomplete steps in its {@link FlowExecution}.
+     *
+     * <p>Called by {@code WorkflowRun.onLoad}, so guaranteed to run if a Pipeline resumes
+     * regardless of its presence in {@link FlowExecutionList}.
+     */
+    @Extension
+    public static class ResumeStepExecutionListener extends FlowExecutionListener {
+        @Override
+        public void onResumed(@NonNull FlowExecution e) {
+            Futures.addCallback(e.getCurrentExecutions(false), new FutureCallback<List<StepExecution>>() {
+                @Override
+                public void onSuccess(@NonNull List<StepExecution> result) {
+                    try {
+                        if (e.isComplete()) {
+                            // WorkflowRun.onLoad will not fireResumed if the execution was already complete when loaded,
+                            // and CpsFlowExecution should not then complete until afterStepExecutionsResumed, so this is defensive.
+                            return;
+                        }
+                        FlowExecutionList list = FlowExecutionList.get();
+                        FlowExecutionOwner owner = e.getOwner();
+                        if (!list.runningTasks.contains(owner)) {
+                            LOGGER.log(Level.WARNING, "Resuming {0}, which is missing from FlowExecutionList ({1}), so registering it now.", new Object[] {owner, list.runningTasks.getView()});
+                            list.register(owner);
+                        }
+                        LOGGER.log(Level.FINE, "Will resume {0}", result);
+                        for (StepExecution se : result) {
+                            try {
+                                se.onResume();
+                            } catch (Throwable x) {
+                                se.getContext().onFailure(x);
+                            }
+                        }
+                    } finally {
+                        e.afterStepExecutionsResumed();
+                    }
+                }
+
+                @Override
+                public void onFailure(@NonNull Throwable t) {
+                    if (t instanceof CancellationException) {
+                        LOGGER.log(Level.FINE, "Cancelled load of " + e, t);
+                    } else {
+                        LOGGER.log(Level.WARNING, "Failed to load " + e, t);
+                    }
+                    e.afterStepExecutionsResumed();
+                }
+
+            }, Timer.get()); // We always hold RunMap and WorkflowRun locks here, so we resume steps on a different thread to avoid potential deadlocks. See JENKINS-67351.
+        }
     }
 }
