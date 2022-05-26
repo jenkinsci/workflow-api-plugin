@@ -12,6 +12,7 @@ import hudson.ExtensionList;
 import hudson.XmlFile;
 import hudson.init.InitMilestone;
 import hudson.init.Terminator;
+import hudson.model.Computer;
 import hudson.model.listeners.ItemListener;
 import hudson.remoting.SingleLaneExecutorService;
 import hudson.util.CopyOnWriteList;
@@ -359,7 +360,10 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 FlowNode n = entry.getKey();
                 StepExecution exec = entry.getValue();
                 processing.add(n);
-                Timer.get().submit(() -> {
+                // Strictly speaking threadPoolForRemoting should be used for agent communications.
+                // In practice the onResume impl known to block is in ExecutorStepExecution.
+                // Avoid jenkins.util.Timer since it is capped at 10 threads and should not be used for long tasks.
+                Computer.threadPoolForRemoting.submit(() -> {
                     LOGGER.fine(() -> "About to resume " + n + " ~ " + exec);
                     try {
                         exec.onResume();
