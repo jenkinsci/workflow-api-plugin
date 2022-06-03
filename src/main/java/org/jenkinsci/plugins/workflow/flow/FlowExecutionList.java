@@ -361,7 +361,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 StepExecution exec = entry.getValue();
                 processing.add(n);
                 // Strictly speaking threadPoolForRemoting should be used for agent communications.
-                // In practice the onResume impl known to block is in ExecutorStepExecution.
+                // In practice the only onResume impl known to block is in ExecutorStepExecution.
                 // Avoid jenkins.util.Timer since it is capped at 10 threads and should not be used for long tasks.
                 Computer.threadPoolForRemoting.submit(() -> {
                     LOGGER.fine(() -> "About to resume " + n + " ~ " + exec);
