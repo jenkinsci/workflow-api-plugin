@@ -322,4 +322,12 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     protected void notifyShutdown() {
         // Default is no-op
     }
+
+    /**
+     * Called after a restart and any attempts at {@link StepExecution#onResume} have completed.
+     * This is a signal that it is safe to resume program execution.
+     * By default, does nothing.
+     */
+    protected void afterStepExecutionsResumed() {}
+
 }
