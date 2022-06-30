@@ -54,6 +54,8 @@ import jenkins.util.JenkinsJVM;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.steps.BodyInvoker;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 
 /**
  * A way of decorating output from a {@link TaskListener}.
@@ -131,6 +133,15 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
          */
         @CheckForNull TaskListenerDecorator of(@NonNull FlowExecutionOwner owner);
 
+        /**
+         *
+         * @return boolean, false means to apply step decorators first, then TaskListenerDecorator, true means otherwise
+         * @see #apply(TaskListener, FlowExecutionOwner, TaskListenerDecorator)
+         */
+        @Restricted(Beta.class)
+        default boolean isAppliedBeforeMainDecorator(){
+            return false;
+        }
     }
 
     /**
@@ -145,11 +156,13 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
      */
     public static BuildListener apply(@NonNull TaskListener listener, @NonNull FlowExecutionOwner owner, @CheckForNull TaskListenerDecorator mainDecorator) {
         JenkinsJVM.checkJenkinsJVM();
+        List<TaskListenerDecorator.Factory> decoratorFactories = ExtensionList.lookup(TaskListenerDecorator.Factory.class);
         List<TaskListenerDecorator> decorators = Stream.concat(
-                ExtensionList.lookup(TaskListenerDecorator.Factory.class).stream().map(f -> f.of(owner)),
-                Stream.of(mainDecorator)).
-            filter(Objects::nonNull).
-            collect(Collectors.toCollection(ArrayList::new));
+                        decoratorFactories.stream().filter(f -> !f.isAppliedBeforeMainDecorator()).map(f -> f.of(owner)),
+                        Stream.concat(Stream.of(mainDecorator),
+                                decoratorFactories.stream().filter(f -> f.isAppliedBeforeMainDecorator()).map(f -> f.of(owner)))).
+                filter(Objects::nonNull).
+                collect(Collectors.toCollection(ArrayList::new));
         if (decorators.isEmpty()) {
             return CloseableTaskListener.of(BuildListenerAdapter.wrap(listener), listener);
         } else {
