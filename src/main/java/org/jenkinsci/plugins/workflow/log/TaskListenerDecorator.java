@@ -54,6 +54,8 @@ import jenkins.util.JenkinsJVM;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.steps.BodyInvoker;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 
 /**
  * A way of decorating output from a {@link TaskListener}.
@@ -136,6 +138,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
          * @return boolean, false means to apply step decorators first, then TaskListenerDecorator, true means otherwise
          * @see #apply(TaskListener, FlowExecutionOwner, TaskListenerDecorator)
          */
+        @Restricted(Beta.class)
         default boolean isAppliedBeforeMainDecorator(){
             return false;
         }
