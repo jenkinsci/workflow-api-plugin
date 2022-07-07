@@ -62,6 +62,7 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      * Fires the {@link #onCreated(FlowExecution)} event.
      */
     public static void fireCreated(@NonNull FlowExecution execution) {
+        // TODO Jenkins 2.325+ use Listeners.notify
         for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
             listener.onCreated(execution);
         }
