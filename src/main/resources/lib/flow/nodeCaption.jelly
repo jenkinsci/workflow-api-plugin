@@ -33,6 +33,8 @@ THE SOFTWARE.
 	<h1 class="build-caption page-headline">
 	  <l:icon class="${node.iconColor.iconClassName} icon-xlg"
          alt="${node.iconColor.description}" tooltip="${node.iconColor.description}" />
-	  <d:invokeBody />
+        <span class="jenkins-icon-adjacent">
+            <d:invokeBody trim="true"/>
+        </span>
 	</h1>
 </j:jelly>
