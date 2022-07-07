@@ -4,12 +4,14 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.security.Permission;
+import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
@@ -48,6 +50,15 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
         public void setDurabilityHint(FlowDurabilityHint hint){
             this.durabilityHint = hint;
             save();
+        }
+
+        public FormValidation doCheckDurabilityHint(@QueryParameter("durabilityHint") String durabilityHint) {
+            FlowDurabilityHint flowDurabilityHint = Arrays.stream(FlowDurabilityHint.values())
+                    .filter(f -> f.name().equals(durabilityHint))
+                    .findFirst()
+                    .orElse(FlowDurabilityHint.MAX_SURVIVABILITY);
+
+            return FormValidation.ok(flowDurabilityHint.getTooltip());
         }
 
         @Override
