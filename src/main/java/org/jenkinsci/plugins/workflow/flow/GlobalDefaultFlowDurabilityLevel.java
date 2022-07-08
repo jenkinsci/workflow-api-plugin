@@ -56,7 +56,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
             FlowDurabilityHint flowDurabilityHint = Arrays.stream(FlowDurabilityHint.values())
                     .filter(f -> f.name().equals(durabilityHint))
                     .findFirst()
-                    .orElse(FlowDurabilityHint.MAX_SURVIVABILITY);
+                    .orElse(GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT);
 
             return FormValidation.ok(flowDurabilityHint.getTooltip());
         }
@@ -79,20 +79,12 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
             return true;
         }
 
-        public static FlowDurabilityHint getSuggestedDurabilityHint() {
-            return GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT;
-        }
-
-        public static FlowDurabilityHint[] getDurabilityHintValues() {
-            return FlowDurabilityHint.values();
-        }
-
         public ListBoxModel doFillDurabilityHintItems() {
             ListBoxModel options = new ListBoxModel();
 
-            options.add("None: use pipeline default (" + getSuggestedDurabilityHint().name() + ")", "null");
+            options.add("None: use pipeline default (" + GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT.name() + ")", "null");
 
-            List<ListBoxModel.Option> mappedOptions = Arrays.stream(getDurabilityHintValues())
+            List<ListBoxModel.Option> mappedOptions = Arrays.stream(FlowDurabilityHint.values())
                     .map(hint -> new ListBoxModel.Option(hint.getDescription(), hint.name()))
                     .collect(Collectors.toList());
 
