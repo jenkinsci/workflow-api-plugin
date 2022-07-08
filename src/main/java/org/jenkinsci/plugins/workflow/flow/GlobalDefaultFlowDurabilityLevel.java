@@ -4,8 +4,14 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.security.Permission;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
@@ -46,6 +52,15 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
             save();
         }
 
+        public FormValidation doCheckDurabilityHint(@QueryParameter("durabilityHint") String durabilityHint) {
+            FlowDurabilityHint flowDurabilityHint = Arrays.stream(FlowDurabilityHint.values())
+                    .filter(f -> f.name().equals(durabilityHint))
+                    .findFirst()
+                    .orElse(GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT);
+
+            return FormValidation.ok(flowDurabilityHint.getTooltip());
+        }
+
         @Override
         public boolean configure(StaplerRequest req, JSONObject json) {
             // TODO verify if this is covered by permissions checks or we need an explicit check here.
@@ -64,12 +79,18 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
             return true;
         }
 
-        public static FlowDurabilityHint getSuggestedDurabilityHint() {
-            return GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT;
-        }
+        public ListBoxModel doFillDurabilityHintItems() {
+            ListBoxModel options = new ListBoxModel();
 
-        public static FlowDurabilityHint[] getDurabilityHintValues() {
-            return FlowDurabilityHint.values();
+            options.add("None: use pipeline default (" + GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT.name() + ")", "null");
+
+            List<ListBoxModel.Option> mappedOptions = Arrays.stream(FlowDurabilityHint.values())
+                    .map(hint -> new ListBoxModel.Option(hint.getDescription(), hint.name()))
+                    .collect(Collectors.toList());
+
+            options.addAll(mappedOptions);
+
+            return options;
         }
 
         @NonNull
