@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.nio.file.Files;
 import jenkins.model.ArtifactManager;
 import jenkins.model.Jenkins;
 import jenkins.util.BuildListenerAdapter;
@@ -362,7 +363,7 @@ public class StashManager {
                 return;
             }
             VirtualFile srcroot = original.getArtifactManager().root();
-            FilePath dstDir = createTmpDir();
+            FilePath dstDir = new FilePath(Files.createTempDirectory("artifact-copy").toFile());
             try {
                 Map<String,String> files = new HashMap<>();
                 for (String path : srcroot.list("**/*", null, false)) {
@@ -380,14 +381,6 @@ public class StashManager {
             }
 
             StashManager.copyAll(original, copy);
-        }
-
-        private FilePath createTmpDir() throws IOException {
-            File dir = File.createTempFile("artifact", "copy");
-            if (!(dir.delete() && dir.mkdirs())) {
-                throw new IOException("Failed to create temporary directory " + dir.getPath());
-            }
-            return new FilePath(dir);
         }
 
     }
