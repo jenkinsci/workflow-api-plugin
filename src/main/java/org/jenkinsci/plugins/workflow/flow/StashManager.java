@@ -47,6 +47,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -383,10 +384,7 @@ public class StashManager {
         }
 
         private FilePath createTmpDir() throws IOException {
-            File dir = File.createTempFile("artifact", "copy");
-            if (!(dir.delete() && dir.mkdirs())) {
-                throw new IOException("Failed to create temporary directory " + dir.getPath());
-            }
+            File dir = Files.createTempDirectory("artifact" + "copy").toFile();
             return new FilePath(dir);
         }
 
