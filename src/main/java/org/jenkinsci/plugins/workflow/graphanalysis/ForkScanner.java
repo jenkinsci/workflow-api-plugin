@@ -439,6 +439,10 @@ public class ForkScanner extends AbstractFlowScanner {
             }
         }
 
+        if (parallelForks.isEmpty()) {
+            throw new IllegalStateException("No least common ancestor found from " + heads);
+        }
+
         // If we hit issues with the ordering of blocks by depth, apply a sorting to the parallels by depth
         return convertForksToBlockStarts(parallelForks);
     }
@@ -450,7 +454,6 @@ public class ForkScanner extends AbstractFlowScanner {
                 headIds.add(f.getId());
             }
             parallelBlockStartStack = leastCommonAncestor(new LinkedHashSet<>(heads));
-            assert parallelBlockStartStack.size() > 0;
             currentParallelStart = parallelBlockStartStack.pop();
             currentParallelStartNode = currentParallelStart.forkStart;
             myCurrent = currentParallelStart.unvisited.pop();
