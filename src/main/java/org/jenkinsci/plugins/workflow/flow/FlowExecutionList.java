@@ -338,6 +338,15 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         }
 
         synchronized void run() {
+            if (Jenkins.get().isTerminating()) {
+                LOGGER.fine("Skipping step resumption during shutdown");
+                return;
+            }
+            if (Jenkins.get().getInitLevel() != InitMilestone.COMPLETED || Jenkins.get().isQuietingDown()) {
+                LOGGER.fine("Waiting to resume step until Jenkins completes startup and is not in quiet mode");
+                Timer.get().schedule(this::run, 100, TimeUnit.MILLISECONDS);
+                return;
+            }
             LOGGER.fine(() -> "Checking status with nodes=" + nodes + " enclosing=" + enclosing + " processing=" + processing);
             if (nodes.isEmpty()) {
                 if (processing.isEmpty()) {
