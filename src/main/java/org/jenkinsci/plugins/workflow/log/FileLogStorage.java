@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
 import org.apache.commons.io.input.NullReader;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -70,6 +71,8 @@ public final class FileLogStorage implements LogStorage {
     }
 
     private final File log;
+
+    private final File zipLog;
     private final File index;
     @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
     private FileOutputStream os;
@@ -80,6 +83,7 @@ public final class FileLogStorage implements LogStorage {
 
     private FileLogStorage(File log) {
         this.log = log;
+        this.zipLog = new File(log + ".gz");
         this.index = new File(log + "-index");
     }
 
@@ -260,11 +264,18 @@ public final class FileLogStorage implements LogStorage {
     @Override public AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete) {
         maybeFlush();
         String id = node.getId();
+        boolean isZip = zipLog.isFile();
         try (ByteBuffer buf = new ByteBuffer();
-             RandomAccessFile raf = new RandomAccessFile(log, "r");
+             RandomAccessFile raf = !isZip ? new RandomAccessFile(log, "r") : null;
              BufferedReader indexBR = index.isFile() ? Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8) : new BufferedReader(new NullReader(0))) {
             // Check this _before_ reading index-log to reduce the chance of a race condition resulting in recent content being associated with the wrong step:
-            long end = raf.length();
+            long end = 0;
+            byte[] fullLog = readGZFile(zipLog);
+            if (isZip) {
+                end = fullLog.length;
+            } else {
+                end = raf.length();
+            }
             // To produce just the output for a single step (again we do not need to pay attention to ConsoleNote here since AnnotatedLargeText handles it),
             // index-log is read looking for transitions that pertain to this step: beginning or ending its content, including at EOF if applicable.
             // (Other transitions, such as to or from unrelated steps, are irrelevant).
@@ -290,40 +301,64 @@ public final class FileLogStorage implements LogStorage {
                         pos = lastTransition;
                     }
                 } else if (lastTransition > pos) {
-                    raf.seek(pos);
-                    if (lastTransition > pos + Integer.MAX_VALUE) {
-                        throw new IOException("Cannot read more than 2Gib at a time"); // ByteBuffer does not support it anyway
+                    if (!isZip) {
+                        raf.seek(pos);
+                        if (lastTransition > pos + Integer.MAX_VALUE) {
+                            throw new IOException("Cannot read more than 2Gib at a time"); // ByteBuffer does not support it anyway
+                        }
+                        // Could perhaps be done a bit more efficiently with FileChannel methods,
+                        // at least if org.kohsuke.stapler.framework.io.ByteBuffer were replaced by java.nio.[Heap]ByteBuffer.
+                        // The overall bottleneck here is however the need to use a memory buffer to begin with:
+                        // LargeText.Source/Session are not public so, pending improvements to Stapler,
+                        // we cannot lazily stream per-step content the way we do for the overall log.
+                        // (Except perhaps by extending ByteBuffer and then overriding every public method!)
+                        // LargeText also needs to be improved to support opaque (non-long) cursors
+                        // (and callers such as progressiveText.jelly and Blue Ocean updated accordingly),
+                        // which is a hard requirement for efficient rendering of cloud-backed logs,
+                        // though for this implementation we do not need it since we can work with byte offsets.
+                        byte[] data = new byte[(int) (lastTransition - pos)];
+                        raf.readFully(data);
+                        buf.write(data);
+                    } else {
+                        buf.write(Arrays.copyOfRange(fullLog, (int) pos, (int) (lastTransition)));
                     }
-                    // Could perhaps be done a bit more efficiently with FileChannel methods,
-                    // at least if org.kohsuke.stapler.framework.io.ByteBuffer were replaced by java.nio.[Heap]ByteBuffer.
-                    // The overall bottleneck here is however the need to use a memory buffer to begin with:
-                    // LargeText.Source/Session are not public so, pending improvements to Stapler,
-                    // we cannot lazily stream per-step content the way we do for the overall log.
-                    // (Except perhaps by extending ByteBuffer and then overriding every public method!)
-                    // LargeText also needs to be improved to support opaque (non-long) cursors
-                    // (and callers such as progressiveText.jelly and Blue Ocean updated accordingly),
-                    // which is a hard requirement for efficient rendering of cloud-backed logs,
-                    // though for this implementation we do not need it since we can work with byte offsets.
-                    byte[] data = new byte[(int) (lastTransition - pos)];
-                    raf.readFully(data);
-                    buf.write(data);
                     pos = -1;
                 } // else some sort of mismatch
             }
             if (pos != -1 && /* otherwise race condition? */ end > pos) {
                 // In case the build is ongoing and we are still actively writing content for this step,
                 // we will hit EOF before any other transition. Otherwise identical to normal case above.
-                raf.seek(pos);
-                if (end > pos + Integer.MAX_VALUE) {
-                    throw new IOException("Cannot read more than 2Gib at a time");
+                if (!isZip) {
+                    raf.seek(pos);
+                    if (end > pos + Integer.MAX_VALUE) {
+                        throw new IOException("Cannot read more than 2Gib at a time");
+                    }
+                    byte[] data = new byte[(int) (end - pos)];
+                    raf.readFully(data);
+                    buf.write(data);
+                } else {
+                    buf.write(Arrays.copyOfRange(fullLog, (int) pos, (int) (end)));
                 }
-                byte[] data = new byte[(int) (end - pos)];
-                raf.readFully(data);
-                buf.write(data);
             }
             return new AnnotatedLargeText<>(buf, StandardCharsets.UTF_8, complete, node);
         } catch (IOException x) {
             return new BrokenLogStorage(x).stepLog(node, complete);
+        }
+    }
+
+    public  byte[] readGZFile(File file) throws IOException {
+        try (GZIPInputStream in = new GZIPInputStream(Files.newInputStream(file.toPath()))) {
+            int bufsize = 1024;
+            byte[] buf = new byte[bufsize];
+            int readBytes;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            readBytes = in.read(buf);
+            while (readBytes != -1) {
+                baos.write(buf, 0, readBytes);
+                readBytes = in.read(buf);
+            }
+            baos.flush();
+            return baos.toByteArray();
         }
     }
 
