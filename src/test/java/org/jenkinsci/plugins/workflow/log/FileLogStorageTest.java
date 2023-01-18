@@ -52,7 +52,7 @@ public class FileLogStorageTest extends LogStorageTestBase {
         overall.getLogger().println("stuff");
         close(overall);
         assertTrue(new File(log + "-index").delete());
-        assertOverallLog(0, "stuff\n", true);
+        assertOverallLog(0, lines("stuff"), true);
     }
 
 }

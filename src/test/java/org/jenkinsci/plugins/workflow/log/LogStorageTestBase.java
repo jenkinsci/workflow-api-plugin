@@ -346,7 +346,7 @@ public abstract class LogStorageTestBase {
     /**
      * Concatenate the given lines after interspersing system-dependent line separators between them and adding a final line separator.
      */
-    private String lines(CharSequence... lines) {
+    protected String lines(CharSequence... lines) {
         return String.join(System.lineSeparator(), lines) + System.lineSeparator();
     }
 
