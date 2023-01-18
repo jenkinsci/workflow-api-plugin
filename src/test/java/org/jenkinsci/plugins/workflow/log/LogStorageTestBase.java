@@ -74,10 +74,6 @@ import org.jvnet.hudson.test.LoggerRule;
  */
 public abstract class LogStorageTestBase {
 
-    static {
-        System.setProperty("line.separator", "\n");
-    }
-
     @ClassRule public static JenkinsRule r = new JenkinsRule();
 
     @ClassRule public static LoggerRule logging = new LoggerRule();
@@ -97,23 +93,31 @@ public abstract class LogStorageTestBase {
         step2.getLogger().println("two #2");
         overall.getLogger().println("interrupting");
         /* We do not really care much whether nodes are annotated when we start display in the middle; the UI will not do anything with it anyway:
-        assertOverallLog(betweenStep2Lines, "<span class=\"pipeline-node-2\">two #2\n</span>interrupting\n", true);
+        assertOverallLog(betweenStep2Lines, lines("<span class=\"pipeline-node-2\">two #2", "</span>interrupting"), true);
         */
-        long overallHtmlPos = assertOverallLog(0, "starting\n<span class=\"pipeline-node-1\">one #1\n</span><span class=\"pipeline-node-2\">two #1\ntwo #2\n</span>interrupting\n", true);
+        long overallHtmlPos = assertOverallLog(0, lines(
+                "starting",
+                "<span class=\"pipeline-node-1\">one #1",
+                "</span><span class=\"pipeline-node-2\">two #1",
+                "two #2",
+                "</span>interrupting"), true);
         assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
         assertLength(overallHtmlPos);
         try { // either tolerate OOB, or not
             assertOverallLog(999, "", true);
             assertOverallLog(999, "", false);
         } catch (EOFException x) {}
-        long step1Pos = assertStepLog("1", 0, "one #1\n", true);
-        long step2Pos = assertStepLog("2", 0, "two #1\ntwo #2\n", true);
+        long step1Pos = assertStepLog("1", 0, lines("one #1"), true);
+        long step2Pos = assertStepLog("2", 0, lines("two #1", "two #2"), true);
         step1.getLogger().println("one #2");
         step1.getLogger().println("one #3");
         overall.getLogger().println("pausing");
-        overallHtmlPos = assertOverallLog(overallHtmlPos, "<span class=\"pipeline-node-1\">one #2\none #3\n</span>pausing\n", true);
+        overallHtmlPos = assertOverallLog(overallHtmlPos, lines(
+                "<span class=\"pipeline-node-1\">one #2",
+                "one #3",
+                "</span>pausing"), true);
         // TODO if we produce output from the middle of a step, we need new span blocks
-        step1Pos = assertStepLog("1", step1Pos, "one #2\none #3\n", true);
+        step1Pos = assertStepLog("1", step1Pos, lines("one #2", "one #3"), true);
         assertLength("1", step1Pos);
         try { // as above
             assertStepLog("1", 999, "", true);
@@ -132,24 +136,30 @@ public abstract class LogStorageTestBase {
         close(step3);
         overall.getLogger().println("ending");
         close(overall);
-        overallHtmlPos = assertOverallLog(overallHtmlPos, "resuming\n<span class=\"pipeline-node-1\">one #4\n</span><span class=\"pipeline-node-3\">three #1\n</span>ending\n", true);
+        overallHtmlPos = assertOverallLog(overallHtmlPos, lines(
+                "resuming",
+                "<span class=\"pipeline-node-1\">one #4",
+                "</span><span class=\"pipeline-node-3\">three #1",
+                "</span>ending"), true);
         assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
         assertLength(overallHtmlPos);
-        step1Pos = assertStepLog("1", step1Pos, "one #4\n", true);
+        step1Pos = assertStepLog("1", step1Pos, lines("one #4"), true);
         assertLength("1", step1Pos);
-        assertStepLog("1", 0, "one #1\none #2\none #3\none #4\n", false);
+        assertStepLog("1", 0, lines("one #1", "one #2", "one #3", "one #4"), false);
         step2Pos = assertStepLog("2", step2Pos, "", true);
-        assertStepLog("3", 0, "three #1\n", true);
+        assertStepLog("3", 0, lines("three #1"), true);
         ls = createStorage();
         TaskListener step4 = ls.nodeListener(new MockNode("4"));
         step4.getLogger().println(HyperlinkNote.encodeTo("http://nowhere.net/", "nikde"));
         close(overall);
-        long step4Pos = assertStepLog("4", 0, "<a href='http://nowhere.net/'>nikde</a>\n", true);
+        long step4Pos = assertStepLog("4", 0, lines("<a href='http://nowhere.net/'>nikde</a>"), true);
         assertLength("4", step4Pos);
         overall = ls.overallListener();
         overall.getLogger().println("really ending");
         close(overall);
-        overallHtmlPos = assertOverallLog(overallHtmlPos, "<span class=\"pipeline-node-4\"><a href='http://nowhere.net/'>nikde</a>\n</span>really ending\n", true);
+        overallHtmlPos = assertOverallLog(overallHtmlPos, lines(
+                "<span class=\"pipeline-node-4\"><a href='http://nowhere.net/'>nikde</a>",
+                "</span>really ending"), true);
         assertEquals(overallHtmlPos, assertOverallLog(overallHtmlPos, "", true));
         assertLength(overallHtmlPos);
     }
@@ -167,16 +177,22 @@ public abstract class LogStorageTestBase {
         overall.getLogger().println("overall from controller");
         TaskListener step = ls.nodeListener(new MockNode("1"));
         step.getLogger().println("step from controller");
-        long overallPos = assertOverallLog(0, "overall from controller\n<span class=\"pipeline-node-1\">step from controller\n</span>", true);
-        long stepPos = assertStepLog("1", 0, "step from controller\n", true);
+        long overallPos = assertOverallLog(0, lines(
+                "overall from controller",
+                "<span class=\"pipeline-node-1\">step from controller",
+                "</span>").stripTrailing(), true);
+        long stepPos = assertStepLog("1", 0, lines("step from controller"), true);
         DumbSlave s = r.createOnlineSlave();
         r.showAgentLogs(s, agentLoggers());
         VirtualChannel channel = s.getChannel();
         channel.call(new RemotePrint("overall from agent", overall));
         channel.call(new RemotePrint("step from agent", step));
         channel.call(new GC());
-        overallPos = assertOverallLog(overallPos, "overall from agent\n<span class=\"pipeline-node-1\">step from agent\n</span>", true);
-        stepPos = assertStepLog("1", stepPos, "step from agent\n", true);
+        overallPos = assertOverallLog(overallPos, lines(
+                "overall from agent",
+                "<span class=\"pipeline-node-1\">step from agent",
+                "</span>").stripTrailing(), true);
+        stepPos = assertStepLog("1", stepPos, lines("step from agent"), true);
         assertEquals(overallPos, assertOverallLog(overallPos, "", true));
         assertEquals(stepPos, assertStepLog("1", stepPos, "", true));
         assertThat(logging.getMessages(), empty());
@@ -185,9 +201,6 @@ public abstract class LogStorageTestBase {
         return Collections.singletonMap(LogStorageTestBase.class.getPackage().getName(), Level.FINER);
     }
     private static final class RemotePrint extends MasterToSlaveCallable<Void, Exception> {
-        static {
-            System.setProperty("line.separator", "\n");
-        }
         private final String message;
         private final TaskListener listener;
         RemotePrint(String message, TaskListener listener) {
@@ -328,6 +341,13 @@ public abstract class LogStorageTestBase {
 
     private AnnotatedLargeText<?> text(String id) {
         return createStorage().stepLog(new MockNode(id), true);
+    }
+
+    /**
+     * Concatenate the given lines after interspersing system-dependent line separators between them and adding a final line separator.
+     */
+    private String lines(CharSequence... lines) {
+        return String.join(System.lineSeparator(), lines) + System.lineSeparator();
     }
 
     private static class MockNode extends FlowNode {
