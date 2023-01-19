@@ -28,14 +28,10 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 /**
- * Attached to a {@link FlowNode} to indicate that it entered a “stage” of a build.
- * This could be used by high-level visualizations which do not care about individual nodes.
- * <p>Flow nodes preceding one with this action are considered to be in no stage, or an anonymous stage.
- * This flow node, and any descendants until the next node with this action, are in the stage named here.
- * <p>Stages might be considered linear throughout a {@link FlowExecution},
- * or only within a single thread of an execution (branch of the flow graph).
- * <p>The standard implementation is attached by {@code StageStep} and is linear within an execution (threads are ignored).
+ * @deprecated Used by the by the original mode of {@code StageStep}, since deprecated by the block-scoped mode.
+ * Replaced for most purposes by {@link LabelAction} and inspection of nesting structure.
  */
+@Deprecated
 public interface StageAction extends PersistentAction {
 
     /**

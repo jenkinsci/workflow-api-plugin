@@ -501,7 +501,6 @@ public class ForkScannerTest {
     @Issue("JENKINS-39839") // Implicitly covers JENKINS-39841 too though
     public void testSingleNestedParallelBranches() throws Exception {
         String script = "node {\n" +
-                "   stage 'test'  \n" +
                 "     echo ('Testing')\n" +
                 "     parallel nestedBranch: {\n" +
                 "       echo 'nested Branch'\n" +
@@ -594,7 +593,7 @@ public class ForkScannerTest {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "ParallelTimingBug");
         job.setDefinition(new CpsFlowDefinition(
             // Seemingly gratuitous sleep steps are because original issue required specific timing to reproduce
-            "stage 'test' \n" +
+            "echo 'test stage' \n" +
             "    parallel 'unit': {\n" +
             "          retry(1) {\n" +
             "            sleep 1;\n" +
@@ -614,7 +613,7 @@ public class ForkScannerTest {
         - actionClassName actionDisplayName
         ------------------------------------------------------------------------------------------
         [2]{}FlowStartNode Start of Pipeline
-        [3]{2}StepAtomNode test
+        [3]{2}StepAtomNode test stage
         [4]{3}StepStartNode Execute in parallel : Start
         [6]{4}StepStartNode Branch: unit
         [7]{4}StepStartNode Branch: otherunit
@@ -784,14 +783,14 @@ public class ForkScannerTest {
     public void testTripleParallel() throws Exception {
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "TripleParallel");
         job.setDefinition(new CpsFlowDefinition(
-                "stage 'test'\n"+   // Id 3, Id 2 before that has the FlowStartNode
+                "echo 'test stage'\n"+   // Id 3, Id 2 before that has the FlowStartNode
                 "parallel 'unit':{\n" + // Id 4 starts parallel, Id 7 is the block start for the unit branch
                 "  echo \"Unit testing...\"\n" + // Id 10
                 "},'integration':{\n" + // Id 11 is unit branch end, Id 8 is the branch start for integration branch
                 "    echo \"Integration testing...\"\n" + // Id 12
                 "}, 'ui':{\n" +  // Id 13 in integration branch end, Id 9 is branch start for UI branch
                 "    echo \"UI testing...\"\n" + // Id 14
-                "}", // Node 15 is UI branch end node, Node 16 is Parallel End node, Node 17 is FlowWendNode
+                "}", // Node 15 is UI branch end node, Node 16 is Parallel End node, Node 17 is FlowEndNode
                 true));
         WorkflowRun b = r.assertBuildStatusSuccess(job.scheduleBuild2(0));
         FlowExecution exec = b.getExecution();
@@ -882,7 +881,7 @@ public class ForkScannerTest {
         //https://gist.github.com/vivek/ccf3a4ef25fbff267c76c962d265041d
         WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "ParallelInsanity");
         job.setDefinition(new CpsFlowDefinition("" +
-                "stage \"first\"\n" +
+                "echo 'first stage'\n" +
                 "parallel left : {\n" +
                 "  echo 'run a bit'\n" +
                 "  echo 'run a bit more'\n" +
@@ -891,7 +890,7 @@ public class ForkScannerTest {
                 "  echo 'wozzle'\n" +
                 "  semaphore 'wait2'\n" +
                 "}\n" +
-                "stage \"last\"\n" +
+                "echo 'last stage'\n" +
                 "echo \"last done\"\n",
                 true));
         ForkScanner scan = new ForkScanner();
@@ -942,7 +941,7 @@ public class ForkScannerTest {
     @Test
     public void testPartlyCompletedParallels() throws Exception {
         String jobScript = ""+
-                "stage 'first'\n" +
+                "echo 'first stage'\n" +
                 "parallel 'long' : { sleep 60; }, \n" +  // Needs to be in-progress
                 "         'short': { sleep 2; }";  // Needs to have completed, and SemaphoreStep alone doesn't cut it
 
@@ -970,21 +969,21 @@ public class ForkScannerTest {
         // Verify that SimpleBlockVisitor actually gets the *real* last node not just the last declared branch
         WorkflowJob jobPauseFirst = r.jenkins.createProject(WorkflowJob.class, "PauseFirst");
         jobPauseFirst.setDefinition(new CpsFlowDefinition("" +
-                "stage 'primero'\n" +
+                "echo 'primero stage'\n" +
                 "parallel 'wait' : {sleep 1; semaphore 'wait1';}, \n" +
                 " 'final': { echo 'succeed';} ",
                 true));
 
         WorkflowJob jobPauseSecond = r.jenkins.createProject(WorkflowJob.class, "PauseSecond");
         jobPauseSecond.setDefinition(new CpsFlowDefinition("" +
-                "stage 'primero'\n" +
+                "echo 'primero stage'\n" +
                 "parallel 'success' : {echo 'succeed'}, \n" +
                 " 'pause':{ sleep 1; semaphore 'wait2'; }\n",
                 true));
 
         WorkflowJob jobPauseMiddle = r.jenkins.createProject(WorkflowJob.class, "PauseMiddle");
         jobPauseMiddle.setDefinition(new CpsFlowDefinition("" +
-                "stage 'primero'\n" +
+                "echo 'primero stage'\n" +
                 "parallel 'success' : {echo 'succeed'}, \n" +
                 " 'pause':{ sleep 1; semaphore 'wait3'; }, \n" +
                 " 'final': { echo 'succeed-final';} ",
