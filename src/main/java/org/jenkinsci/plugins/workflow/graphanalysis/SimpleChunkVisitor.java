@@ -68,7 +68,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  *   have (such as the start of another parallel).</em>
  *
  * <p>Implementations get to decide how to use and handle chunks, and should be stateful.
- * <h3>At a minimum they should handle:</h3>
+ * <p><strong>At a minimum they should handle:</strong>
  * <ul>
  *     <li>Cases where there is no enclosing chunk (no start/end found, or outside a chunk)</li>
  *     <li>Cases where there is no chunk end to match the start, because we haven't finished running a block</li>
