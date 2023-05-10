@@ -198,7 +198,6 @@ public class ErrorActionTest {
                     "parallel(one: { node {" + script + "} }, two: { node {" + script + "} })", true));
             WorkflowRun b = r.buildAndAssertStatus(Result.FAILURE, p);
             FlowNode originNode = ErrorAction.findOrigin(b.getExecution().getCauseOfFailure(), b.getExecution());
-            originNode.getPersistentAction(ErrorAction.class).getError().printStackTrace();
             origin.set(originNode.getId());
         });
         rr.then(r -> {
@@ -209,7 +208,6 @@ public class ErrorActionTest {
         });
     }
 
-    @Ignore("See note in ErrorAction#findOrigin")
     @Test public void findOriginOfSyncErrorAcrossRestart() throws Throwable {
         String name = "restart";
         AtomicReference<String> origin = new AtomicReference<>();
