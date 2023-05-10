@@ -33,7 +33,10 @@ import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -62,6 +65,10 @@ public class ErrorAction implements PersistentAction {
             }
         }
         this.error = error;
+        String id = findId(error, new HashSet<>());
+        if (id == null && error != null) {
+            error.addSuppressed(new ErrorId());
+        }
     }
 
     /**
@@ -140,6 +147,20 @@ public class ErrorAction implements PersistentAction {
         return candidate;
     }
 
+    private static @CheckForNull String findId(Throwable error, Set<Throwable> visited) {
+        if (error == null || !visited.add(error)) {
+            return null;
+        }
+        for (Throwable suppressed : error.getSuppressed()) {
+            // We intentionally do not visit suppressed recursively so that we do not incorrectly select the ID from a
+            // distinct error in a sibling branch of a parallel step.
+            if (suppressed instanceof ErrorId) {
+                return ((ErrorId) suppressed).uuid;
+            }
+        }
+        return findId(error.getCause(), visited);
+    }
+
     /**
      * {@link Throwable#equals} might not be reliable if the program has resumed
      * and stuff is deserialized.
@@ -152,15 +173,12 @@ public class ErrorAction implements PersistentAction {
         } else if (!Objects.equals(t1.getMessage(), t2.getMessage())) {
             return false;
         } else {
-            // TODO: Steps which throw exceptions synchronously on the CPS VM thread break this equality check after
-            // a Jenkins restart. In that case, the original FlowNode gets an ErrorAction with the Throwable, which is
-            // written to disk, and then afterwards, when the error is thrown into the CPS-transformed script to resume
-            // execution, the location in the script and Continuable.SEPARATOR_STACK_ELEMENT are added to the stack
-            // trace of the same Throwable object using setStackTrace, so all subsequent serialized FlowNodes include
-            // those stack trace elements. This breaks stack trace equality, resulting in findOrigin returning the
-            // BlockEndNode of the parent of the step that threw the synchronous error.
-            // The `t1 == t2` reference equality check above masks the issue if you do not restart Jenkins.
-
+            String id1 = findId(t1, new HashSet<>());
+            if (id1 != null) {
+                return id1.equals(findId(t2, new HashSet<>()));
+            }
+            // No ErrorId, use a best-effort approach that doesn't work across restarts for exceptions thrown
+            // synchronously from the CPS VM thread.
             // Check that stack traces match, but specifically avoid checking suppressed exceptions, which are often
             // modified after ErrorAction is written to disk when steps like parallel are involved.
             while (t1 != null && t2 != null) {
@@ -171,6 +189,25 @@ public class ErrorAction implements PersistentAction {
                 t2 = t2.getCause();
             }
             return (t1 == null) == (t2 == null);
+        }
+    }
+
+    private static class ErrorId extends Throwable {
+        private final String uuid;
+
+        public ErrorId() {
+            this.uuid = UUID.randomUUID().toString();
+        }
+
+        @Override
+        public String getMessage() {
+            return uuid;
+        }
+
+        @Override
+        public Throwable fillInStackTrace() {
+            // We only care about the UUID, the stack trace is not relevant.
+            return this;
         }
     }
 
