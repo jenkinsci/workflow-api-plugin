@@ -32,7 +32,8 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.Functions;
+import java.util.Arrays;
+import java.util.Objects;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -148,8 +149,28 @@ public class ErrorAction implements PersistentAction {
             return true;
         } else if (t1.getClass() != t2.getClass()) {
             return false;
+        } else if (!Objects.equals(t1.getMessage(), t2.getMessage())) {
+            return false;
         } else {
-            return Functions.printThrowable(t1).equals(Functions.printThrowable(t2));
+            // TODO: Steps which throw exceptions synchronously on the CPS VM thread break this equality check after
+            // a Jenkins restart. In that case, the original FlowNode gets an ErrorAction with the Throwable, which is
+            // written to disk, and then afterwards, when the error is thrown into the CPS-transformed script to resume
+            // execution, the location in the script and Continuable.SEPARATOR_STACK_ELEMENT are added to the stack
+            // trace of the same Throwable object using setStackTrace, so all subsequent serialized FlowNodes include
+            // those stack trace elements. This breaks stack trace equality, resulting in findOrigin returning the
+            // BlockEndNode of the parent of the step that threw the synchronous error.
+            // The `t1 == t2` reference equality check above masks the issue if you do not restart Jenkins.
+
+            // Check that stack traces match, but specifically avoid checking suppressed exceptions, which are often
+            // modified after ErrorAction is written to disk when steps like parallel are involved.
+            while (t1 != null && t2 != null) {
+                if (!Arrays.equals(t1.getStackTrace(), t2.getStackTrace())) {
+                    return false;
+                }
+                t1 = t1.getCause();
+                t2 = t2.getCause();
+            }
+            return (t1 == null) == (t2 == null);
         }
     }
 

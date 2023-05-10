@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -38,12 +39,14 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsSessionRule;
 
+import hudson.Functions;
 import hudson.model.Result;
 import hudson.remoting.ProxyException;
 import org.codehaus.groovy.runtime.NullObject;
@@ -182,6 +185,47 @@ public class ErrorActionTest {
             p.setDefinition(new CpsFlowDefinition("FOO", false));
             WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
             assertThat(b.getExecution().getCauseOfFailure(), Matchers.instanceOf(ProxyException.class));
+        });
+    }
+
+    @Test public void findOriginOfAsyncErrorAcrossRestart() throws Throwable {
+        String name = "restart";
+        AtomicReference<String> origin = new AtomicReference<>();
+        rr.then(r -> {
+            String script = Functions.isWindows() ? "bat 'exit 1'" : "sh 'exit 1'";
+            WorkflowJob p = r.createProject(WorkflowJob.class, name);
+            p.setDefinition(new CpsFlowDefinition(
+                    "parallel(one: { node {" + script + "} }, two: { node {" + script + "} })", true));
+            WorkflowRun b = r.buildAndAssertStatus(Result.FAILURE, p);
+            FlowNode originNode = ErrorAction.findOrigin(b.getExecution().getCauseOfFailure(), b.getExecution());
+            originNode.getPersistentAction(ErrorAction.class).getError().printStackTrace();
+            origin.set(originNode.getId());
+        });
+        rr.then(r -> {
+            WorkflowJob p = r.jenkins.getItemByFullName(name, WorkflowJob.class);
+            WorkflowRun b = p.getLastBuild();
+            FlowNode originNode = ErrorAction.findOrigin(b.getExecution().getCauseOfFailure(), b.getExecution());
+            assertEquals(origin.get(), originNode.getId());
+        });
+    }
+
+    @Ignore("See note in ErrorAction#findOrigin")
+    @Test public void findOriginOfSyncErrorAcrossRestart() throws Throwable {
+        String name = "restart";
+        AtomicReference<String> origin = new AtomicReference<>();
+        rr.then(r -> {
+            WorkflowJob p = r.createProject(WorkflowJob.class, name);
+            p.setDefinition(new CpsFlowDefinition(
+                    "parallel(one: { error 'one' }, two: { error 'two' })", true));
+            WorkflowRun b = r.buildAndAssertStatus(Result.FAILURE, p);
+            FlowNode originNode = ErrorAction.findOrigin(b.getExecution().getCauseOfFailure(), b.getExecution());
+            origin.set(originNode.getId());
+        });
+        rr.then(r -> {
+            WorkflowJob p = r.jenkins.getItemByFullName(name, WorkflowJob.class);
+            WorkflowRun b = p.getLastBuild();
+            FlowNode originNode = ErrorAction.findOrigin(b.getExecution().getCauseOfFailure(), b.getExecution());
+            assertEquals(origin.get(), originNode.getId());
         });
     }
 
