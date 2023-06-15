@@ -54,7 +54,7 @@ public class ErrorAction implements PersistentAction {
     private final @NonNull Throwable error;
 
     public ErrorAction(@NonNull Throwable error) {
-        if (isUnserializableException(error)) {
+        if (isUnserializableException(error, new HashSet<>())) {
             error = new ProxyException(error);
         } else if (error != null) {
             try {
@@ -75,8 +75,8 @@ public class ErrorAction implements PersistentAction {
      * Some exceptions don't serialize properly. If so, we need to replace that with
      * an equivalent that captures the same details but serializes nicely.
      */
-    private boolean isUnserializableException(@CheckForNull Throwable error) {
-        if (error == null) {
+    private boolean isUnserializableException(@CheckForNull Throwable error, Set<Throwable> visited) {
+        if (error == null || !visited.add(error)) {
             return false;
         }
         // If the exception was defined in a Pipeline script, we don't want to serialize it
@@ -95,11 +95,11 @@ public class ErrorAction implements PersistentAction {
         if (error instanceof MultipleCompilationErrorsException || error instanceof MissingMethodException) {
             return true;
         }
-        if (isUnserializableException(error.getCause())) {
+        if (isUnserializableException(error.getCause(), visited)) {
             return true;
         }
         for (Throwable t : error.getSuppressed()) {
-            if (isUnserializableException(t)) {
+            if (isUnserializableException(t, visited)) {
                 return true;
             }
         }
