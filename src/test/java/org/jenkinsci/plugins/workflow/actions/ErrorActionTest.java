@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.actions;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,7 @@ import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsSessionRule;
 
+import groovy.lang.MissingMethodException;
 import hudson.Functions;
 import hudson.model.Result;
 import hudson.remoting.ProxyException;
@@ -227,4 +229,20 @@ public class ErrorActionTest {
         });
     }
 
+    @Test public void cyclicErrorsAreSupported() throws Throwable {
+        Exception cyclic1 = new Exception();
+        Exception cyclic2 = new Exception(cyclic1);
+        cyclic1.initCause(cyclic2);
+        assertNotNull(new ErrorAction(cyclic1));
+        assertNotNull(new ErrorAction(cyclic2));
+    }
+
+    @Ignore("TODO: broken until https://github.com/jenkinsci/remoting/pull/645 is picked up")
+    @Test public void unserializableCyclicErrorsAreSupported() throws Throwable {
+        Exception unserializable = new MissingMethodException("thisMethodDoesNotExist", String.class, new Object[0]);
+        Exception cyclic = new Exception(unserializable);
+        unserializable.initCause(cyclic);
+        assertNotNull(new ErrorAction(unserializable));
+        assertNotNull(new ErrorAction(cyclic));
+    }
 }
