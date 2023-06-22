@@ -59,9 +59,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-
 /**
  * Tests for internals of ForkScanner
  */
@@ -997,23 +994,23 @@ public class ForkScannerTest {
     }
 
     @Test
-    public void parallelInParallelVisitsOuterParallelStartTwice() throws Exception {
+    public void inProgressParallelInParallel() throws Exception {
         WorkflowJob p = r.createProject(WorkflowJob.class);
         p.setDefinition(new CpsFlowDefinition(
-                "stage('MyStage') {\n" +
-                "  parallel(\n" +
-                "    outerA: {\n" +
-                "      semaphore('outerA')\n" +
+                "stage('MyStage') {\n" +            // 3, 4
+                "  parallel(\n" +                   // 5
+                "    outerA: {\n" +                 // 8
+                "      semaphore('outerA')\n" +     // 11
                 "    },\n" +
-                "    outerB: {\n" +
-                "      echo('outerB')\n" +
-                "    },\n" +
-                "    outerC: {\n" +
-                "      parallel(\n" +
-                "        innerA: {\n" +
-                "          semaphore('innerA')\n" +
+                "    outerB: {\n" +                 // 9
+                "      echo('outerB')\n" +          // 12
+                "    },\n" +                        // 13
+                "    outerC: {\n" +                 // 10
+                "      parallel(\n" +               // 14
+                "        innerA: {\n" +             // 16
+                "          semaphore('innerA')\n" + // 18
                 "        },\n" +
-                "        innerB: {\n" +
+                "        innerB: {\n" +             // 17
                 "          echo('innerB')\n" +
                 "        }\n" +
                 "      )\n" +
@@ -1024,14 +1021,10 @@ public class ForkScannerTest {
         SemaphoreStep.waitForStart("outerA/1", b);
         SemaphoreStep.waitForStart("innerA/1", b);
         ForkScanner scanner = new ForkScanner();
-        scanner.setup(b.getExecution().getCurrentHeads());
-        List<String> visited = new ArrayList<>();
-        for (FlowNode node : scanner) {
-            visited.add(node.getId());
-        }
-        assertThat("Each FlowNode should be visited only once " + visited, visited.size(), equalTo(new HashSet<>(visited).size()));
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
         SemaphoreStep.success("outerA/1", null);
         SemaphoreStep.success("innerA/1", null);
         r.assertBuildStatusSuccess(r.waitForCompletion(b));
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
     }
 }
