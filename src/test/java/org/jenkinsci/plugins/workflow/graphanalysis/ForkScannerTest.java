@@ -992,4 +992,42 @@ public class ForkScannerTest {
         testParallelFindsLast(jobPauseSecond, "wait2");
         testParallelFindsLast(jobPauseMiddle, "wait3");
     }
+
+    @Test
+    public void parallelInParallelVisitsOuterParallelStartTwice() throws Exception {
+        WorkflowJob p = r.createProject(WorkflowJob.class);
+        p.setDefinition(new CpsFlowDefinition(
+                "parallel(\n" +
+                "  outerA: {\n" +
+                "    semaphore('outerA')\n" +
+                "  },\n" +
+                "  outerB: {\n" +
+                "    echo('outerB')\n" +
+                "  },\n" +
+                "  outerC: {\n" +
+                "    parallel(\n" +
+                "      innerA: {\n" +
+                "        semaphore('innerA')\n" +
+                "      },\n" +
+                "      innerB: {\n" +
+                "        echo('innerB')\n" +
+                "      }\n" +
+                "    )\n" +
+                "  }\n" +
+                ")\n", true));
+        WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("outerA/1", b);
+        SemaphoreStep.waitForStart("innerA/1", b);
+        ForkScanner scanner = new ForkScanner();
+        scanner.setup(b.getExecution().getCurrentHeads());
+        Set<String> visited = new HashSet<>();
+        for (FlowNode node : scanner) {
+            if (!visited.add(node.getId())) {
+                Assert.fail("Node " + node.getId() + " was visited more than once");
+            }
+        }
+        SemaphoreStep.success("outerA/1", null);
+        SemaphoreStep.success("innerA/1", null);
+        r.assertBuildStatusSuccess(r.waitForCompletion(b));
+    }
 }
