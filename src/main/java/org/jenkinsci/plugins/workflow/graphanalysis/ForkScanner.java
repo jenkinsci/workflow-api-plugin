@@ -445,6 +445,11 @@ public class ForkScanner extends AbstractFlowScanner {
         }
 
         // The result must be in reverse topological order, i.e. inner branches must be visited before outer branches.
+        // Note: This does not really implement a topological sort, but the above logic seems to impose enough structure
+        // on parallelForks for the result to be topologically sorted in most cases as long as the sort is stable, and
+        // the results are definitely correct as long as there is no more than one nested parallel step.
+        // Exotic Pipelines with many layers of nested parallelism may still exhibit anomalous behavior, in which case
+        // implementing a true topological sort may help.
         return convertForksToBlockStarts(parallelForks).stream().sorted((pbs1, pbs2) -> {
             if (pbs1.forkStart.getEnclosingBlocks().contains(pbs2.forkStart)) {
                 return -1;
