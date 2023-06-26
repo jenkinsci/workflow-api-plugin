@@ -992,4 +992,39 @@ public class ForkScannerTest {
         testParallelFindsLast(jobPauseSecond, "wait2");
         testParallelFindsLast(jobPauseMiddle, "wait3");
     }
+
+    @Test
+    public void inProgressParallelInParallel() throws Exception {
+        WorkflowJob p = r.createProject(WorkflowJob.class);
+        p.setDefinition(new CpsFlowDefinition(
+                "stage('MyStage') {\n" +            // 3, 4
+                "  parallel(\n" +                   // 5
+                "    outerA: {\n" +                 // 8
+                "      semaphore('outerA')\n" +     // 11
+                "    },\n" +
+                "    outerB: {\n" +                 // 9
+                "      echo('outerB')\n" +          // 12
+                "    },\n" +                        // 13
+                "    outerC: {\n" +                 // 10
+                "      parallel(\n" +               // 14
+                "        innerA: {\n" +             // 16
+                "          semaphore('innerA')\n" + // 18
+                "        },\n" +
+                "        innerB: {\n" +             // 17
+                "          echo('innerB')\n" +
+                "        }\n" +
+                "      )\n" +
+                "    }\n" +
+                "  )\n" +
+                "}\n", true));
+        WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("outerA/1", b);
+        SemaphoreStep.waitForStart("innerA/1", b);
+        ForkScanner scanner = new ForkScanner();
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        SemaphoreStep.success("outerA/1", null);
+        SemaphoreStep.success("innerA/1", null);
+        r.assertBuildStatusSuccess(r.waitForCompletion(b));
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+    }
 }

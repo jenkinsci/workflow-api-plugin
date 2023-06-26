@@ -48,6 +48,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Scanner that will scan down all forks when we hit parallel blocks before continuing, but generally runs in linear order
@@ -443,8 +444,15 @@ public class ForkScanner extends AbstractFlowScanner {
             throw new IllegalStateException("No least common ancestor found from " + heads);
         }
 
-        // If we hit issues with the ordering of blocks by depth, apply a sorting to the parallels by depth
-        return convertForksToBlockStarts(parallelForks);
+        // The result must be in reverse topological order, i.e. inner branches must be visited before outer branches.
+        return convertForksToBlockStarts(parallelForks).stream().sorted((pbs1, pbs2) -> {
+            if (pbs1.forkStart.getEnclosingBlocks().contains(pbs2.forkStart)) {
+                return -1;
+            } else if (pbs2.forkStart.getEnclosingBlocks().contains(pbs1.forkStart)) {
+                return 1;
+            }
+            return 0;
+        }).collect(Collectors.toCollection(ArrayDeque::new));
     }
 
     @Override
