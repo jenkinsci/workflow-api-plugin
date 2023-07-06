@@ -43,6 +43,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.AtomNode;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 
 /**
  * Attached to {@link FlowNode} that caused an error.
@@ -165,7 +167,8 @@ public class ErrorAction implements PersistentAction {
      * {@link Throwable#equals} might not be reliable if the program has resumed
      * and stuff is deserialized.
      */
-    private static boolean equals(Throwable t1, Throwable t2) {
+    @Restricted(Beta.class)
+    public static boolean equals(Throwable t1, Throwable t2) {
         if (t1 == t2) {
             return true;
         } else if (t1.getClass() != t2.getClass()) {
