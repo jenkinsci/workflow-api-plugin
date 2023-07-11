@@ -186,7 +186,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         @NonNull
         @Override public OutputStream decorate(@NonNull OutputStream logger) throws IOException, InterruptedException {
             // TODO BodyInvoker.MergedFilter probably has these backwards
-            return original.decorate(subsequent.decorate(logger));
+            return decorateAll(logger, List.of(subsequent, original));
         }
 
         @Override public String toString() {
@@ -219,6 +219,17 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
     }
 
+    private static OutputStream decorateAll(OutputStream base, List<TaskListenerDecorator> decorators) {
+        for (TaskListenerDecorator decorator : decorators) {
+            try {
+                base = decorator.decorate(base);
+            } catch (Throwable x) {
+                LOGGER.log(Level.WARNING, null, x);
+            }
+        }
+        return base;
+    }
+
     private static final class DecoratedTaskListener implements BuildListener {
 
         private static final long serialVersionUID = 1;
@@ -247,16 +258,8 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         @NonNull
         @Override public PrintStream getLogger() {
             if (logger == null) {
-                OutputStream base = delegate.getLogger();
-                for (TaskListenerDecorator decorator : decorators) {
-                    try {
-                        base = decorator.decorate(base);
-                    } catch (Exception x) {
-                        LOGGER.log(Level.WARNING, null, x);
-                    }
-                }
                 try {
-                    logger = new PrintStream(base, false, "UTF-8");
+                    logger = new PrintStream(decorateAll(delegate.getLogger(), decorators), false, "UTF-8");
                 } catch (UnsupportedEncodingException x) {
                     throw new AssertionError(x);
                 }
