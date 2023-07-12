@@ -57,6 +57,8 @@ public final class TaskListenerDecoratorTest {
         r.assertLogNotContains("s3cr3t", b);
         r.assertLogContains("please mask ****", b);
         r.assertLogContains("please also mask ****", b);
+        r.assertLogContains("IllegalStateException: oops", b);
+        r.assertLogContains(BrokenStep.BrokenDecorator.class.getName(), b);
     }
 
     public static final class MaskStep extends Step {

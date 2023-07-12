@@ -49,6 +49,7 @@ import java.util.stream.Stream;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import hudson.Functions;
 import jenkins.util.BuildListenerAdapter;
 import jenkins.util.JenkinsJVM;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -225,6 +226,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
                 base = decorator.decorate(base);
             } catch (Throwable x) {
                 LOGGER.log(Level.WARNING, null, x);
+                Functions.printStackTrace(x, new PrintStream(base, true));
             }
         }
         return base;
