@@ -221,6 +221,10 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
     }
 
+    /**
+     * Applies a series of decorators in order to a base stream.
+     * Catches and logs any errors thrown from {@link #decorate}, skipping that decorator.
+     */
     private static OutputStream decorateAll(OutputStream base, List<TaskListenerDecorator> decorators) {
         for (TaskListenerDecorator decorator : decorators) {
             try {
