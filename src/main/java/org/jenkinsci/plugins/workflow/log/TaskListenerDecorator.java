@@ -49,6 +49,8 @@ import java.util.stream.Stream;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import hudson.Functions;
+import java.nio.charset.StandardCharsets;
 import jenkins.util.BuildListenerAdapter;
 import jenkins.util.JenkinsJVM;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -186,7 +188,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         @NonNull
         @Override public OutputStream decorate(@NonNull OutputStream logger) throws IOException, InterruptedException {
             // TODO BodyInvoker.MergedFilter probably has these backwards
-            return original.decorate(subsequent.decorate(logger));
+            return decorateAll(logger, List.of(subsequent, original));
         }
 
         @Override public String toString() {
@@ -219,6 +221,22 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
     }
 
+    /**
+     * Applies a series of decorators in order to a base stream.
+     * Catches and logs any errors thrown from {@link #decorate}, skipping that decorator.
+     */
+    private static OutputStream decorateAll(OutputStream base, List<TaskListenerDecorator> decorators) {
+        for (TaskListenerDecorator decorator : decorators) {
+            try {
+                base = decorator.decorate(base);
+            } catch (Throwable x) {
+                LOGGER.log(Level.WARNING, null, x);
+                Functions.printStackTrace(x, new PrintStream(base, true, StandardCharsets.UTF_8));
+            }
+        }
+        return base;
+    }
+
     private static final class DecoratedTaskListener implements BuildListener {
 
         private static final long serialVersionUID = 1;
@@ -247,16 +265,8 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         @NonNull
         @Override public PrintStream getLogger() {
             if (logger == null) {
-                OutputStream base = delegate.getLogger();
-                for (TaskListenerDecorator decorator : decorators) {
-                    try {
-                        base = decorator.decorate(base);
-                    } catch (Exception x) {
-                        LOGGER.log(Level.WARNING, null, x);
-                    }
-                }
                 try {
-                    logger = new PrintStream(base, false, "UTF-8");
+                    logger = new PrintStream(decorateAll(delegate.getLogger(), decorators), false, "UTF-8");
                 } catch (UnsupportedEncodingException x) {
                     throw new AssertionError(x);
                 }
