@@ -236,7 +236,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         return base;
     }
 
-    private static final class DecoratedTaskListener implements BuildListener, OutputStreamTaskListener {
+    private static final class DecoratedTaskListener extends OutputStreamTaskListener.Default implements BuildListener {
 
         private static final long serialVersionUID = 1;
 
@@ -253,7 +253,6 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         private final @NonNull List<TaskListenerDecorator> decorators;
 
         private transient OutputStream out;
-        private transient PrintStream logger;
 
         DecoratedTaskListener(@NonNull TaskListener delegate, @NonNull List<TaskListenerDecorator> decorators) {
             this.delegate = delegate;
@@ -268,14 +267,6 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
                 out = decorateAll(OutputStreamTaskListener.getOutputStream(delegate), decorators);
             }
             return out;
-        }
-
-        @NonNull
-        @Override public PrintStream getLogger() {
-            if (logger == null) {
-                logger = new PrintStream(getOutputStream(), false, StandardCharsets.UTF_8);
-            }
-            return logger;
         }
 
         @Override public String toString() {

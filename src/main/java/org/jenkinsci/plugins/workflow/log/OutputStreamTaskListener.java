@@ -42,9 +42,6 @@ import org.kohsuke.accmod.restrictions.Beta;
  * {@link TaskListener} which can directly return an {@link OutputStream} not wrapped in a {@link PrintStream}.
  * This is important for logging since the error-swallowing behavior of {@link PrintStream} is unwanted,
  * and {@link PrintStream#checkError} is useless.
- * <p>{@link #getLogger} should generally be implemented in terms of {@link #getOutputStream}
- * (no autoflush, using {@link StandardCharsets#UTF_8})
- * but there is not a {@code default} implementation since the result should be cached in a field.
  */
 @Restricted(Beta.class)
 public interface OutputStreamTaskListener extends TaskListener {
@@ -95,6 +92,22 @@ public interface OutputStreamTaskListener extends TaskListener {
             return ClosedOutputStream.CLOSED_OUTPUT_STREAM;
         }
         return os;
+    }
+
+    /**
+     * Convenience implementation handling {@link #getLogger}.
+     */
+    abstract class Default implements OutputStreamTaskListener {
+
+        private transient PrintStream ps;
+
+        @Override public synchronized PrintStream getLogger() {
+            if (ps == null) {
+                ps = new PrintStream(getOutputStream(), false, StandardCharsets.UTF_8);
+            }
+            return ps;
+        }
+
     }
 
 }

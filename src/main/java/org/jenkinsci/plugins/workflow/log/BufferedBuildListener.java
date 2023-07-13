@@ -24,8 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.CloseProofOutputStream;
 import hudson.model.BuildListener;
 import hudson.remoting.Channel;
@@ -37,7 +35,6 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 import org.jenkinsci.remoting.SerializableOnlyOverRemoting;
 
@@ -45,30 +42,22 @@ import org.jenkinsci.remoting.SerializableOnlyOverRemoting;
  * Unlike {@link StreamTaskListener} this does not set {@code autoflush} on the reconstructed {@link PrintStream}.
  * It also wraps on the remote side in {@link DelayBufferedOutputStream}.
  */
-final class BufferedBuildListener implements BuildListener, Closeable, SerializableOnlyOverRemoting, OutputStreamTaskListener {
+final class BufferedBuildListener extends OutputStreamTaskListener.Default implements BuildListener, Closeable, SerializableOnlyOverRemoting {
 
     private static final Logger LOGGER = Logger.getLogger(BufferedBuildListener.class.getName());
 
     private final OutputStream out;
-    @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "using Replacement anyway, fields here are irrelevant")
-    private final PrintStream ps;
 
     BufferedBuildListener(OutputStream out) {
         this.out = out;
-        ps = new PrintStream(out, false, StandardCharsets.UTF_8);
     }
 
     @Override public OutputStream getOutputStream() {
         return out;
     }
 
-    @NonNull
-    @Override public PrintStream getLogger() {
-        return ps;
-    }
-    
     @Override public void close() throws IOException {
-        ps.close();
+        getLogger().close();
     }
 
     private Object writeReplace() {
