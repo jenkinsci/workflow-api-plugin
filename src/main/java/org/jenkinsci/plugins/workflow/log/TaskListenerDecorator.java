@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -237,7 +236,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         return base;
     }
 
-    private static final class DecoratedTaskListener implements BuildListener {
+    private static final class DecoratedTaskListener implements BuildListener, OutputStreamTaskListener {
 
         private static final long serialVersionUID = 1;
 
@@ -253,6 +252,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
          */
         private final @NonNull List<TaskListenerDecorator> decorators;
 
+        private transient OutputStream out;
         private transient PrintStream logger;
 
         DecoratedTaskListener(@NonNull TaskListener delegate, @NonNull List<TaskListenerDecorator> decorators) {
@@ -263,13 +263,17 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
         }
 
         @NonNull
+        @Override public OutputStream getOutputStream() {
+            if (out == null) {
+                out = decorateAll(OutputStreamTaskListener.getOutputStream(delegate), decorators);
+            }
+            return out;
+        }
+
+        @NonNull
         @Override public PrintStream getLogger() {
             if (logger == null) {
-                try {
-                    logger = new PrintStream(decorateAll(delegate.getLogger(), decorators), false, "UTF-8");
-                } catch (UnsupportedEncodingException x) {
-                    throw new AssertionError(x);
-                }
+                logger = new PrintStream(getOutputStream(), false, StandardCharsets.UTF_8);
             }
             return logger;
         }
@@ -280,7 +284,7 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
 
     }
 
-    private static final class CloseableTaskListener implements BuildListener, AutoCloseable {
+    private static final class CloseableTaskListener implements BuildListener, AutoCloseable, OutputStreamTaskListener {
 
         static BuildListener of(BuildListener mainDelegate, TaskListener closeDelegate) {
             if (closeDelegate instanceof AutoCloseable) {
@@ -299,6 +303,12 @@ public abstract class TaskListenerDecorator implements /* TODO Remotable */ Seri
             this.mainDelegate = mainDelegate;
             this.closeDelegate = closeDelegate;
             assert closeDelegate instanceof AutoCloseable;
+        }
+
+        @NonNull
+        @Override
+        public OutputStream getOutputStream() {
+            return OutputStreamTaskListener.getOutputStream(mainDelegate);
         }
 
         @NonNull

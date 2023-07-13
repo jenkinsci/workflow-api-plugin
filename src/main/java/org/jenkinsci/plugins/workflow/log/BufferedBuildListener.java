@@ -28,27 +28,38 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.CloseProofOutputStream;
 import hudson.model.BuildListener;
+import hudson.remoting.Channel;
+import hudson.remoting.ChannelClosedException;
 import hudson.remoting.RemoteOutputStream;
 import hudson.util.StreamTaskListener;
 import java.io.Closeable;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.logging.Logger;
 import org.jenkinsci.remoting.SerializableOnlyOverRemoting;
 
 /**
  * Unlike {@link StreamTaskListener} this does not set {@code autoflush} on the reconstructed {@link PrintStream}.
  * It also wraps on the remote side in {@link DelayBufferedOutputStream}.
  */
-final class BufferedBuildListener implements BuildListener, Closeable, SerializableOnlyOverRemoting {
+final class BufferedBuildListener implements BuildListener, Closeable, SerializableOnlyOverRemoting, OutputStreamTaskListener {
+
+    private static final Logger LOGGER = Logger.getLogger(BufferedBuildListener.class.getName());
 
     private final OutputStream out;
     @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "using Replacement anyway, fields here are irrelevant")
     private final PrintStream ps;
 
-    BufferedBuildListener(OutputStream out) throws IOException {
+    BufferedBuildListener(OutputStream out) {
         this.out = out;
-        ps = new PrintStream(out, false, "UTF-8");
+        ps = new PrintStream(out, false, StandardCharsets.UTF_8);
+    }
+
+    @Override public OutputStream getOutputStream() {
+        return out;
     }
 
     @NonNull
@@ -75,8 +86,59 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
             this.ros = new RemoteOutputStream(new CloseProofOutputStream(cbl.out));
         }
 
-        private Object readResolve() throws IOException {
-            return new BufferedBuildListener(new GCFlushedOutputStream(new DelayBufferedOutputStream(ros, tuning)));
+        private Object readResolve() {
+            var cos = new CloseableOutputStream(new GCFlushedOutputStream(new DelayBufferedOutputStream(ros, tuning)));
+            Channel.currentOrFail().addListener(new Channel.Listener() {
+                @Override public void onClosed(Channel channel, IOException cause) {
+                    LOGGER.fine(() -> "closing " + channel.getName());
+                    cos.close(channel, cause);
+                }
+            });
+            return new BufferedBuildListener(cos);
+        }
+
+    }
+
+    /**
+     * Output stream which throws {@link ChannelClosedException} when appropriate.
+     * Otherwise callers could continue trying to write to {@link DelayBufferedOutputStream}
+     * long after {@link Channel#isClosingOrClosed} without errors.
+     * In the case of {@code org.jenkinsci.plugins.durabletask.Handler.output},
+     * this is actively harmful since it would mean that writes apparently succeed
+     * and {@code last-location.txt} would move forward even though output was lost.
+     */
+    private static final class CloseableOutputStream extends FilterOutputStream {
+
+        /** non-null if closed */
+        private Channel channel;
+        /** optional close cause */
+        private IOException cause;
+
+        CloseableOutputStream(OutputStream delegate) {
+            super(delegate);
+        }
+
+        void close(Channel channel, IOException cause) {
+            this.channel = channel;
+            this.cause = cause;
+            // Do not call close(): ProxyOutputStream.doClose would just throw ChannelClosedException: …: channel is already closed
+        }
+
+        private void checkClosed() throws IOException {
+            if (channel != null) {
+                throw new ChannelClosedException(channel, cause);
+            }
+            LOGGER.finer("not closed yet");
+        }
+
+        @Override public void write(int b) throws IOException {
+            checkClosed();
+            out.write(b);
+        }
+
+        @Override public void write(byte[] b, int off, int len) throws IOException {
+            checkClosed();
+            out.write(b, off, len);
         }
 
     }
