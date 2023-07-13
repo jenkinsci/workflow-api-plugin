@@ -141,6 +141,10 @@ final class BufferedBuildListener implements BuildListener, Closeable, Serializa
             out.write(b, off, len);
         }
 
+        @Override public String toString() {
+            return "CloseableOutputStream[" + out + "]";
+        }
+
     }
 
 }
