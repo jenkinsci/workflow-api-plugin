@@ -355,7 +355,7 @@ public abstract class LogStorageTestBase {
         @Override protected String getTypeDisplayName() {return null;}
     }
 
-    protected static class MockFlowExecution extends FlowExecution {
+    private static class MockFlowExecution extends FlowExecution {
         @Override
         public void start() {
             throw new UnsupportedOperationException();
