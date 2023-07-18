@@ -77,7 +77,9 @@ public final class FileLogStorage implements LogStorage {
     private final File index;
     @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
     private FileOutputStream os;
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
     private long osStartPosition;
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
     private CountingOutputStream cos;
     @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "we only care about synchronizing writes")
     private OutputStream bos;
