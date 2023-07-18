@@ -126,17 +126,28 @@ public final class FileLogStorage implements LogStorage {
         assert Thread.holdsLock(this);
         if (!Objects.equals(id, lastId)) {
             bos.flush();
-            long pos = os.getChannel().position();
-            if (id == null) {
-                indexOs.write(pos + "\n");
-            } else {
-                indexOs.write(pos + " " + id + "\n");
+            // FileChannel methods such as position() close the channel (and the stream it was derived from) if the
+            // current thread is interrupted. We must not allow interruption on some arbitrary thread attempting to
+            // write to the log to close the stream irrevocably, so we clear the interrupt status before using the
+            // channel and then restore the interrupt status afterwards.
+            boolean interrupted = Thread.interrupted();
+            try {
+                long pos = os.getChannel().position();
+                if (id == null) {
+                    indexOs.write(pos + "\n");
+                } else {
+                    indexOs.write(pos + " " + id + "\n");
+                }
+                // Could call FileChannel.force(true) like hudson.util.FileChannelWriter does for AtomicFileWriter,
+                // though making index-log writes slower is likely a poor tradeoff for slightly more reliable log display,
+                // since logs are often never read and this is transient data rather than configuration or valuable state.
+                indexOs.flush();
+                lastId = id;
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
-            // Could call FileChannel.force(true) like hudson.util.FileChannelWriter does for AtomicFileWriter,
-            // though making index-log writes slower is likely a poor tradeoff for slightly more reliable log display,
-            // since logs are often never read and this is transient data rather than configuration or valuable state.
-            indexOs.flush();
-            lastId = id;
         }
     }
 
