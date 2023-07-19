@@ -350,7 +350,7 @@ public abstract class LogStorageTestBase {
         return String.join(System.lineSeparator(), lines) + System.lineSeparator();
     }
 
-    private static class MockNode extends FlowNode {
+    protected static class MockNode extends FlowNode {
         MockNode(String id) {super(new MockFlowExecution(), id);}
         @Override protected String getTypeDisplayName() {return null;}
     }

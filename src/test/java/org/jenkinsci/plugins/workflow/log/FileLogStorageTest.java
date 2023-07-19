@@ -55,4 +55,18 @@ public class FileLogStorageTest extends LogStorageTestBase {
         assertOverallLog(0, lines("stuff"), true);
     }
 
+    @Test public void interruptionDoesNotCloseStream() throws Exception {
+        LogStorage ls = createStorage();
+        TaskListener overall = ls.overallListener();
+        overall.getLogger().println("overall 1");
+        Thread.currentThread().interrupt();
+        TaskListener stepLog = ls.nodeListener(new MockNode("1"));
+        stepLog.getLogger().println("step 1");
+        assertTrue(Thread.interrupted());
+        close(stepLog);
+        overall.getLogger().println("overall 2");
+        close(overall);
+        assertOverallLog(0, lines("overall 1", "<span class=\"pipeline-node-1\">step 1", "</span>overall 2"), true);
+    }
+
 }
