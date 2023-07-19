@@ -48,6 +48,7 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.input.NullReader;
+import org.apache.commons.io.output.CountingOutputStream;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.kohsuke.accmod.Restricted;
@@ -58,6 +59,9 @@ import org.kohsuke.stapler.framework.io.ByteBuffer;
  * Simple implementation of log storage in a single file that maintains a side file with an index indicating where node transitions occur.
  * Each line in the index file is a byte offset, optionally followed by a space and then a node ID.
  */
+/* Note: Avoid FileChannel methods in this class, as they close the channel and its parent stream if the thread is
+   interrupted, which is problematic given that we do not control the threads which write to the log file.
+*/
 @Restricted(Beta.class)
 public final class FileLogStorage implements LogStorage {
 
@@ -73,6 +77,10 @@ public final class FileLogStorage implements LogStorage {
     private final File index;
     @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
     private FileOutputStream os;
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
+    private long osStartPosition;
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "actually it is always accessed within the monitor")
+    private CountingOutputStream cos;
     @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "we only care about synchronizing writes")
     private OutputStream bos;
     private Writer indexOs;
@@ -86,7 +94,9 @@ public final class FileLogStorage implements LogStorage {
     private synchronized void open() throws IOException {
         if (os == null) {
             os = new FileOutputStream(log, true);
-            bos = new GCFlushedOutputStream(new DelayBufferedOutputStream(os));
+            osStartPosition = log.length();
+            cos = new CountingOutputStream(os);
+            bos = new GCFlushedOutputStream(new DelayBufferedOutputStream(cos));
             if (index.isFile()) {
                 try (BufferedReader r = Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8)) {
                     // TODO would be faster to scan the file backwards for the penultimate \n, then convert the byte sequence from there to EOF to UTF-8 and set lastId accordingly
@@ -126,7 +136,7 @@ public final class FileLogStorage implements LogStorage {
         assert Thread.holdsLock(this);
         if (!Objects.equals(id, lastId)) {
             bos.flush();
-            long pos = os.getChannel().position();
+            long pos = osStartPosition + cos.getByteCount();
             if (id == null) {
                 indexOs.write(pos + "\n");
             } else {
