@@ -96,7 +96,7 @@ public final class FileLogStorage implements LogStorage {
             os = new FileOutputStream(log, true);
             osStartPosition = log.length();
             cos = new CountingOutputStream(os);
-            bos = new GCFlushedOutputStream(new DelayBufferedOutputStream(cos));
+            bos = LogStorage.wrapWithAutoFlushingBuffer(cos);
             if (index.isFile()) {
                 try (BufferedReader r = Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8)) {
                     // TODO would be faster to scan the file backwards for the penultimate \n, then convert the byte sequence from there to EOF to UTF-8 and set lastId accordingly
@@ -124,12 +124,12 @@ public final class FileLogStorage implements LogStorage {
 
     @NonNull
     @Override public BuildListener overallListener() throws IOException {
-        return new BufferedBuildListener(new IndexOutputStream(null));
+        return LogStorage.wrapWithRemoteAutoFlushingListener(new IndexOutputStream(null));
     }
 
     @NonNull
     @Override public TaskListener nodeListener(@NonNull FlowNode node) throws IOException {
-        return new BufferedBuildListener(new IndexOutputStream(node.getId()));
+        return LogStorage.wrapWithRemoteAutoFlushingListener(new IndexOutputStream(node.getId()));
     }
 
     private void checkId(String id) throws IOException {
