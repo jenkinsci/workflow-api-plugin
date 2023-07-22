@@ -174,4 +174,19 @@ public interface LogStorage {
         }
     }
 
+    /**
+     * Wraps the specified {@link OutputStream} with a {@link BuildListener} that automatically buffers and flushes
+     * remote writes.
+     */
+    static @NonNull BuildListener wrapWithRemoteAutoFlushingListener(@NonNull OutputStream os) throws IOException {
+        return new BufferedBuildListener(os);
+    }
+
+    /**
+     * Wraps the specified {@link OutputStream} with a buffer that flushes automatically as needed.
+     */
+    static @NonNull OutputStream wrapWithAutoFlushingBuffer(@NonNull OutputStream os) throws IOException {
+        return new GCFlushedOutputStream(new DelayBufferedOutputStream(os));
+    }
+
 }
