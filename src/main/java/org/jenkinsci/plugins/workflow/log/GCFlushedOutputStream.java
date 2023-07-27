@@ -35,6 +35,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.remoting.ChannelClosedException;
+import java.io.EOFException;
+import java.nio.channels.ClosedChannelException;
+import java.util.stream.Stream;
 import jenkins.util.Timer;
 
 /**
@@ -58,6 +62,21 @@ final class GCFlushedOutputStream extends FilterOutputStream {
         return "GCFlushedOutputStream[" + out + "]";
     }
 
+    // TODO https://github.com/jenkinsci/remoting/pull/657
+    private static boolean isClosedChannelException(Throwable t) {
+        if (t instanceof ClosedChannelException) {
+            return true;
+        } else if (t instanceof ChannelClosedException) {
+            return true;
+        } else if (t instanceof EOFException) {
+            return true;
+        } else if (t == null) {
+            return false;
+        } else {
+            return isClosedChannelException(t.getCause()) || Stream.of(t.getSuppressed()).anyMatch(GCFlushedOutputStream::isClosedChannelException);
+        }
+    }
+
     /**
      * Flushes streams prior to garbage collection.
      * ({@link BufferedOutputStream} does not do this automatically.)
@@ -78,7 +97,7 @@ final class GCFlushedOutputStream extends FilterOutputStream {
                     try {
                         ref.out.flush();
                     } catch (IOException x) {
-                        LOGGER.log(Level.WARNING, null, x);
+                        LOGGER.log(isClosedChannelException(x) ? Level.FINE : Level.WARNING, null, x);
                     }
                 }
             }, 0, 10, TimeUnit.SECONDS);
