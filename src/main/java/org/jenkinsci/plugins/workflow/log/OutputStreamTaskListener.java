@@ -69,6 +69,7 @@ public interface OutputStreamTaskListener extends TaskListener {
         }
         if (Runtime.version().compareToIgnoreOptional(Runtime.Version.parse("17")) >= 0) {
             boolean core = // nothing to be done about these, though they should not be used in Pipeline build logs anyway
+                listener == TaskListener.NULL ||
                 listener.getClass() == StreamTaskListener.class ||
                 listener.getClass() == LogTaskListener.class ||
                 listener.getClass() == StreamBuildListener.class ||
