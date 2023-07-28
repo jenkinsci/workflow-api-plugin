@@ -25,7 +25,10 @@
 package org.jenkinsci.plugins.workflow.log;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
+import hudson.util.LogTaskListener;
+import hudson.util.StreamTaskListener;
 import java.io.FilterOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -34,6 +37,7 @@ import java.lang.reflect.InaccessibleObjectException;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import jenkins.util.BuildListenerAdapter;
 import org.apache.commons.io.output.ClosedOutputStream;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -64,7 +68,12 @@ public interface OutputStreamTaskListener extends TaskListener {
             return ps;
         }
         if (Runtime.version().compareToIgnoreOptional(Runtime.Version.parse("17")) >= 0) {
-            Logger.getLogger(OutputStreamTaskListener.class.getName()).warning(() -> "On Java 17+ error handling is degraded unless OutputStreamTaskListener is used: " + listener.getClass().getName());
+            boolean core = // nothing to be done about these, though they should not be used in Pipeline build logs anyway
+                listener.getClass() == StreamTaskListener.class ||
+                listener.getClass() == LogTaskListener.class ||
+                listener.getClass() == StreamBuildListener.class ||
+                listener.getClass() == BuildListenerAdapter.class;
+            Logger.getLogger(OutputStreamTaskListener.class.getName()).log(core ? Level.FINE : Level.WARNING, () -> "On Java 17+ error handling is degraded unless OutputStreamTaskListener is used: " + listener.getClass().getName());
             return ps;
         }
         Field printStreamDelegate;
