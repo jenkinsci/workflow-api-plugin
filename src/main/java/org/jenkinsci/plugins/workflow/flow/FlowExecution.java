@@ -317,8 +317,10 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
         return getInternalGraphLookup().iterateEnclosingBlocks(node);
     }
 
-    /** Perform shutdown-specific logic -- should be invoked by the {@link FlowExecutionOwner#notifyShutdown()} method
-     *  in response to {@link FlowExecutionList#saveAll()} */
+    /**
+     * @deprecated No longer used.
+     */
+    @Deprecated
     protected void notifyShutdown() {
         // Default is no-op
     }
