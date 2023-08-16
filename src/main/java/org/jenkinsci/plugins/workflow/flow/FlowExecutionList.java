@@ -11,6 +11,7 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.XmlFile;
 import hudson.init.InitMilestone;
+import hudson.init.TermMilestone;
 import hudson.init.Terminator;
 import hudson.model.Computer;
 import hudson.model.listeners.ItemListener;
@@ -38,6 +39,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
+import org.jvnet.hudson.reactor.Milestone;
 
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -50,6 +52,19 @@ import org.kohsuke.accmod.restrictions.DoNotUse;
  */
 @Extension
 public class FlowExecutionList implements Iterable<FlowExecution> {
+
+    /**
+     * Milestone for {@link Terminator} between {@link TermMilestone#STARTED} and {@link #LIST_SAVED}.
+     * All running builds have been suspended and their {@link FlowExecutionOwner#getListener}s closed.
+     */
+    public static final String EXECUTIONS_SUSPENDED = "FlowExecutionList.EXECUTIONS_SUSPENDED";
+
+    /**
+     * Milestone for {@link Terminator} between {@link #EXECUTIONS_SUSPENDED} and {@link TermMilestone#COMPLETED}.
+     * {@link FlowExecutionList} itself has been saved.
+     */
+    public static final String LIST_SAVED = "FlowExecutionList.LIST_SAVED";
+
     private final CopyOnWriteList<FlowExecutionOwner> runningTasks = new CopyOnWriteList<>();
     private final SingleLaneExecutorService executor = new SingleLaneExecutorService(Timer.get());
     private XmlFile configFile;
@@ -238,7 +253,9 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     }
 
     @Restricted(DoNotUse.class)
-    @Terminator public static void saveAll() throws InterruptedException {
+    @SuppressWarnings("deprecation")
+    @Terminator(requires = EXECUTIONS_SUSPENDED, attains = LIST_SAVED)
+    public static void saveAll() throws InterruptedException {
         LOGGER.fine("ensuring all executions are saved");
 
         for (FlowExecutionOwner owner : get().runningTasks.getView()) {

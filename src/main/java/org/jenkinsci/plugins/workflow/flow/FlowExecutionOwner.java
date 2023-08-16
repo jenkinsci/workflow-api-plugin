@@ -53,7 +53,10 @@ public abstract class FlowExecutionOwner implements Serializable {
     @NonNull
     public abstract FlowExecution get() throws IOException;
 
-    /** Invoked in {@link FlowExecutionList#saveAll()} to notify that execution has been suspended */
+    /**
+     * @deprecated No longer used.
+     */
+    @Deprecated
     void notifyShutdown() {
         FlowExecution exec = getOrNull();
         if (exec != null) {
