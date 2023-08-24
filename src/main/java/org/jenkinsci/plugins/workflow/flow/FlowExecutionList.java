@@ -95,7 +95,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                             return e;
                         }
                     } catch (Throwable e) {
-                        LOGGER.log(Level.WARNING, "Failed to load " + o + ". Unregistering", e);
+                        LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", e);
                         unregister(o);
                     }
                 }
