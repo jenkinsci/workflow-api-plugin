@@ -219,7 +219,8 @@ public class ForkScannerTest {
         test.assertNoIllegalNullsInEvents();
         test.assertNoDupes();
         int nodeCount = new DepthFirstScanner().allNodes(heads).size();
-        Assert.assertEquals(nodeCount,
+        Assert.assertEquals("ForkScanner should visit the same number of nodes as DepthFirstScanner",
+                nodeCount,
                 new ForkScanner().allNodes(heads).size());
         test.assertMatchingParallelStartEnd();
         test.assertAllNodesGotChunkEvents(new DepthFirstScanner().allNodes(heads));
@@ -1024,6 +1025,33 @@ public class ForkScannerTest {
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
         SemaphoreStep.success("outerA/1", null);
         SemaphoreStep.success("innerA/1", null);
+        r.assertBuildStatusSuccess(r.waitForCompletion(b));
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+    }
+
+    @Test
+    public void inProgressParallelInParallelEvenNesting() throws Exception {
+        WorkflowJob p = r.createProject(WorkflowJob.class);
+        p.setDefinition(new CpsFlowDefinition(
+                "parallel(\n" +
+                "  'outerA': {\n" +
+                "    parallel('innerA': {\n" +
+                "       semaphore('innerA')\n" +
+                "    })\n" +
+                "  },\n" +
+                "  'outerB': {\n" +
+                "    parallel('innerB': {\n" +
+                "       semaphore('innerB')\n" +
+                "    })\n" +
+                "  }\n" +
+                ")", true));
+        WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("innerA/1", b);
+        SemaphoreStep.waitForStart("innerB/1", b);
+        ForkScanner scanner = new ForkScanner();
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        SemaphoreStep.success("innerA/1", null);
+        SemaphoreStep.success("innerB/1", null);
         r.assertBuildStatusSuccess(r.waitForCompletion(b));
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
     }
