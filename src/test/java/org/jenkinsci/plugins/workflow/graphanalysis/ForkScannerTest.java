@@ -352,16 +352,20 @@ public class ForkScannerTest {
         FlowNode BRANCH2_END = exec.getNode("12");
         FlowNode START_PARALLEL = exec.getNode("4");
 
-        // Branch 1, we're going to run one flownode beyond the start of the parallel branch and then split
+        // Branch 1, we're going to to the start of the parallel branch and then split
         mainBranch.add(BRANCH1_END);
         mainBranch.add(exec.getNode("8"));
         mainBranch.add(exec.getNode("6"));
         mainBranch.add(exec.getNode("4"));
-        mainBranch.add(exec.getNode("3"));  // FlowNode beyond the fork point
         for (FlowNode f : mainBranch.visited) {
             nodeMap.put(f, mainBranch);
         }
-        FlowTestUtils.assertNodeOrder("Visited nodes", mainBranch.visited, 9, 8, 6, 4, 3);
+        FlowTestUtils.assertNodeOrder("Visited nodes", mainBranch.visited, 9, 8, 6, 4);
+
+        ForkScanner.Fork forked = mainBranch.split(nodeMap, (BlockStartNode)exec.getNode("4"));
+        forked.following.add(sideBranch);
+        ForkScanner.FlowSegment splitSegment = (ForkScanner.FlowSegment)nodeMap.get(BRANCH1_END); // New branch
+        FlowTestUtils.assertNodeOrder("Branch 1 split after fork", splitSegment.visited, 9, 8, 6);
 
         // Branch 2
         sideBranch.add(BRANCH2_END);
@@ -372,15 +376,6 @@ public class ForkScannerTest {
             nodeMap.put(f, sideBranch);
         }
         FlowTestUtils.assertNodeOrder("Visited nodes", sideBranch.visited, 12, 11, 10, 7);
-
-        ForkScanner.Fork forked = mainBranch.split(nodeMap, (BlockStartNode)exec.getNode("4"), sideBranch);
-        ForkScanner.FlowSegment splitSegment = (ForkScanner.FlowSegment)nodeMap.get(BRANCH1_END); // New branch
-        Assert.assertNull(splitSegment.after);
-        FlowTestUtils.assertNodeOrder("Branch 1 split after fork", splitSegment.visited, 9, 8, 6);
-
-        // Just the single node before the fork
-        Assert.assertEquals(forked, mainBranch.after);
-        FlowTestUtils.assertNodeOrder("Head of flow, pre-fork", mainBranch.visited, 3);
 
         // Fork point
         Assert.assertEquals(forked, nodeMap.get(START_PARALLEL));
@@ -404,15 +399,14 @@ public class ForkScannerTest {
         }
         nodeMap.put(exec.getNode("7"), sideBranch);
 
-        forked = mainBranch.split(nodeMap, (BlockStartNode)exec.getNode("4"), sideBranch);
+        forked = mainBranch.split(nodeMap, (BlockStartNode)exec.getNode("4"));
+        forked.following.add(sideBranch);
         follows = new ForkScanner.FlowSegment[2];
         follows[0] = mainBranch;
         follows[1] = sideBranch;
         Assert.assertArrayEquals(follows, forked.following.toArray());
         FlowTestUtils.assertNodeOrder("Branch1", mainBranch.visited, 6);
-        Assert.assertNull(mainBranch.after);
         FlowTestUtils.assertNodeOrder("Branch2", sideBranch.visited, 7);
-        Assert.assertNull(sideBranch.after);
         Assert.assertEquals(forked, nodeMap.get(START_PARALLEL));
         Assert.assertEquals(mainBranch, nodeMap.get(exec.getNode("6")));
         Assert.assertEquals(sideBranch, nodeMap.get(exec.getNode("7")));
@@ -1021,7 +1015,6 @@ public class ForkScannerTest {
         WorkflowRun b = p.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("outerA/1", b);
         SemaphoreStep.waitForStart("innerA/1", b);
-        ForkScanner scanner = new ForkScanner();
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
         SemaphoreStep.success("outerA/1", null);
         SemaphoreStep.success("innerA/1", null);
@@ -1030,28 +1023,24 @@ public class ForkScannerTest {
     }
 
     @Test
-    public void inProgressParallelInParallelEvenNesting() throws Exception {
+    public void inProgressParallelInParallelOneNestedBranch() throws Exception {
         WorkflowJob p = r.createProject(WorkflowJob.class);
         p.setDefinition(new CpsFlowDefinition(
-                "parallel(\n" +
-                "  'outerA': {\n" +
-                "    parallel('innerA': {\n" +
-                "       semaphore('innerA')\n" +
-                "    })\n" +
-                "  },\n" +
-                "  'outerB': {\n" +
-                "    parallel('innerB': {\n" +
-                "       semaphore('innerB')\n" +
-                "    })\n" +
-                "  }\n" +
-                ")", true));
+                "parallel(\n" +                   // 3
+                "  'outerA': {\n" +               // 5
+                "    parallel(\n" +               // 7
+                "      'innerA': {\n" +           // 8
+                "        semaphore('innerA')\n" + // 10
+                "      }\n" +                     // 11
+                "    )\n" +                       // 12
+                "  },\n" +                        // 13
+                "  'outerB': {\n" +               // 6
+                "  }\n" +                         // 9
+                ")", true));                      // 14
         WorkflowRun b = p.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("innerA/1", b);
-        SemaphoreStep.waitForStart("innerB/1", b);
-        ForkScanner scanner = new ForkScanner();
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
         SemaphoreStep.success("innerA/1", null);
-        SemaphoreStep.success("innerB/1", null);
         r.assertBuildStatusSuccess(r.waitForCompletion(b));
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
     }

@@ -235,7 +235,6 @@ public class ForkScanner extends AbstractFlowScanner {
     // TODO see if this can be replaced with a FlowChunk acting as a container class for a list of FlowNodes
     static class FlowSegment implements FlowPiece {
         ArrayList<FlowNode> visited = new ArrayList<>();
-        FlowPiece after;
         boolean isLeaf = true;
 
         @Override
@@ -244,44 +243,20 @@ public class ForkScanner extends AbstractFlowScanner {
         }
 
         /**
-         * We have discovered a forking node intersecting our FlowSegment in the middle or meeting at the end
-         * Now we need to split the flow, or pull out the fork point and make both branches follow it
+         * We have discovered a parallel step start node at the end of our segment, so we create a fork for that step and point it to this segment.
          * @param nodeMapping Mapping of BlockStartNodes to flowpieces (forks or segments)
-         * @param joinPoint Node where the branches intersect/meet (fork point)
-         * @param joiningBranch Flow piece that is joining this
-         * @throws IllegalStateException When you try to split a segment on a node that it doesn't contain, or invalid graph structure
+         * @param joinPoint The parallel step start node
+         * @throws IllegalStateException When you try to split a segment in an invalid way
          * @return Recreated fork
          */
-        Fork split(@NonNull HashMap<FlowNode, FlowPiece> nodeMapping, @NonNull BlockStartNode joinPoint, @NonNull FlowPiece joiningBranch) {
-            int index = visited.lastIndexOf(joinPoint);  // Fork will be closer to end, so this is better than indexOf
-            Fork newFork = new Fork(joinPoint);
-
-            if (index < 0) {
-                throw new IllegalStateException("Tried to split a segment where the node doesn't exist in this segment");
-            } else if (index == this.visited.size()-1) { // We forked just off the most recent node
-                newFork.following.add(this);
-                newFork.following.add(joiningBranch);
-                this.visited.remove(index);
-            } else if (index == 0) {
-                throw new IllegalStateException("We have a cyclic graph or heads that are not separate branches!");
-            } else { // Splitting at some midpoint within the segment, everything before becomes part of the following
-                // Execute the split: create a new fork at the fork point, and shuffle the part of the flow after it
-                //   to a new segment and add that to the fork.
-
-                FlowSegment newSegment = new FlowSegment();
-                newSegment.after = this.after;
-                newSegment.visited.addAll(this.visited.subList(0, index));
-                newFork.following.add(newSegment);
-                newFork.following.add(joiningBranch);
-                this.after = newFork;
-                this.isLeaf = false;
-
-                // Remove the part before the fork point
-                this.visited.subList(0, index+1).clear();
-                for (FlowNode n : newSegment.visited) {
-                    nodeMapping.put(n, newSegment);
-                }
+        Fork split(@NonNull HashMap<FlowNode, FlowPiece> nodeMapping, @NonNull BlockStartNode joinPoint) {
+            int index = visited.size() - 1;
+            if (visited.isEmpty() || visited.get(index) != joinPoint) {
+                throw new AssertionError("Misuse of ForkScanner.split");
             }
+            Fork newFork = new Fork(joinPoint);
+            newFork.following.add(this);
+            this.visited.remove(index);
             nodeMapping.put(joinPoint, newFork);
             return newFork;
         }
@@ -407,27 +382,30 @@ public class ForkScanner extends AbstractFlowScanner {
                 FlowPiece existingPiece = branches.get(nextBlockStart);
                 if (existingPiece == null && myPiece instanceof FlowSegment) { // No merge, just add to segment
                     ((FlowSegment) myPiece).add(nextBlockStart);
-                    branches.put(nextBlockStart, myPiece);
+                    if (isParallelStart(nextBlockStart)) {
+                        // We make a fork for every parallel step preemptively in case it has less than 2 branches.
+                        Fork f = ((FlowSegment) myPiece).split(branches, (BlockStartNode) nextBlockStart);
+                        // We always create the fork at the end of the existing segment at its end, so we must replace
+                        // the piece with the fork ahead of it.
+                        int headIndex = livePieces.indexOf(myPiece);
+                        livePieces.set(headIndex, f);
+                        parallelForks.add(f);
+                        branches.put(nextBlockStart, f);
+                    } else {
+                        branches.put(nextBlockStart, myPiece);
+                    }
                 } else if (existingPiece == null && myPiece instanceof Fork) {  // No merge, we had a fork. Start a segment preceding the fork
                     FlowSegment newSegment = new FlowSegment();
                     newSegment.isLeaf = false;
                     newSegment.add(nextBlockStart);
-                    newSegment.after = myPiece;
                     pieceIterator.remove();
                     pieceIterator.add(newSegment);
                     branches.put(nextBlockStart, newSegment);
                 } else if (existingPiece != null) {  // Always not null. We're merging into another thing, we're going to eliminate a branch
                     if (existingPiece instanceof Fork) {
                         ((Fork) existingPiece).following.add(myPiece);
-                    } else { // Split a flow segment so it forks against this one
-                        Fork f = ((FlowSegment) existingPiece).split(branches, (BlockStartNode)nextBlockStart, myPiece);
-                        // If we split the existing segment at its end, we created a fork replacing its latest node
-                        // Thus we must replace the piece with the fork ahead of it
-                        if (f.following.contains(existingPiece) ) {
-                            int headIndex = livePieces.indexOf(existingPiece);
-                            livePieces.set(headIndex, f);
-                        }
-                        parallelForks.add(f);
+                    } else {
+                        throw new IllegalStateException("Unexpected join on " + existingPiece);
                     }
 
                     // Merging removes the piece & its iterator from heads
