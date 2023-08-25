@@ -39,7 +39,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
-import org.jvnet.hudson.reactor.Milestone;
 
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -206,16 +205,24 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     public static class ItemListenerImpl extends ItemListener {
         @Override
         public void onLoaded() {
-            FlowExecutionList list = FlowExecutionList.get();
-            for (final FlowExecution e : list) {
-                // The call to FlowExecutionOwner.get in the implementation of iterator() is sufficient to load the Pipeline.
+            FlowExecutionList.get().resume();
+        }
+    }
+
+    private void resume() {
+        for (final FlowExecutionOwner o : runningTasks) {
+            try {
+                FlowExecution e = o.get();
                 LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
                 if (e.isComplete()) {
-                    list.unregister(e.getOwner());
+                    unregister(o);
                 }
+            } catch (IOException ex) {
+                LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", ex);
+                unregister(o);
             }
-            list.resumptionComplete = true;
         }
+        resumptionComplete = true;
     }
 
     /**
