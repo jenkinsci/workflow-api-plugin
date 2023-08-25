@@ -54,10 +54,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import java.util.stream.StreamSupport;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 
 /**
  * Tests for internals of ForkScanner
@@ -539,7 +544,9 @@ public class ForkScannerTest {
         ForkScanner.ParallelBlockStart start = starts.peek();
         Assert.assertEquals(2, start.unvisited.size());
         Assert.assertEquals(exec.getNode("4"), start.forkStart);
-        Assert.assertArrayEquals(heads.toArray(), start.unvisited.toArray());
+        List<FlowNode> startUnvisited = new ArrayList<>(start.unvisited);
+        Collections.reverse(startUnvisited);
+        Assert.assertArrayEquals(heads.toArray(), startUnvisited.toArray());
 
         // Ensure no issues with single start triggering least common ancestor
         heads = new LinkedHashSet<>(Collections.singletonList(exec.getNode("4")));
@@ -1016,10 +1023,12 @@ public class ForkScannerTest {
         SemaphoreStep.waitForStart("outerA/1", b);
         SemaphoreStep.waitForStart("innerA/1", b);
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "innerB", "innerA", "outerC", "outerB", "outerA");
         SemaphoreStep.success("outerA/1", null);
         SemaphoreStep.success("innerA/1", null);
         r.assertBuildStatusSuccess(r.waitForCompletion(b));
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "innerB", "innerA", "outerC", "outerB", "outerA");
     }
 
     @Test
@@ -1040,8 +1049,46 @@ public class ForkScannerTest {
         WorkflowRun b = p.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("innerA/1", b);
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        // TODO: We would like for this order to match the order of the completed build, but that requires reverting
+        // https://github.com/jenkinsci/workflow-api-plugin/pull/287, which would reintroduce a much more severe problem.
+        assertBranchOrder(b.getExecution(), "innerA", "outerA", "outerB");
         SemaphoreStep.success("innerA/1", null);
         r.assertBuildStatusSuccess(r.waitForCompletion(b));
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "outerB", "innerA", "outerA");
+    }
+
+    @Test
+    public void parallelBranchOrdering() throws Exception {
+        WorkflowJob p = r.createProject(WorkflowJob.class);
+        p.setDefinition(new CpsFlowDefinition(
+                "parallel(\n" +
+                "  '1': { echo '1' },\n" +
+                "  '2': { semaphore('2') },\n" +
+                "  '3': { echo '3' },\n" +
+                "  '4': { semaphore('4') },\n" +
+                "  '5': { echo '5' },\n" +
+                ")", true));
+        WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("2/1", b);
+        SemaphoreStep.waitForStart("4/1", b);
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "5", "4", "3", "2", "1");
+        SemaphoreStep.success("2/1", null);
+        SemaphoreStep.success("4/1", null);
+        r.assertBuildStatusSuccess(r.waitForCompletion(b));
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "5", "4", "3", "2", "1");
+    }
+
+    private static void assertBranchOrder(FlowExecution execution, String... expectedBranchNames) {
+        ForkScanner scanner = new ForkScanner();
+        scanner.setup(execution.getCurrentHeads());
+        List<String> branches = StreamSupport.stream(scanner.spliterator(), false)
+                .map(n -> n.getPersistentAction(ThreadNameAction.class))
+                .filter(Objects::nonNull)
+                .map(ThreadNameAction::getThreadName)
+                .collect(Collectors.toList());
+        assertThat(branches, contains(expectedBranchNames));
     }
 }

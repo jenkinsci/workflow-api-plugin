@@ -41,6 +41,7 @@ import net.jcip.annotations.NotThreadSafe;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -351,12 +352,16 @@ public class ForkScanner extends AbstractFlowScanner {
         };
 
         for (FlowNode f : heads) {
-            iterators.add(new FilteratorImpl<>((Iterator)f.iterateEnclosingBlocks().iterator(), notAHead));  // We can do this because Parallels always meet at a BlockStartNode
+            iterators.add(new FilteratorImpl<>((Iterator) new ExpandedEnclosingBlockIterator(f), notAHead));  // We can do this because Parallels always meet at a BlockStartNode
             FlowSegment b = new FlowSegment();
             b.add(f);
             livePieces.add(b);
             branches.put(f, b);
         }
+
+        // We want to visit heads in order of most recent to least recent.
+        Collections.reverse(iterators);
+        Collections.reverse(livePieces);
 
         // Walk through, merging flownodes one-by-one until everything has merged to one ancestor
         boolean mergedAll = false;
@@ -371,6 +376,7 @@ public class ForkScanner extends AbstractFlowScanner {
 
                 // Welp we hit the end of a branch
                 if (!blockStartIterator.hasNext()) {
+                    // This case is why we use ExpandedEnclosingBlockIterator instead of FlowNode.iterateEnclosingBlocks - otherwise branch ordering is not preserved.
                     pieceIterator.remove();
                     itIterator.remove();
                     continue;
@@ -760,6 +766,42 @@ public class ForkScanner extends AbstractFlowScanner {
             FlowNode f = next();
             fireVisitChunkCallbacks(myNext, myCurrent, prev, visitor, finder, this);
             fireVisitParallelCallbacks(myNext, myCurrent, prev, visitor, finder, this);
+        }
+    }
+
+    /**
+     * Like {@link FlowNode#iterateEnclosingBlocks}, but if the original node is a {@link BlockEndNode}, its
+     * corresponding {@link BlockStartNode} is the first element in the iterator.
+     */
+    private static class ExpandedEnclosingBlockIterator implements Iterator<BlockStartNode> {
+        private BlockStartNode startNode;
+        Iterator<BlockStartNode> enclosingBlocks;
+
+        public ExpandedEnclosingBlockIterator(FlowNode node) {
+            if (node instanceof BlockEndNode) {
+                startNode = ((BlockEndNode) node).getStartNode();
+                enclosingBlocks = startNode.iterateEnclosingBlocks().iterator();
+            } else {
+                enclosingBlocks = node.iterateEnclosingBlocks().iterator();
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (startNode != null) {
+                return true;
+            }
+            return enclosingBlocks.hasNext();
+        }
+
+        @Override
+        public BlockStartNode next() {
+            if (startNode != null) {
+                BlockStartNode temp = startNode;
+                startNode = null;
+                return temp;
+            }
+            return enclosingBlocks.next();
         }
     }
 

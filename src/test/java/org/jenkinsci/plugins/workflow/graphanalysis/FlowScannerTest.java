@@ -390,11 +390,11 @@ public class FlowScannerTest {
         // Test forkscanner inside a parallel
         List<FlowNode> startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("12"));
         scanner.setup(startingPoints);
-        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 12, 11, 10, 7, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 12, 11, 10, 7, 9, 8, 6, 4, 3, 2);
 
         startingPoints = Arrays.asList(exec.getNode("9"), exec.getNode("11"));
         scanner.setup(startingPoints);
-        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 9, 8, 6, 11, 10, 7, 4, 3, 2);
+        FlowTestUtils.assertNodeOrder("ForkedScanner", scanner, 11, 10, 7, 9, 8, 6, 4, 3, 2);
 
 
         // Filtering at different points within branches
