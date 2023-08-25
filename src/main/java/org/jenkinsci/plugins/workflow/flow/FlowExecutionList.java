@@ -208,8 +208,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         public void onLoaded() {
             FlowExecutionList list = FlowExecutionList.get();
             for (final FlowExecution e : list) {
-                // The call to FlowExecutionOwner.get in the implementation of iterator() is sufficent to load the Pipeline.
+                // The call to FlowExecutionOwner.get in the implementation of iterator() is sufficient to load the Pipeline.
                 LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
+                if (e.isComplete()) {
+                    list.unregister(e.getOwner());
+                }
             }
             list.resumptionComplete = true;
         }
