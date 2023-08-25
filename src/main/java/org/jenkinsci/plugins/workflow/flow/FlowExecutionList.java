@@ -88,7 +88,10 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 while (base.hasNext()) {
                     FlowExecutionOwner o = base.next();
                     try {
-                        return o.get();
+                        FlowExecution e = o.get();
+                        if (!e.isComplete()) {
+                            return e;
+                        }
                     } catch (Throwable e) {
                         LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", e);
                         unregister(o);
