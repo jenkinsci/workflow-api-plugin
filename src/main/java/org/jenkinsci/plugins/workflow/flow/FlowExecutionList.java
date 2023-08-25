@@ -80,7 +80,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      */
     @Override
     public Iterator<FlowExecution> iterator() {
-        return new AbstractIterator<FlowExecution>() {
+        return new AbstractIterator<>() {
             final Iterator<FlowExecutionOwner> base = runningTasks.iterator();
 
             @Override
@@ -88,12 +88,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 while (base.hasNext()) {
                     FlowExecutionOwner o = base.next();
                     try {
-                        FlowExecution e = o.get();
-                        if (e.isComplete()) {
-                            unregister(o);
-                        } else {
-                            return e;
-                        }
+                        return o.get();
                     } catch (Throwable e) {
                         LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", e);
                         unregister(o);
