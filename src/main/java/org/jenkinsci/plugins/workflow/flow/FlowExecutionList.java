@@ -39,7 +39,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
-import org.jvnet.hudson.reactor.Milestone;
 
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -80,7 +79,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      */
     @Override
     public Iterator<FlowExecution> iterator() {
-        return new AbstractIterator<FlowExecution>() {
+        return new AbstractIterator<>() {
             final Iterator<FlowExecutionOwner> base = runningTasks.iterator();
 
             @Override
@@ -89,13 +88,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     FlowExecutionOwner o = base.next();
                     try {
                         FlowExecution e = o.get();
-                        if (e.isComplete()) {
-                            unregister(o);
-                        } else {
+                        if (!e.isComplete()) {
                             return e;
                         }
                     } catch (Throwable e) {
-                        LOGGER.log(Level.WARNING, "Failed to load " + o + ". Unregistering", e);
+                        LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", e);
                         unregister(o);
                     }
                 }
@@ -208,13 +205,32 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     public static class ItemListenerImpl extends ItemListener {
         @Override
         public void onLoaded() {
-            FlowExecutionList list = FlowExecutionList.get();
-            for (final FlowExecution e : list) {
-                // The call to FlowExecutionOwner.get in the implementation of iterator() is sufficent to load the Pipeline.
-                LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
-            }
-            list.resumptionComplete = true;
+            FlowExecutionList.get().resume();
         }
+    }
+
+    private void resume() {
+        boolean needSave = false;
+        for (var it = runningTasks.iterator(); it.hasNext(); ) {
+            var o = it.next();
+            try {
+                FlowExecution e = o.get();
+                LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
+                if (e.isComplete()) {
+                    LOGGER.log(Level.FINE, "Unregistering completed " + o, e);
+                    it.remove();
+                    needSave = true;
+                }
+            } catch (IOException ex) {
+                LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", ex);
+                it.remove();
+                needSave = true;
+            }
+        }
+        if (needSave) {
+            saveLater();
+        }
+        resumptionComplete = true;
     }
 
     /**
