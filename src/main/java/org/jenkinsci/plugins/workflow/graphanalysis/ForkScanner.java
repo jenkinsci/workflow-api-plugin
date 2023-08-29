@@ -51,8 +51,22 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Scanner that will scan down all forks when we hit parallel blocks before continuing, but generally runs in linear order
- * <p>Think of it as the opposite of {@link DepthFirstScanner}.
+ * Scanner that will scan down all forks when we hit parallel blocks before continuing (as opposed to {@link DepthFirstScanner}), but generally runs in linear order.
+ * <p><strong>Warning</strong> This scanner has various issues when iterating over incomplete builds, or more generally
+ * when multiple heads are passed to {@link #setup}, especially if the build contains nested parallelism.
+ * Consider using {@link DepthFirstScanner} instead in those cases to avoid these issues, employing its iteration order
+ * as needed to sort results (although its global iteration order is inconsistent, its relative iteration order among
+ * siblings at the same nesting level (e.g. parallel branches) is consistent and that is good enough for typical use
+ * cases such as producing a tree).
+ * In particular, the following known issues are possible when using this scanner with multiple heads:
+ * <ul>
+ *   <li>Nodes may be visited more than once (mainly with nested parallelism, but also possible with bad timing while a parallel step is initializing heads for its branches).
+ *   <li>Nodes that should be visited may be skipped (only known to happen for nested parallel steps with less than two branches).
+ *   <li>The ordering of branches in parallel steps is inconsistent with respect to the Pipeline script and the order may change as the build progresses.
+ *   <li>When using {@link #visitSimpleChunks}, some chunks may be skipped, and the boundaries of chunks may be incorrect. For example, in some cases, the start node in {@link SimpleChunkVisitor#parallelStart} may not actually be the start node for a parallel step.
+ * </ul>
+ *
+ * <p>For completed builds, or when a single head is passed to {@link #setup}, the above issues should not occur and the following description should be accurate:
  *
  * <p>This is a fairly efficient way to visit all FlowNodes, and provides four useful guarantees:
  * <ul>

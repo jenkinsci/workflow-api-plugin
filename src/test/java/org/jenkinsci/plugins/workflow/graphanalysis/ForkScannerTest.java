@@ -54,10 +54,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import org.junit.Ignore;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 
 /**
  * Tests for internals of ForkScanner
@@ -219,7 +225,8 @@ public class ForkScannerTest {
         test.assertNoIllegalNullsInEvents();
         test.assertNoDupes();
         int nodeCount = new DepthFirstScanner().allNodes(heads).size();
-        Assert.assertEquals(nodeCount,
+        Assert.assertEquals("ForkScanner should visit the same number of nodes as DepthFirstScanner",
+                nodeCount,
                 new ForkScanner().allNodes(heads).size());
         test.assertMatchingParallelStartEnd();
         test.assertAllNodesGotChunkEvents(new DepthFirstScanner().allNodes(heads));
@@ -1022,9 +1029,74 @@ public class ForkScannerTest {
         SemaphoreStep.waitForStart("innerA/1", b);
         ForkScanner scanner = new ForkScanner();
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "innerB", "innerA", "outerC", "outerB", "outerA");
         SemaphoreStep.success("outerA/1", null);
         SemaphoreStep.success("innerA/1", null);
         r.assertBuildStatusSuccess(r.waitForCompletion(b));
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "innerB", "innerA", "outerC", "outerB", "outerA");
+    }
+
+    @Ignore("outerA gets skipped when iterating, see warning in ForkScanner Javadoc")
+    @Test
+    public void inProgressParallelInParallelOneNestedBranch() throws Exception {
+        WorkflowJob p = r.createProject(WorkflowJob.class);
+        p.setDefinition(new CpsFlowDefinition(
+                "parallel(\n" +                   // 3
+                "  'outerA': {\n" +               // 5
+                "    parallel(\n" +               // 7
+                "      'innerA': {\n" +           // 8
+                "        semaphore('innerA')\n" + // 10
+                "      }\n" +                     // 11
+                "    )\n" +                       // 12
+                "  },\n" +                        // 13
+                "  'outerB': {\n" +               // 6
+                "  }\n" +                         // 9
+                ")", true));                      // 14
+        WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("innerA/1", b);
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        // TODO: We would like for this order to match the order of the completed build, but that would require an
+        // alternative fix for the issue described in https://github.com/jenkinsci/workflow-api-plugin/pull/287.
+        assertBranchOrder(b.getExecution(), "innerA", "outerA", "outerB");
+        SemaphoreStep.success("innerA/1", null);
+        r.assertBuildStatusSuccess(r.waitForCompletion(b));
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "outerB", "innerA", "outerA");
+    }
+
+    @Ignore("Actual ordering is all complete branches and then all incomplete branches, see warning in ForkScanner Javadoc")
+    @Test
+    public void parallelBranchOrdering() throws Exception {
+        WorkflowJob p = r.createProject(WorkflowJob.class);
+        p.setDefinition(new CpsFlowDefinition(
+                "parallel(\n" +
+                "  '1': { echo '1' },\n" +
+                "  '2': { semaphore('2') },\n" +
+                "  '3': { echo '3' },\n" +
+                "  '4': { semaphore('4') },\n" +
+                "  '5': { echo '5' },\n" +
+                ")", true));
+        WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("2/1", b);
+        SemaphoreStep.waitForStart("4/1", b);
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "5", "4", "3", "2", "1");
+        SemaphoreStep.success("2/1", null);
+        SemaphoreStep.success("4/1", null);
+        r.assertBuildStatusSuccess(r.waitForCompletion(b));
+        sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
+        assertBranchOrder(b.getExecution(), "5", "4", "3", "2", "1");
+    }
+
+    private static void assertBranchOrder(FlowExecution execution, String... expectedBranchNames) {
+        ForkScanner scanner = new ForkScanner();
+        scanner.setup(execution.getCurrentHeads());
+        List<String> branches = StreamSupport.stream(scanner.spliterator(), false)
+                .map(n -> n.getPersistentAction(ThreadNameAction.class))
+                .filter(Objects::nonNull)
+                .map(ThreadNameAction::getThreadName)
+                .collect(Collectors.toList());
+        assertThat(branches, contains(expectedBranchNames));
     }
 }
