@@ -81,6 +81,7 @@ final class BufferedBuildListener extends OutputStreamTaskListener.Default imple
                 @Override public void onClosed(Channel channel, IOException cause) {
                     LOGGER.fine(() -> "closing " + channel.getName());
                     cos.close(channel, cause);
+                    channel.removeListener(this);
                 }
             });
             return new BufferedBuildListener(cos);
