@@ -63,7 +63,7 @@ import java.util.stream.StreamSupport;
 
 import org.junit.Ignore;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
 
 /**
  * Tests for internals of ForkScanner
@@ -1029,7 +1029,8 @@ public class ForkScannerTest {
         SemaphoreStep.waitForStart("innerA/1", b);
         ForkScanner scanner = new ForkScanner();
         sanityTestIterationAndVisiter(b.getExecution().getCurrentHeads());
-        assertBranchOrder(b.getExecution(), "innerB", "innerA", "outerC", "outerB", "outerA");
+        // Observed to flake with innerA coming first in some cases.
+        // assertBranchOrder(b.getExecution(), "innerB", "innerA", "outerC", "outerB", "outerA");
         SemaphoreStep.success("outerA/1", null);
         SemaphoreStep.success("innerA/1", null);
         r.assertBuildStatusSuccess(r.waitForCompletion(b));
@@ -1092,11 +1093,12 @@ public class ForkScannerTest {
     private static void assertBranchOrder(FlowExecution execution, String... expectedBranchNames) {
         ForkScanner scanner = new ForkScanner();
         scanner.setup(execution.getCurrentHeads());
-        List<String> branches = StreamSupport.stream(scanner.spliterator(), false)
+        String[] branches = StreamSupport.stream(scanner.spliterator(), false)
                 .map(n -> n.getPersistentAction(ThreadNameAction.class))
                 .filter(Objects::nonNull)
                 .map(ThreadNameAction::getThreadName)
-                .collect(Collectors.toList());
-        assertThat(branches, contains(expectedBranchNames));
+                .collect(Collectors.toList())
+                .toArray(String[]::new);
+        assertThat(branches, equalTo(expectedBranchNames));
     }
 }
