@@ -52,8 +52,8 @@ final class BufferedBuildListener extends OutputStreamTaskListener.Default imple
     private static final Cleaner cleaner = Cleaner.create(new NamingThreadFactory(new DaemonThreadFactory(), BufferedBuildListener.class.getName() + ".cleaner"));
 
     private final OutputStream out;
-    private final Channel channel;
-    private final Listener listener;
+    private transient final Channel channel;
+    private transient final Listener listener;
 
     BufferedBuildListener(OutputStream out) {
         this.out = out;
