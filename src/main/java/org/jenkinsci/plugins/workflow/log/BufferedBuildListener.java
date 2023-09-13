@@ -47,6 +47,8 @@ import org.jenkinsci.remoting.SerializableOnlyOverRemoting;
  */
 final class BufferedBuildListener extends OutputStreamTaskListener.Default implements BuildListener, Closeable, SerializableOnlyOverRemoting {
 
+    private static final long serialVersionUID = 1;
+
     private static final Logger LOGGER = Logger.getLogger(BufferedBuildListener.class.getName());
 
     private static final Cleaner cleaner = Cleaner.create(new NamingThreadFactory(new DaemonThreadFactory(), BufferedBuildListener.class.getName() + ".cleaner"));
