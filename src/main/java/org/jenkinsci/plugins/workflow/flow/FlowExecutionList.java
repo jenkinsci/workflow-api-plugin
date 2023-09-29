@@ -14,6 +14,7 @@ import hudson.init.InitMilestone;
 import hudson.init.TermMilestone;
 import hudson.init.Terminator;
 import hudson.model.Computer;
+import hudson.model.Queue;
 import hudson.model.listeners.ItemListener;
 import hudson.remoting.SingleLaneExecutorService;
 import hudson.util.CopyOnWriteList;
@@ -37,6 +38,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import jenkins.util.SystemProperties;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 
@@ -105,7 +107,14 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         if (configFile == null) {
             Jenkins j = Jenkins.getInstanceOrNull();
             if (j != null) {
-                configFile = new XmlFile(new File(j.getRootDir(), FlowExecutionList.class.getName() + ".xml"));
+                String id = SystemProperties.getString(Queue.class.getName() + ".id");
+                File f;
+                if (id != null) {
+                    f = new File(Jenkins.get().getRootDir(), FlowExecutionList.class.getName() + "/" + id + ".xml");
+                } else {
+                    f = new File(j.getRootDir(), FlowExecutionList.class.getName() + ".xml");
+                }
+                configFile = new XmlFile(f);
             }
         }
         return configFile;
