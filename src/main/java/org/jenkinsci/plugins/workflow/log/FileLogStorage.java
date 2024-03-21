@@ -94,6 +94,9 @@ public final class FileLogStorage implements LogStorage {
     private synchronized void open() throws IOException {
         if (os == null) {
             os = new FileOutputStream(log, true);
+            LOGGER.fine(() -> "locking " + log + "…");
+            os.getChannel().lock();
+            LOGGER.fine(() -> "…locked " + log);
             osStartPosition = log.length();
             cos = new CountingOutputStream(os);
             bos = LogStorage.wrapWithAutoFlushingBuffer(cos);
@@ -189,6 +192,7 @@ public final class FileLogStorage implements LogStorage {
                 openStorages.remove(log);
                 try {
                     bos.close();
+                    LOGGER.fine(() -> "closed " + log + " which should have released its lock");
                 } finally {
                     indexOs.close();
                 }
