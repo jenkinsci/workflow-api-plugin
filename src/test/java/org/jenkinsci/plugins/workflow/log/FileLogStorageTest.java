@@ -30,12 +30,15 @@ import hudson.model.TaskListener;
 import java.io.File;
 import java.util.logging.Level;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.LoggerRule;
 
 public class FileLogStorageTest extends LogStorageTestBase {
 
+    @ClassRule public static LoggerRule fineLogging = new LoggerRule();
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
     private File log;
 
@@ -57,7 +60,7 @@ public class FileLogStorageTest extends LogStorageTestBase {
     }
 
     @Test public void interruptionDoesNotCloseStream() throws Exception {
-        logging.record(FileLogStorage.class, Level.FINE);
+        fineLogging.record(FileLogStorage.class, Level.FINE);
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("overall 1");
