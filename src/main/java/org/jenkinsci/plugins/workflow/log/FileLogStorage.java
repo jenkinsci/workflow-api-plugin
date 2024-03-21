@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.log;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import hudson.Functions;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.model.BuildListener;
@@ -94,9 +95,14 @@ public final class FileLogStorage implements LogStorage {
     private synchronized void open() throws IOException {
         if (os == null) {
             os = new FileOutputStream(log, true);
-            LOGGER.fine(() -> "locking " + log + "…");
-            os.getChannel().lock();
-            LOGGER.fine(() -> "…locked " + log);
+            // TODO mandatory file locks break log reading on Windows (see FileLogStorageTest.smokes etc.)
+            // And LargeText offers no control over how FileSession works, so cannot share the channel.
+            // Could instead lock the index file, then use openStorages to ensure that readers reuse the channel.
+            if (!Functions.isWindows()) {
+                LOGGER.fine(() -> "locking " + log + "…");
+                os.getChannel().lock();
+                LOGGER.fine(() -> "…locked " + log);
+            }
             osStartPosition = log.length();
             cos = new CountingOutputStream(os);
             bos = LogStorage.wrapWithAutoFlushingBuffer(cos);
@@ -192,7 +198,9 @@ public final class FileLogStorage implements LogStorage {
                 openStorages.remove(log);
                 try {
                     bos.close();
-                    LOGGER.fine(() -> "closed " + log + " which should have released its lock");
+                    if (!Functions.isWindows()) {
+                        LOGGER.fine(() -> "closed " + log + " which should have released its lock");
+                    }
                 } finally {
                     indexOs.close();
                 }

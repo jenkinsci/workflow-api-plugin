@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 
 import hudson.model.TaskListener;
 import java.io.File;
+import java.util.logging.Level;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -56,6 +57,7 @@ public class FileLogStorageTest extends LogStorageTestBase {
     }
 
     @Test public void interruptionDoesNotCloseStream() throws Exception {
+        logging.record(FileLogStorage.class, Level.FINE);
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("overall 1");
