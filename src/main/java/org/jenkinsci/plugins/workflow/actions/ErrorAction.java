@@ -185,24 +185,25 @@ public class ErrorAction implements PersistentAction {
             LOGGER.fine(() -> "Same object: " + t1);
             return true;
         }
-        String id1 = findId(t1, new HashSet<>());
-        if (id1 != null) {
-            String id2 = findId(t2, new HashSet<>());
-            if (id1.equals(id2)) {
-                LOGGER.fine(() -> "ErrorId matches: " + id1);
-                return true;
-            }
-            LOGGER.fine(() -> "ErrorId mismatch: " + t1 + " " + id1 + " vs. " + t2 + " " + id2);
-        } else {
-            LOGGER.fine(() -> "No ErrorId on " + t1);
-        }
-        if (t1.getClass() != t2.getClass()) {
+        boolean noProxy = t1.getClass() != ProxyException.class && t2.getClass() != ProxyException.class;
+        if (noProxy && t1.getClass() != t2.getClass()) {
             LOGGER.fine(() -> "Different types: " + t1.getClass() + " vs. " + t2.getClass());
             return false;
-        } else if (!Objects.equals(t1.getMessage(), t2.getMessage())) {
+        } else if (noProxy && !Objects.equals(t1.getMessage(), t2.getMessage())) {
             LOGGER.fine(() -> "Different messages: " + t1.getMessage() + " vs. " + t2.getMessage());
             return false;
         } else {
+            String id1 = findId(t1, new HashSet<>());
+            if (id1 != null) {
+                String id2 = findId(t2, new HashSet<>());
+                if (id1.equals(id2)) {
+                    LOGGER.fine(() -> "ErrorId matches: " + id1);
+                    return true;
+                } else {
+                    LOGGER.fine(() -> "ErrorId mismatch: " + t1 + " " + id1 + " vs. " + t2 + " " + id2);
+                    return false;
+                }
+            }
             // No ErrorId, use a best-effort approach that doesn't work across restarts for exceptions thrown
             // synchronously from the CPS VM thread.
             // Check that stack traces match, but specifically avoid checking suppressed exceptions, which are often
