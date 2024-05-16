@@ -75,7 +75,7 @@ public class ErrorAction implements PersistentAction {
         }
         this.error = errorForAction;
         String id = findId(error, new HashSet<>());
-        if (id == null && error != null) {
+        if (id == null) {
             errorForAction.addSuppressed(new ErrorId());
             if (error != errorForAction) {
                 // Make sure the original exception has the error ID, not just the copy here.
