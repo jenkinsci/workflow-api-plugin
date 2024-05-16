@@ -69,8 +69,6 @@ import org.jvnet.hudson.test.InboundAgentRule;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.jenkinsci.plugins.workflow.graph.StepNode;
-import static org.hamcrest.Matchers.equalTo;
 
 /**
  * Tests for {@link ErrorAction}
