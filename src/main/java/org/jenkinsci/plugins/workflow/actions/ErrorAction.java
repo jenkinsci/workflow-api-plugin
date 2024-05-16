@@ -42,7 +42,7 @@ import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.AtomNode;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
-import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
 
@@ -56,20 +56,25 @@ public class ErrorAction implements PersistentAction {
     private final @NonNull Throwable error;
 
     public ErrorAction(@NonNull Throwable error) {
+        Throwable errorForAction = error;
         if (isUnserializableException(error, new HashSet<>())) {
-            error = new ProxyException(error);
+            errorForAction = new ProxyException(error);
         } else if (error != null) {
             try {
                 Jenkins.XSTREAM2.toXMLUTF8(error, new NullOutputStream());
             } catch (Exception x) {
                 // Typically SecurityException from ClassFilter.
-                error = new ProxyException(error);
+                errorForAction = new ProxyException(error);
             }
         }
-        this.error = error;
+        this.error = errorForAction;
         String id = findId(error, new HashSet<>());
         if (id == null && error != null) {
-            error.addSuppressed(new ErrorId());
+            errorForAction.addSuppressed(new ErrorId());
+            if (error != errorForAction) {
+                // Make sure the original exception has the error ID, not just the copy here.
+                error.addSuppressed(new ErrorId());
+            }
         }
     }
 
@@ -140,7 +145,7 @@ public class ErrorAction implements PersistentAction {
      */
     public static @CheckForNull FlowNode findOrigin(@NonNull Throwable error, @NonNull FlowExecution execution) {
         FlowNode candidate = null;
-        for (FlowNode n : new ForkScanner().allNodes(execution)) {
+        for (FlowNode n : new DepthFirstScanner().allNodes(execution)) {
             ErrorAction errorAction = n.getPersistentAction(ErrorAction.class);
             if (errorAction != null && equals(error, errorAction.getError())) {
                 candidate = n; // continue search for earlier one
