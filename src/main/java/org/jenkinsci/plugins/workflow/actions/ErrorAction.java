@@ -176,9 +176,11 @@ public class ErrorAction implements PersistentAction {
     public static boolean equals(Throwable t1, Throwable t2) {
         if (t1 == t2) {
             return true;
-        } else if (t1.getClass() != t2.getClass()) {
+        }
+        boolean noProxy = t1.getClass() != ProxyException.class && t2.getClass() != ProxyException.class;
+        if (noProxy && t1.getClass() != t2.getClass()) {
             return false;
-        } else if (!Objects.equals(t1.getMessage(), t2.getMessage())) {
+        } else if (noProxy && !Objects.equals(t1.getMessage(), t2.getMessage())) {
             return false;
         } else {
             String id1 = findId(t1, new HashSet<>());
