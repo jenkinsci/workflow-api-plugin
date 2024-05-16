@@ -40,7 +40,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -237,7 +236,6 @@ public class ErrorActionTest {
         assertNotNull(new ErrorAction(cyclic2));
     }
 
-    @Ignore("TODO: broken until https://github.com/jenkinsci/remoting/pull/645 is picked up")
     @Test public void unserializableCyclicErrorsAreSupported() throws Throwable {
         Exception unserializable = new MissingMethodException("thisMethodDoesNotExist", String.class, new Object[0]);
         Exception cyclic = new Exception(unserializable);
