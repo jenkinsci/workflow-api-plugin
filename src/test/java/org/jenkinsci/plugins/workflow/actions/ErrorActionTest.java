@@ -47,20 +47,43 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsSessionRule;
 
 import groovy.lang.MissingMethodException;
+import hudson.FilePath;
 import hudson.Functions;
 import hudson.model.Result;
+import hudson.model.TaskListener;
 import hudson.remoting.ProxyException;
+import hudson.remoting.VirtualChannel;
+import java.io.File;
+import java.io.IOException;
+import java.util.Set;
+import java.util.logging.Level;
+import jenkins.MasterToSlaveFileCallable;
 import org.codehaus.groovy.runtime.NullObject;
+import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.StepExecutions;
+import org.jvnet.hudson.test.InboundAgentRule;
+import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.TestExtension;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Tests for {@link ErrorAction}
  */
 public class ErrorActionTest {
+
     @ClassRule
     public static BuildWatcher buildWatcher = new BuildWatcher();
 
     @Rule
     public JenkinsSessionRule rr = new JenkinsSessionRule();
+
+    @Rule public InboundAgentRule agents = new InboundAgentRule();
+
+    @Rule public LoggerRule logging = new LoggerRule().record(ErrorAction.class, Level.FINE);
 
     private List<ErrorAction> extractErrorActions(FlowExecution exec) {
         List<ErrorAction> ret = new ArrayList<>();
@@ -226,6 +249,87 @@ public class ErrorActionTest {
             FlowNode originNode = ErrorAction.findOrigin(b.getExecution().getCauseOfFailure(), b.getExecution());
             assertEquals(origin.get(), originNode.getId());
         });
+    }
+
+    @Test public void findOriginFromBodyExecutionCallback() throws Throwable {
+        rr.then(r -> {
+            agents.createAgent(r, "remote");
+            var p = r.createProject(WorkflowJob.class);
+            p.setDefinition(new CpsFlowDefinition("callsFindOrigin {node('remote') {fails()}}", true));
+            var b = p.scheduleBuild2(0).waitForStart();
+            r.waitForMessage("Acting slowly in ", b);
+            agents.stop("remote");
+            r.assertBuildStatus(Result.FAILURE, r.waitForCompletion(b));
+            r.assertLogContains("Found in: fails", b);
+        });
+    }
+    public static final class WrapperStep extends Step {
+        @DataBoundConstructor public WrapperStep() {}
+        @Override public StepExecution start(StepContext context) throws Exception {
+            return new ExecutionImpl(context);
+        }
+        private static final class ExecutionImpl extends StepExecution {
+            ExecutionImpl(StepContext context) {
+                super(context);
+            }
+            @Override public boolean start() throws Exception {
+                getContext().newBodyInvoker().withCallback(new Callback()).start();
+                return false;
+            }
+        }
+        private static class Callback extends BodyExecutionCallback {
+            @Override public void onSuccess(StepContext context, Object result) {
+                context.onSuccess(result);
+            }
+            @Override
+            public void onFailure(StepContext context, Throwable t) {
+                try {
+                    var l = context.get(TaskListener.class);
+                    Functions.printStackTrace(t, l.error("Original failure:"));
+                    l.getLogger().println("Found in: " + ErrorAction.findOrigin(t, context.get(FlowExecution.class)).getDisplayFunctionName());
+                } catch (Exception x) {
+                    assert false : x;
+                }
+                context.onFailure(t);
+            }
+        }
+        @TestExtension("findOriginFromBodyExecutionCallback") public static final class DescriptorImpl extends StepDescriptor {
+            @Override public String getFunctionName() {
+                return "callsFindOrigin";
+            }
+            @Override public Set<? extends Class<?>> getRequiredContext() {
+                return Set.of();
+            }
+            @Override public boolean takesImplicitBlockArgument() {
+                return true;
+            }
+        }
+    }
+    public static final class FailingStep extends Step {
+        @DataBoundConstructor public FailingStep() {}
+        @Override public StepExecution start(StepContext context) throws Exception {
+            return StepExecutions.synchronousNonBlockingVoid(context, c -> c.get(FilePath.class).act(new Sleep(c.get(TaskListener.class))));
+        }
+        private static final class Sleep extends MasterToSlaveFileCallable<Void> {
+            private final TaskListener l;
+            Sleep(TaskListener l) {
+                this.l = l;
+            }
+            @Override public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
+                l.getLogger().println("Acting slowly in " + f);
+                l.getLogger().flush();
+                Thread.sleep(Long.MAX_VALUE);
+                return null;
+            }
+        }
+        @TestExtension("findOriginFromBodyExecutionCallback") public static final class DescriptorImpl extends StepDescriptor {
+            @Override public String getFunctionName() {
+                return "fails";
+            }
+            @Override public Set<? extends Class<?>> getRequiredContext() {
+                return Set.of(FilePath.class);
+            }
+        }
     }
 
     @Test public void cyclicErrorsAreSupported() throws Throwable {

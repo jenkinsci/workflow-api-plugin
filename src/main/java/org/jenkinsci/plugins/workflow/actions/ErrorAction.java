@@ -37,6 +37,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -53,15 +55,19 @@ import org.kohsuke.accmod.restrictions.Beta;
  */
 public class ErrorAction implements PersistentAction {
 
+    private static final Logger LOGGER = Logger.getLogger(ErrorAction.class.getName());
+
     private final @NonNull Throwable error;
 
     public ErrorAction(@NonNull Throwable error) {
         if (isUnserializableException(error, new HashSet<>())) {
+            LOGGER.log(Level.FINE, "sanitizing unserializable error", error);
             error = new ProxyException(error);
         } else if (error != null) {
             try {
                 Jenkins.XSTREAM2.toXMLUTF8(error, new NullOutputStream());
             } catch (Exception x) {
+                LOGGER.log(Level.FINE, "unable to serialize to XML", x);
                 // Typically SecurityException from ClassFilter.
                 error = new ProxyException(error);
             }
