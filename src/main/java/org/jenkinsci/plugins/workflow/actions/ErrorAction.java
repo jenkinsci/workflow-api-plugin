@@ -37,6 +37,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -53,23 +55,33 @@ import org.kohsuke.accmod.restrictions.Beta;
  */
 public class ErrorAction implements PersistentAction {
 
+    private static final Logger LOGGER = Logger.getLogger(ErrorAction.class.getName());
+
     private final @NonNull Throwable error;
 
     public ErrorAction(@NonNull Throwable error) {
+        Throwable errorForAction = error;
         if (isUnserializableException(error, new HashSet<>())) {
-            error = new ProxyException(error);
+            LOGGER.log(Level.FINE, "sanitizing unserializable error", error);
+            errorForAction = new ProxyException(error);
         } else if (error != null) {
             try {
                 Jenkins.XSTREAM2.toXMLUTF8(error, new NullOutputStream());
             } catch (Exception x) {
+                LOGGER.log(Level.FINE, "unable to serialize to XML", x);
                 // Typically SecurityException from ClassFilter.
-                error = new ProxyException(error);
+                errorForAction = new ProxyException(error);
             }
         }
-        this.error = error;
+        this.error = errorForAction;
         String id = findId(error, new HashSet<>());
-        if (id == null && error != null) {
-            error.addSuppressed(new ErrorId());
+        if (id == null) {
+            var errorId = new ErrorId();
+            errorForAction.addSuppressed(errorId);
+            if (error != errorForAction) {
+                // Make sure the original exception has the error ID, not just the copy here.
+                error.addSuppressed(errorId);
+            }
         }
     }
 
@@ -170,28 +182,49 @@ public class ErrorAction implements PersistentAction {
     @Restricted(Beta.class)
     public static boolean equals(Throwable t1, Throwable t2) {
         if (t1 == t2) {
+            LOGGER.fine(() -> "Same object: " + t1);
             return true;
-        } else if (t1.getClass() != t2.getClass()) {
+        }
+        boolean noProxy = t1.getClass() != ProxyException.class && t2.getClass() != ProxyException.class;
+        if (noProxy && t1.getClass() != t2.getClass()) {
+            LOGGER.fine(() -> "Different types: " + t1.getClass() + " vs. " + t2.getClass());
             return false;
-        } else if (!Objects.equals(t1.getMessage(), t2.getMessage())) {
+        } else if (noProxy && !Objects.equals(t1.getMessage(), t2.getMessage())) {
+            LOGGER.fine(() -> "Different messages: " + t1.getMessage() + " vs. " + t2.getMessage());
             return false;
         } else {
             String id1 = findId(t1, new HashSet<>());
             if (id1 != null) {
-                return id1.equals(findId(t2, new HashSet<>()));
+                String id2 = findId(t2, new HashSet<>());
+                if (id1.equals(id2)) {
+                    LOGGER.fine(() -> "ErrorId matches: " + id1);
+                    return true;
+                } else {
+                    LOGGER.fine(() -> "ErrorId mismatch: " + t1 + " " + id1 + " vs. " + t2 + " " + id2);
+                    return false;
+                }
             }
             // No ErrorId, use a best-effort approach that doesn't work across restarts for exceptions thrown
             // synchronously from the CPS VM thread.
             // Check that stack traces match, but specifically avoid checking suppressed exceptions, which are often
             // modified after ErrorAction is written to disk when steps like parallel are involved.
-            while (t1 != null && t2 != null) {
-                if (!Arrays.equals(t1.getStackTrace(), t2.getStackTrace())) {
+            var _t1 = t1;
+            var _t2 = t2;
+            while (_t1 != null && _t2 != null) {
+                if (!Arrays.equals(_t1.getStackTrace(), _t2.getStackTrace())) {
+                    LOGGER.fine(() -> "Different stack traces between " + t1 + " vs. " + t2); // not showing details
                     return false;
                 }
-                t1 = t1.getCause();
-                t2 = t2.getCause();
+                _t1 = _t1.getCause();
+                _t2 = _t2.getCause();
             }
-            return (t1 == null) == (t2 == null);
+            if ((_t1 == null) == (_t2 == null)) {
+                LOGGER.fine(() -> "Same stack traces in " + t1 + " vs. " + t2);
+                return true;
+            } else {
+                LOGGER.fine(() -> "Different cause depths between " + t1 + " vs. " + t2);
+                return false;
+            }
         }
     }
 
