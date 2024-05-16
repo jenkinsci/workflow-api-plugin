@@ -69,6 +69,8 @@ import org.jvnet.hudson.test.InboundAgentRule;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.jenkinsci.plugins.workflow.graph.StepNode;
+import static org.hamcrest.Matchers.equalTo;
 
 /**
  * Tests for {@link ErrorAction}
@@ -346,5 +348,16 @@ public class ErrorActionTest {
         unserializable.initCause(cyclic);
         assertNotNull(new ErrorAction(unserializable));
         assertNotNull(new ErrorAction(cyclic));
+    }
+
+    @Test public void findOriginOfRethrownUnserializableException() throws Throwable {
+        rr.then(r -> {
+            WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+            p.setDefinition(new CpsFlowDefinition(
+                "stage('test') { withEnv([]) {  throw new " + X.class.getCanonicalName() + "() } }", false /* for "new org.jenkinsci.plugins.workflow.actions.ErrorActionTest$X" */));
+            WorkflowRun b = r.buildAndAssertStatus(Result.FAILURE, p);
+            FlowNode originNode = ErrorAction.findOrigin(b.getExecution().getCauseOfFailure(), b.getExecution());
+            assertThat(((StepNode) originNode).getDescriptor().getFunctionName(), equalTo("withEnv"));
+        });
     }
 }
