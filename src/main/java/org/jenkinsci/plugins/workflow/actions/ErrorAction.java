@@ -181,28 +181,42 @@ public class ErrorAction implements PersistentAction {
     @Restricted(Beta.class)
     public static boolean equals(Throwable t1, Throwable t2) {
         if (t1 == t2) {
+            LOGGER.fine(() -> "Same object: " + t1);
             return true;
         } else if (t1.getClass() != t2.getClass()) {
+            LOGGER.fine(() -> "Different types: " + t1.getClass() + " vs. " + t2.getClass());
             return false;
         } else if (!Objects.equals(t1.getMessage(), t2.getMessage())) {
+            LOGGER.fine(() -> "Different messages: " + t1.getMessage() + " vs. " + t2.getMessage());
             return false;
         } else {
             String id1 = findId(t1, new HashSet<>());
             if (id1 != null) {
-                return id1.equals(findId(t2, new HashSet<>()));
+                String id2 = findId(t2, new HashSet<>());
+                LOGGER.fine(() -> "ErrorId comparisons: " + id1 + " vs. " + id2);
+                return id1.equals(id2);
             }
             // No ErrorId, use a best-effort approach that doesn't work across restarts for exceptions thrown
             // synchronously from the CPS VM thread.
             // Check that stack traces match, but specifically avoid checking suppressed exceptions, which are often
             // modified after ErrorAction is written to disk when steps like parallel are involved.
-            while (t1 != null && t2 != null) {
-                if (!Arrays.equals(t1.getStackTrace(), t2.getStackTrace())) {
+            var _t1 = t1;
+            var _t2 = t2;
+            while (_t1 != null && _t2 != null) {
+                if (!Arrays.equals(_t1.getStackTrace(), _t2.getStackTrace())) {
+                    LOGGER.fine(() -> "Different stack traces between " + t1 + " vs. " + t2); // not showing details
                     return false;
                 }
-                t1 = t1.getCause();
-                t2 = t2.getCause();
+                _t1 = _t1.getCause();
+                _t2 = _t2.getCause();
             }
-            return (t1 == null) == (t2 == null);
+            if ((_t1 == null) == (_t2 == null)) {
+                LOGGER.fine(() -> "Same stack traces in " + t1 + " vs. " + t2);
+                return true;
+            } else {
+                LOGGER.fine(() -> "Different cause depths between " + t1 + " vs. " + t2);
+                return false;
+            }
         }
     }
 
