@@ -44,7 +44,7 @@ import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.AtomNode;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
-import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
+import org.jenkinsci.plugins.workflow.graphanalysis.ForkScanner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
 
@@ -151,7 +151,7 @@ public class ErrorAction implements PersistentAction {
      */
     public static @CheckForNull FlowNode findOrigin(@NonNull Throwable error, @NonNull FlowExecution execution) {
         FlowNode candidate = null;
-        for (FlowNode n : new DepthFirstScanner().allNodes(execution)) {
+        for (FlowNode n : new ForkScanner().allNodes(execution)) {
             ErrorAction errorAction = n.getPersistentAction(ErrorAction.class);
             if (errorAction != null && equals(error, errorAction.getError())) {
                 candidate = n; // continue search for earlier one
