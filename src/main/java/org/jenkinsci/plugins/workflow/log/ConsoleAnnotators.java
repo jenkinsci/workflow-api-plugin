@@ -24,8 +24,8 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
-import com.jcraft.jzlib.GZIPInputStream;
-import com.jcraft.jzlib.GZIPOutputStream;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.console.ConsoleAnnotator;
