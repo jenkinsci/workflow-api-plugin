@@ -57,8 +57,8 @@ import jenkins.model.ArtifactManager;
 import jenkins.model.Jenkins;
 import jenkins.util.BuildListenerAdapter;
 import jenkins.util.VirtualFile;
-import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.tools.tar.TarEntry;
+import org.apache.tools.tar.TarInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.accmod.Restricted;
@@ -235,8 +235,8 @@ public class StashManager {
                     result.put(n.substring(0, n.length() - SUFFIX.length()), unpacked);
                     try (InputStream is = new FileInputStream(kid)) {
                         InputStream wrapped = FilePath.TarCompression.GZIP.extract(is);
-                        TarArchiveInputStream archiveStream = new TarArchiveInputStream(wrapped);
-                        ArchiveEntry archiveEntry;
+                        TarInputStream archiveStream = new TarInputStream(wrapped);
+                        TarEntry archiveEntry;
                         while ((archiveEntry = archiveStream.getNextEntry()) != null) {
                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
                             IOUtils.copy(archiveStream, baos);
