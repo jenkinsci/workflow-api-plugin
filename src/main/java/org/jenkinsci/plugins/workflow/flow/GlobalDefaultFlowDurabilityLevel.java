@@ -82,7 +82,7 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
         public ListBoxModel doFillDurabilityHintItems() {
             ListBoxModel options = new ListBoxModel();
 
-            options.add("None: use pipeline default (" + GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT.name() + ")", "null");
+            options.add("None: use pipeline default (" + GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT.getDescription()+ ")", "null");
 
             List<ListBoxModel.Option> mappedOptions = Arrays.stream(FlowDurabilityHint.values())
                     .map(hint -> new ListBoxModel.Option(hint.getDescription(), hint.name()))
