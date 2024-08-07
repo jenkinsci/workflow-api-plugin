@@ -253,24 +253,26 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
             for (FlowExecution e : FlowExecutionList.get()) {
                 ListenableFuture<List<StepExecution>> execs = e.getCurrentExecutions(false);
-                all.add(execs);
-                Futures.addCallback(execs,new FutureCallback<List<StepExecution>>() {
-                    @Override
-                    public void onSuccess(@NonNull List<StepExecution> result) {
-                        for (StepExecution e : result) {
-                            try {
-                                f.apply(e);
-                            } catch (RuntimeException x) {
-                                LOGGER.log(Level.WARNING, null, x);
-                            }
+                // We transform the futures that return List<StepExecution> into futures that return Void before
+                // passing them to Futures.allAsList so that the combined future only holds strong references to each
+                // FlowExecution until its StepExecutions have been loaded and applied to the function. This prevents
+                // us from leaking references to all processed executions in the case where a single build has a stuck
+                // CpsVmExecutorService that prevents the future returned by getCurrentExecutions from completing.
+                ListenableFuture<Void> results = Futures.transform(execs, (List<StepExecution> result) -> {
+                    for (StepExecution se : result) {
+                        try {
+                            f.apply(se);
+                        } catch (RuntimeException x) {
+                            LOGGER.log(Level.WARNING, null, x);
                         }
                     }
-
-                    @Override
-                    public void onFailure(@NonNull Throwable t) {
-                        LOGGER.log(Level.WARNING, null, t);
-                    }
+                    return null;
                 }, MoreExecutors.directExecutor());
+                ListenableFuture<Void> resultsWithWarningsLogged = Futures.catching(results, Throwable.class, t -> {
+                    LOGGER.log(Level.WARNING, null, t);
+                    return null;
+                }, MoreExecutors.directExecutor());
+                all.add(resultsWithWarningsLogged);
             }
 
             return Futures.allAsList(all);

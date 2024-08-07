@@ -38,12 +38,14 @@ import hudson.model.StringParameterValue;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Level;
+import jenkins.model.Jenkins;
 import org.hamcrest.Matcher;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -61,6 +63,7 @@ import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.JenkinsSessionRule;
+import org.jvnet.hudson.test.MemoryAssert;
 import org.jvnet.hudson.test.TestExtension;
 import org.jvnet.hudson.test.recipes.LocalData;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -185,6 +188,36 @@ public class FlowExecutionListTest {
             // stuck build and the futures inside of StepExecutionIteratorImpl.applyAll.
             // TODO: Ideally, we would detect the issue with the stuck build and find some way to kill it.
             r.waitForCompletion(b);
+        });
+    }
+
+    @Ignore("MemoryAssert is unable to clear the SoftReference from AbstractLazyLoadRunMap. Heap dumps show a strong reference from the test execution thread as a local variable, which is not captured by MemoryAssert. Also needs to be moved to a class with no BuildWatcher.")
+    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuck2() throws Throwable {
+        sessions.then(r -> {
+            WeakReference<Object> buildRef;
+            {
+                var stuck = r.createProject(WorkflowJob.class, "stuck");
+                stuck.setDefinition(new CpsFlowDefinition("parallel(one: { echo 'test message'; Thread.sleep(Integer.MAX_VALUE); })", false));
+                var stuckBuild = stuck.scheduleBuild2(0).waitForStart();
+
+                var notStuck = r.createProject(WorkflowJob.class, "not-stuck");
+                notStuck.setDefinition(new CpsFlowDefinition("semaphore('wait')", true));
+                var notStuckBuild = notStuck.scheduleBuild2(0).waitForStart();
+                buildRef = new WeakReference<>(notStuckBuild);
+
+                SemaphoreStep.waitForStart("wait/1", notStuckBuild);
+                r.waitForMessage("test message", stuckBuild);
+                Thread.sleep(1000); // We need Thread.sleep to be running in the CpsVmExecutorService.
+
+                // Make FlowExecutionList$StepExecutionIteratorImpl.applyAll submit a task to the CpsVmExecutorService
+                // for stuck #1 that will never complete, so the resulting future will never complete.
+                var future = StepExecution.applyAll(e -> null);
+
+                SemaphoreStep.success("wait/1", null);
+                r.waitForCompletion(notStuckBuild);
+                Jenkins.get().getQueue().clearLeftItems(); // Clean up the soft reference immediately.
+            }
+            MemoryAssert.assertGC(buildRef, true);
         });
     }
 
