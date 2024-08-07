@@ -167,7 +167,7 @@ public class FlowExecutionListTest {
 
     @Ignore("Build never completes due to infinite loop")
     @LocalData
-    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuck() throws Throwable {
+    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuckInfiniteLoop() throws Throwable {
         // LocalData created using the following snippet while the build was waiting in the _second_ sleep, except
         // for build.xml, which was captured during the sleep step. The StepEndNode for the stage was then adjusted to
         // have its startId point to the timeout step's StepStartNode, creating a loop.
@@ -191,33 +191,29 @@ public class FlowExecutionListTest {
         });
     }
 
-    @Ignore("MemoryAssert is unable to clear the SoftReference from AbstractLazyLoadRunMap. Heap dumps show a strong reference from the test execution thread as a local variable, which is not captured by MemoryAssert. Also needs to be moved to a class with no BuildWatcher.")
-    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuck2() throws Throwable {
+    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuck() throws Throwable {
         sessions.then(r -> {
-            WeakReference<Object> buildRef;
-            {
-                var stuck = r.createProject(WorkflowJob.class, "stuck");
-                stuck.setDefinition(new CpsFlowDefinition("parallel(one: { echo 'test message'; Thread.sleep(Integer.MAX_VALUE); })", false));
-                var stuckBuild = stuck.scheduleBuild2(0).waitForStart();
-
-                var notStuck = r.createProject(WorkflowJob.class, "not-stuck");
-                notStuck.setDefinition(new CpsFlowDefinition("semaphore('wait')", true));
-                var notStuckBuild = notStuck.scheduleBuild2(0).waitForStart();
-                buildRef = new WeakReference<>(notStuckBuild);
-
-                SemaphoreStep.waitForStart("wait/1", notStuckBuild);
-                r.waitForMessage("test message", stuckBuild);
-                Thread.sleep(1000); // We need Thread.sleep to be running in the CpsVmExecutorService.
-
-                // Make FlowExecutionList$StepExecutionIteratorImpl.applyAll submit a task to the CpsVmExecutorService
-                // for stuck #1 that will never complete, so the resulting future will never complete.
-                var future = StepExecution.applyAll(e -> null);
-
-                SemaphoreStep.success("wait/1", null);
-                r.waitForCompletion(notStuckBuild);
-                Jenkins.get().getQueue().clearLeftItems(); // Clean up the soft reference immediately.
-            }
-            MemoryAssert.assertGC(buildRef, true);
+            var notStuck = r.createProject(WorkflowJob.class, "not-stuck");
+            notStuck.setDefinition(new CpsFlowDefinition("semaphore('wait')", true));
+            var notStuckBuild = notStuck.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("wait/1", notStuckBuild);
+            WeakReference<Object> notStuckBuildRef = new WeakReference<>(notStuckBuild);
+            // Create a Pipeline that runs a long-lived task on its CpsVmExecutorService, causing it to get stuck.
+            var stuck = r.createProject(WorkflowJob.class, "stuck");
+            stuck.setDefinition(new CpsFlowDefinition("parallel(one: { echo 'test message'; Thread.sleep(Integer.MAX_VALUE); })", false));
+            var stuckBuild = stuck.scheduleBuild2(0).waitForStart();
+            r.waitForMessage("test message", stuckBuild);
+            Thread.sleep(1000); // We need Thread.sleep to be running in the CpsVmExecutorService.
+            // Make FlowExecutionList$StepExecutionIteratorImpl.applyAll submit a task to the CpsVmExecutorService
+            // for stuck #1 that will never complete, so the resulting future will never complete.
+            StepExecution.applyAll(e -> null);
+            // Let notStuckBuild complete and check that it can be GC'd.
+            SemaphoreStep.success("wait/1", null);
+            r.waitForCompletion(notStuckBuild);
+            notStuckBuild = null; // Clear out the local variable in this thread.
+            Jenkins.get().getQueue().clearLeftItems(); // We don't want to wait 5 minutes.
+            MemoryAssert.assertGC(notStuckBuildRef, true);
+            // TODO: Test cleanup hangs for 1 minute in CpsFlowExecution.suspendAll because the checkpoint task can't run.
         });
     }
 
