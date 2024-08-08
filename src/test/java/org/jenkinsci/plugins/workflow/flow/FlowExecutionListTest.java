@@ -56,7 +56,6 @@ import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -65,7 +64,6 @@ import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.JenkinsSessionRule;
 import org.jvnet.hudson.test.MemoryAssert;
 import org.jvnet.hudson.test.TestExtension;
-import org.jvnet.hudson.test.recipes.LocalData;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class FlowExecutionListTest {
@@ -165,32 +163,6 @@ public class FlowExecutionListTest {
         });
     }
 
-    @Ignore("Build never completes due to infinite loop")
-    @LocalData
-    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuckInfiniteLoop() throws Throwable {
-        // LocalData created using the following snippet while the build was waiting in the _second_ sleep, except
-        // for build.xml, which was captured during the sleep step. The StepEndNode for the stage was then adjusted to
-        // have its startId point to the timeout step's StepStartNode, creating a loop.
-        /*
-        sessions.then(r -> {
-            var stuck = r.createProject(WorkflowJob.class);
-            stuck.setDefinition(new CpsFlowDefinition("stage('stage') { sleep 30 }; timeout(time: 10) { sleep 30 }", true));
-            var b = stuck.scheduleBuild2(0).waitForStart();
-            System.out.println(b.getRootDir());
-            r.waitForCompletion(b);
-        });
-        */
-        sessions.then(r -> {
-            var p = r.jenkins.getItemByFullName("test0", WorkflowJob.class);
-            var b = p.getBuildByNumber(1);
-            // TODO: Create and run a new build, call StepExecutionIterator.applyAll while it is running, and assert
-            // that we do not leak a hard reference to it through the task queue for the CpsVmExecutorService for the
-            // stuck build and the futures inside of StepExecutionIteratorImpl.applyAll.
-            // TODO: Ideally, we would detect the issue with the stuck build and find some way to kill it.
-            r.waitForCompletion(b);
-        });
-    }
-
     @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuck() throws Throwable {
         sessions.then(r -> {
             var notStuck = r.createProject(WorkflowJob.class, "not-stuck");
@@ -200,7 +172,7 @@ public class FlowExecutionListTest {
             WeakReference<Object> notStuckBuildRef = new WeakReference<>(notStuckBuild);
             // Create a Pipeline that runs a long-lived task on its CpsVmExecutorService, causing it to get stuck.
             var stuck = r.createProject(WorkflowJob.class, "stuck");
-            stuck.setDefinition(new CpsFlowDefinition("parallel(one: { echo 'test message'; Thread.sleep(Integer.MAX_VALUE); })", false));
+            stuck.setDefinition(new CpsFlowDefinition("echo 'test message'; Thread.sleep(Integer.MAX_VALUE)", false));
             var stuckBuild = stuck.scheduleBuild2(0).waitForStart();
             r.waitForMessage("test message", stuckBuild);
             Thread.sleep(1000); // We need Thread.sleep to be running in the CpsVmExecutorService.
