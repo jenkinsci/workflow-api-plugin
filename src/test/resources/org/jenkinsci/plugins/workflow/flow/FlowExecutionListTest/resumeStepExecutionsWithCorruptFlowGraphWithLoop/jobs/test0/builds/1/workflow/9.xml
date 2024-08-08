@@ -1,0 +1,16 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<Tag plugin="workflow-support@907.v6713a_ed8a_573">
+  <node class="cps.n.StepStartNode" plugin="workflow-cps@3894.3896.vca_2c931e7935">
+    <parentIds>
+      <string>8</string>
+    </parentIds>
+    <id>9</id>
+    <descriptorId>org.jenkinsci.plugins.workflow.steps.TimeoutStep</descriptorId>
+  </node>
+  <actions>
+    <wf.a.BodyInvocationAction/>
+    <wf.a.TimingAction>
+      <startTime>1722980005244</startTime>
+    </wf.a.TimingAction>
+  </actions>
+</Tag>
