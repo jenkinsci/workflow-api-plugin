@@ -273,7 +273,7 @@ public class FlowExecutionListTest {
             UNBLOCKED,
         }
 
-        @TestExtension public static class DescriptorImpl extends StepDescriptor {
+        @TestExtension("stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuck") public static class DescriptorImpl extends StepDescriptor {
             @Override
             public Set<? extends Class<?>> getRequiredContext() {
                 return Collections.singleton(TaskListener.class);
