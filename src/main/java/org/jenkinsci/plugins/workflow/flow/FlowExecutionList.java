@@ -362,15 +362,14 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                         nodes.put(n, se);
                     } else {
                         LOGGER.warning(() -> "Could not find FlowNode for " + se + " so it will not be resumed");
-                        // TODO: Should we call se.getContext().onFailure()?
                     }
                 } catch (IOException | InterruptedException x) {
                     LOGGER.log(Level.WARNING, "Could not look up FlowNode for " + se + " so it will not be resumed", x);
-                    // TODO: Should we call se.getContext().onFailure()?
                 }
             }
-            try {
-                for (FlowNode n : nodes.keySet()) {
+            for (Map.Entry<FlowNode, StepExecution> entry : nodes.entrySet()) {
+                FlowNode n = entry.getKey();
+                try {
                     LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
                     scanner.setup(n);
                     for (FlowNode parent : scanner) {
@@ -379,14 +378,9 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                             break;
                         }
                     }
+                } catch (Exception x) {
+                    LOGGER.log(Level.WARNING, x, () -> "Unable to compute enclosing blocks for " + n + ", so " + entry.getValue() + " might not resume successfully");
                 }
-            } catch (Exception e) {
-                // TODO: Should we instead just try to resume steps with no respect to topological order?
-                // There is something wrong with the FlowGraph. Kill all of the steps so the build fails instead of hanging forever.
-                for (StepExecution se : executions) {
-                    se.getContext().onFailure(e);
-                }
-                onCompletion.run();
             }
         }
 

@@ -41,9 +41,12 @@ import java.io.Serializable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.stream.Collectors;
 import org.hamcrest.Matcher;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -162,7 +165,7 @@ public class FlowExecutionListTest {
     }
 
     @LocalData
-    @Test public void resumeStepExecutionsWithCorruptFlowGraphWithLoop() throws Throwable {
+    @Test public void resumeStepExecutionsWithCorruptFlowGraphWithCycle() throws Throwable {
         // LocalData created using the following snippet while the build was waiting in the _second_ sleep, except
         // for build.xml, which was captured during the sleep step. The StepEndNode for the stage was then adjusted to
         // have its startId point to the timeout step's StepStartNode, creating a loop.
@@ -175,10 +178,18 @@ public class FlowExecutionListTest {
             r.waitForCompletion(b);
         });
         */
+        logging.capture(50);
         sessions.then(r -> {
             var p = r.jenkins.getItemByFullName("test0", WorkflowJob.class);
             var b = p.getBuildByNumber(1);
-            r.assertBuildStatus(Result.FAILURE, r.waitForCompletion(b));
+            r.waitForCompletion(b);
+            assertThat(logging.getMessages(), hasItem(containsString("Unable to compute enclosing blocks")));
+            var loggedExceptions = logging.getRecords().stream()
+                    .map(LogRecord::getThrown)
+                    .filter(Objects::nonNull)
+                    .map(Throwable::toString)
+                    .collect(Collectors.toList());
+            assertThat(loggedExceptions, hasItem(containsString("Cycle in flow graph")));
         });
     }
 

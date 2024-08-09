@@ -91,7 +91,7 @@ public class LinearBlockHoppingScanner extends LinearScanner {
         // Find the first candidate node preceding a block... and filtering by blacklist
         while (candidate instanceof BlockEndNode) {
             if (!visited.add(candidate.getId())) {
-                throw new IllegalStateException("Loop in flow graph for " + candidate.getExecution() + " involving " + candidate);
+                throw new IllegalStateException("Cycle in flow graph for " + candidate.getExecution() + " involving " + candidate);
             }
             candidate = ((BlockEndNode) candidate).getStartNode();
             if (blacklistNodes.contains(candidate)) {

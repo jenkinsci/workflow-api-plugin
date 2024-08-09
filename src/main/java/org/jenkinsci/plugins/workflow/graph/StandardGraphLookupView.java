@@ -124,7 +124,7 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
         Set<String> visited = new HashSet<>();
         while (!(current instanceof FlowStartNode)) {  // Hunt back for enclosing blocks, a potentially expensive operation
             if (!visited.add(current.getId())) {
-                throw new IllegalStateException("Loop in flow graph for " + node.getExecution() + " involving " + current);
+                throw new IllegalStateException("Cycle in flow graph for " + node.getExecution() + " involving " + current);
             }
             if (current instanceof BlockEndNode) {
                 // Hop over the block to the start
