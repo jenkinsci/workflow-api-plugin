@@ -253,11 +253,10 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
 
             for (FlowExecution e : FlowExecutionList.get()) {
                 ListenableFuture<List<StepExecution>> execs = e.getCurrentExecutions(false);
-                // We transform the futures that return List<StepExecution> into futures that return Void before
-                // passing them to Futures.allAsList so that the combined future only holds strong references to each
-                // FlowExecution until its StepExecutions have been loaded and applied to the function. This prevents
-                // us from leaking references to all processed executions in the case where a single build has a stuck
-                // CpsVmExecutorService that prevents the future returned by getCurrentExecutions from completing.
+                // It is important that the combined future's return values do not reference the individual step
+                // executions, so we use transform instead of addCallback. Otherwise, it is possible to leak references
+                // to the WorkflowRun for each processed StepExecution in the case where a single live FlowExecution
+                // has a stuck CpsVmExecutorService that prevents the getCurrentExecutions future from completing.
                 ListenableFuture<Void> results = Futures.transform(execs, (List<StepExecution> result) -> {
                     for (StepExecution se : result) {
                         try {
