@@ -11,7 +11,9 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -119,8 +121,11 @@ public final class StandardGraphLookupView implements GraphLookupView, GraphList
     /** Do a brute-force scan for the enclosing blocks **/
     BlockStartNode bruteForceScanForEnclosingBlock(@NonNull final FlowNode node) {
         FlowNode current = node;
-
+        Set<String> visited = new HashSet<>();
         while (!(current instanceof FlowStartNode)) {  // Hunt back for enclosing blocks, a potentially expensive operation
+            if (!visited.add(current.getId())) {
+                throw new IllegalStateException("Cycle in flow graph for " + node.getExecution() + " involving " + current);
+            }
             if (current instanceof BlockEndNode) {
                 // Hop over the block to the start
                 BlockStartNode start = ((BlockEndNode) current).getStartNode();

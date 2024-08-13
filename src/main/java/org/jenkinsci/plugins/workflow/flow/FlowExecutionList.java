@@ -368,14 +368,19 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     LOGGER.log(Level.WARNING, "Could not look up FlowNode for " + se + " so it will not be resumed", x);
                 }
             }
-            for (FlowNode n : nodes.keySet()) {
-                LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
-                scanner.setup(n);
-                for (FlowNode parent : scanner) {
-                    if (parent != n && nodes.containsKey(parent)) {
-                        enclosing.put(n, parent);
-                        break;
+            for (Map.Entry<FlowNode, StepExecution> entry : nodes.entrySet()) {
+                FlowNode n = entry.getKey();
+                try {
+                    LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
+                    scanner.setup(n);
+                    for (FlowNode parent : scanner) {
+                        if (parent != n && nodes.containsKey(parent)) {
+                            enclosing.put(n, parent);
+                            break;
+                        }
                     }
+                } catch (Exception x) {
+                    LOGGER.log(Level.WARNING, x, () -> "Unable to compute enclosing blocks for " + n + ", so " + entry.getValue() + " might not resume successfully");
                 }
             }
         }

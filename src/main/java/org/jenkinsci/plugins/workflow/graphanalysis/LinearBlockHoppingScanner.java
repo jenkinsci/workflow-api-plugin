@@ -32,8 +32,10 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import net.jcip.annotations.NotThreadSafe;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -85,9 +87,12 @@ public class LinearBlockHoppingScanner extends LinearScanner {
     @CheckForNull
     protected FlowNode jumpBlockScan(@CheckForNull FlowNode node, @NonNull Collection<FlowNode> blacklistNodes) {
         FlowNode candidate = node;
-
+        Set<String> visited = new HashSet<>();
         // Find the first candidate node preceding a block... and filtering by blacklist
         while (candidate instanceof BlockEndNode) {
+            if (!visited.add(candidate.getId())) {
+                throw new IllegalStateException("Cycle in flow graph for " + candidate.getExecution() + " involving " + candidate);
+            }
             candidate = ((BlockEndNode) candidate).getStartNode();
             if (blacklistNodes.contains(candidate)) {
                 return null;

@@ -41,11 +41,14 @@ import hudson.model.queue.QueueTaskFuture;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -65,6 +68,7 @@ import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.JenkinsSessionRule;
 import org.jvnet.hudson.test.MemoryAssert;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.recipes.LocalData;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class FlowExecutionListTest {
@@ -161,6 +165,35 @@ public class FlowExecutionListTest {
             r.waitForCompletion(b);
             r.assertBuildStatus(Result.FAILURE, b);
             r.assertLogContains("Unable to resume NonResumableStep", b);
+        });
+    }
+
+    @LocalData
+    @Test public void resumeStepExecutionsWithCorruptFlowGraphWithCycle() throws Throwable {
+        // LocalData created using the following snippet while the build was waiting in the _second_ sleep, except
+        // for build.xml, which was captured during the sleep step. The StepEndNode for the stage was then adjusted to
+        // have its startId point to the timeout step's StepStartNode, creating a loop.
+        /*
+        sessions.then(r -> {
+            var stuck = r.createProject(WorkflowJob.class);
+            stuck.setDefinition(new CpsFlowDefinition("stage('stage') { sleep 30 }; timeout(time: 10) { sleep 30 }", true));
+            var b = stuck.scheduleBuild2(0).waitForStart();
+            System.out.println(b.getRootDir());
+            r.waitForCompletion(b);
+        });
+        */
+        logging.capture(50);
+        sessions.then(r -> {
+            var p = r.jenkins.getItemByFullName("test0", WorkflowJob.class);
+            var b = p.getBuildByNumber(1);
+            r.waitForCompletion(b);
+            assertThat(logging.getMessages(), hasItem(containsString("Unable to compute enclosing blocks")));
+            var loggedExceptions = logging.getRecords().stream()
+                    .map(LogRecord::getThrown)
+                    .filter(Objects::nonNull)
+                    .map(Throwable::toString)
+                    .collect(Collectors.toList());
+            assertThat(loggedExceptions, hasItem(containsString("Cycle in flow graph")));
         });
     }
 
