@@ -26,3 +26,6 @@ tags
 
 # mvn versions:set
 pom.xml.versionsBackup
+
+# MemoryAssert tests
+*.hprof
