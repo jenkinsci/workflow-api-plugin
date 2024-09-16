@@ -30,7 +30,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertNotNull;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import hudson.AbortException;
+import hudson.ExtensionList;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
@@ -53,11 +55,14 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.pickles.Pickle;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepExecutions;
+import org.jenkinsci.plugins.workflow.support.pickles.SingleTypedPickleFactory;
+import org.jenkinsci.plugins.workflow.support.pickles.TryRepeatedly;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -197,7 +202,7 @@ public class FlowExecutionListTest {
         });
     }
 
-    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuck() throws Throwable {
+    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenCpsVmIsStuck() throws Throwable {
         sessions.then(r -> {
             var notStuck = r.createProject(WorkflowJob.class, "not-stuck");
             notStuck.setDefinition(new CpsFlowDefinition("semaphore 'wait'", true));
@@ -221,6 +226,42 @@ public class FlowExecutionListTest {
             MemoryAssert.assertGC(notStuckBuildRef, true);
             // Allow stuck #1 to complete so the test can be cleaned up promptly.
             SynchronousBlockingStep.unblock("stuck");
+            r.waitForCompletion(stuckBuild);
+        });
+    }
+
+    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenProgramPromiseIsStuck() throws Throwable {
+        sessions.then(r -> {
+            var stuck = r.createProject(WorkflowJob.class, "stuck");
+            stuck.setDefinition(new CpsFlowDefinition(
+                    "def x = new org.jenkinsci.plugins.workflow.flow.FlowExecutionListTest.StuckPickle.Marker()\n" +
+                    "semaphore 'stuckWait'\n" +
+                    "echo x.getClass().getName()", false));
+            var stuckBuild = stuck.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("stuckWait/1", stuckBuild);
+        });
+        sessions.then(r -> {
+            var notStuck = r.createProject(WorkflowJob.class, "not-stuck");
+            notStuck.setDefinition(new CpsFlowDefinition("semaphore 'wait'", true));
+            var notStuckBuild = notStuck.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("wait/1", notStuckBuild);
+            WeakReference<Object> notStuckBuildRef = new WeakReference<>(notStuckBuild);
+            var stuck = r.jenkins.getItemByFullName("stuck", WorkflowJob.class);
+            var stuckBuild = stuck.getBuildByNumber(1);
+            // Make FlowExecutionList$StepExecutionIteratorImpl.applyAll submit a task to the CpsVmExecutorService
+            // for stuck #1 that will never complete, so the resulting future will never complete.
+            StepExecution.applyAll(e -> null);
+            // Let notStuckBuild complete and clean up all references.
+            SemaphoreStep.success("wait/1", null);
+            r.waitForCompletion(notStuckBuild);
+            notStuckBuild = null; // Clear out the local variable in this thread.
+            Jenkins.get().getQueue().clearLeftItems(); // Otherwise we'd have to wait 5 minutes for the cache to be cleared.
+            // Make sure that the reference can be GC'd.
+            MemoryAssert.assertGC(notStuckBuildRef, true);
+            // Allow stuck #1 to complete so the test can be cleaned up promptly.
+            r.waitForMessage("Still trying to load StuckPickle for", stuckBuild);
+            ExtensionList.lookupSingleton(StuckPickle.Factory.class).resolved = new StuckPickle.Marker();
+            SemaphoreStep.success("stuckWait/1", null);
             r.waitForCompletion(stuckBuild);
         });
     }
@@ -306,7 +347,7 @@ public class FlowExecutionListTest {
             UNBLOCKED,
         }
 
-        @TestExtension("stepExecutionIteratorDoesNotLeakBuildsWhenOneIsStuck") public static class DescriptorImpl extends StepDescriptor {
+        @TestExtension("stepExecutionIteratorDoesNotLeakBuildsWhenCpsVmIsStuck") public static class DescriptorImpl extends StepDescriptor {
             @Override
             public Set<? extends Class<?>> getRequiredContext() {
                 return Collections.singleton(TaskListener.class);
@@ -314,6 +355,35 @@ public class FlowExecutionListTest {
             @Override
             public String getFunctionName() {
                 return "blockSynchronously";
+            }
+        }
+    }
+
+    public static class StuckPickle extends Pickle {
+        @Override
+        public ListenableFuture<Marker> rehydrate(FlowExecutionOwner owner) {
+            return new TryRepeatedly<Marker>(1) {
+                @Override
+                protected Marker tryResolve() {
+                    return ExtensionList.lookupSingleton(Factory.class).resolved;
+                }
+                @Override protected FlowExecutionOwner getOwner() {
+                    return owner;
+                }
+                @Override public String toString() {
+                    return "StuckPickle for " + owner;
+                }
+            };
+        }
+
+        public static class Marker {}
+
+        @TestExtension("stepExecutionIteratorDoesNotLeakBuildsWhenProgramPromiseIsStuck")
+        public static final class Factory extends SingleTypedPickleFactory<Marker> {
+            public Marker resolved;
+
+            @Override protected Pickle pickle(Marker object) {
+                return new StuckPickle();
             }
         }
     }
