@@ -169,14 +169,62 @@ public final class FileLogStorage implements LogStorage {
         @Override public void write(@NonNull byte[] b) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
-                bos.write(b);
+                maskedWrite(b, 0, b.length);
             }
         }
 
         @Override public void write(@NonNull byte[] b, int off, int len) throws IOException {
             synchronized (FileLogStorage.this) {
                 checkId(id);
-                bos.write(b, off, len);
+                maskedWrite(b, off, len);
+            }
+        }
+
+        /*
+         * Mask the sensitive data in the log
+         */
+        private void maskedWrite(@NonNull byte[] b, int off, int len) throws IOException {
+            String in = new String(b, off, len);
+
+            String regexPattern = "(?<![A-Za-z0-9\\+=])[A-Za-z0-9\\+=]{40}(?![A-Za-z0-9\\+=])";
+            String replacementString = "****************************************";
+
+            // Jenkins adds special code in the output to handle console notes.
+            // Console notes are markuplanguage that the Jenkins console UI interprets 
+            // to add links, colors, etc.
+            // Console notes are a sequence of chars that starts with PREAMBLE_STR
+            // and ends with POSTAMBLE_STR.
+            // The logic below is to apply masking logic to the buffer portions
+            // before and after the console note (if any) and skip masking the console 
+            // note itself.
+            int preamble_idx = in.indexOf(hudson.console.ConsoleNote.PREAMBLE_STR);
+            int postamble_length = hudson.console.ConsoleNote.POSTAMBLE_STR.length();
+
+            if (preamble_idx == -1) {
+                String outString = in.replaceAll(regexPattern, replacementString);
+                bos.write(outString.getBytes());
+                return;
+            }
+
+            int postamble_idx = in.indexOf(hudson.console.ConsoleNote.POSTAMBLE_STR);
+
+            int leftStringLen = preamble_idx;
+            int consoleNoteLen = postamble_idx + postamble_length - preamble_idx;
+            int rightStringLen = len - consoleNoteLen - leftStringLen;
+
+            if (leftStringLen > 0) {
+                String left = new String(b, off, leftStringLen);
+                String outString = left.replaceAll(regexPattern, replacementString);
+                bos.write(outString.getBytes());
+            }
+
+            String consoleNote = new String(b, off + preamble_idx, consoleNoteLen);
+            System.out.println("consoleNote:" + consoleNote);
+
+            if (rightStringLen > 0) {
+                String right = new String(b, off + postamble_idx + postamble_length, rightStringLen);
+                String outString = right.replaceAll(regexPattern, replacementString);
+                bos.write(outString.getBytes());
             }
         }
 
