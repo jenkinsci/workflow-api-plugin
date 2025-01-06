@@ -54,17 +54,6 @@ public abstract class FlowExecutionOwner implements Serializable {
     public abstract FlowExecution get() throws IOException;
 
     /**
-     * @deprecated No longer used.
-     */
-    @Deprecated
-    void notifyShutdown() {
-        FlowExecution exec = getOrNull();
-        if (exec != null) {
-            exec.notifyShutdown();
-        }
-    }
-
-    /**
      * Same as {@link #get} but avoids throwing an exception or blocking.
      * @return a valid flow execution, or null if not ready or invalid
      */
