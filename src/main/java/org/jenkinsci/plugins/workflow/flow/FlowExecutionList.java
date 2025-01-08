@@ -247,17 +247,17 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         @Override public void resume() {
             boolean needSave = false;
             for (var it = runningTasks.iterator(); it.hasNext();) {
-                var o = it.next();
+                var owner = it.next();
                 try {
-                    FlowExecution e = o.get();
-                    LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
-                    if (e.isComplete()) {
-                        LOGGER.log(Level.FINE, "Unregistering completed " + o, e);
+                    var exec = owner.get();
+                    LOGGER.fine(() -> "eagerly loaded " + exec);
+                    if (exec.isComplete()) {
+                        LOGGER.fine(() -> "unregistering completed " + exec);
                         it.remove();
                         needSave = true;
                     }
-                } catch (IOException ex) {
-                    LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", ex);
+                } catch (IOException x) {
+                    LOGGER.log(Level.FINE, x, () -> "failed to load " + owner + "; unregistering");
                     it.remove();
                     needSave = true;
                 }
