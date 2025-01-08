@@ -100,6 +100,25 @@ public abstract class FlowExecutionOwner implements Serializable {
     }
 
     /**
+     * The {@link Run#getExternalizableId}, if this owner is indeed a {@link Run}.
+     * The default implementation uses {@link #getExecutable}
+     * but an implementation may override this to avoid loading the actual {@link Run}.
+     * @return an id, or null if unknown, unloadable, or unapplicable
+     */
+    @CheckForNull
+    public String getExternalizableId() {
+        try {
+            var exec = getExecutable();
+            if (exec instanceof Run) {
+                return ((Run<?, ?>) exec).getExternalizableId();
+            }
+        } catch (IOException x) {
+            LOGGER.log(Level.WARNING, "cannot look up externalizableId of " + this, x);
+        }
+        return null;
+    }
+
+    /**
      * {@link FlowExecutionOwner}s are equal to one another if and only if
      * they point to the same {@link FlowExecution} object.
      */
