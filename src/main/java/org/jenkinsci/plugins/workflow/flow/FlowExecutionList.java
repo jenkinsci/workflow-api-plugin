@@ -173,7 +173,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         /**
          * Check if an entry is present.
          */
-        boolean contains(FlowExecutionOwner o);
+        boolean contains(FlowExecutionOwner owner);
 
         /**
          * Load data during startup.
