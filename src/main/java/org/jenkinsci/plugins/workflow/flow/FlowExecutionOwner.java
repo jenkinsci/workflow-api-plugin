@@ -44,6 +44,8 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
  */
 public abstract class FlowExecutionOwner implements Serializable {
 
+    private static final long serialVersionUID = 1796027762257567194L;
+
     private static final Logger LOGGER = Logger.getLogger(FlowExecutionOwner.class.getName());
 
     /**
