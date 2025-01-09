@@ -75,26 +75,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      */
     @Override
     public Iterator<FlowExecution> iterator() {
-        return new AbstractIterator<>() {
-            final Iterator<FlowExecutionOwner> base = ExtensionList.lookupFirst(Storage.class).owners();
-
-            @Override
-            protected FlowExecution computeNext() {
-                while (base.hasNext()) {
-                    FlowExecutionOwner o = base.next();
-                    try {
-                        FlowExecution e = o.get();
-                        if (!e.isComplete()) {
-                            return e;
-                        }
-                    } catch (Throwable e) {
-                        LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", e);
-                        unregister(o);
-                    }
-                }
-                return endOfData();
-            }
-        };
+        return ExtensionList.lookupFirst(Storage.class).iterator();
     }
 
     /**
@@ -154,11 +135,11 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     public interface Storage extends ExtensionPoint {
 
         /**
-         * Enumerate the build handles.
+         * Enumerate running builds.
          * Order is unspecified.
          * The set may be mutated while the iterator is active.
          */
-        Iterator<FlowExecutionOwner> owners();
+        Iterator<FlowExecution> iterator();
 
         /**
          * Add an entry, if not already present.
@@ -202,8 +183,27 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
         private final SingleLaneExecutorService executor = new SingleLaneExecutorService(Timer.get());
         private XmlFile configFile;
 
-        @Override public Iterator<FlowExecutionOwner> owners() {
-            return runningTasks.iterator();
+        @Override public Iterator<FlowExecution> iterator() {
+            return new AbstractIterator<>() {
+                final Iterator<FlowExecutionOwner> base = runningTasks.iterator();
+
+                @Override
+                protected FlowExecution computeNext() {
+                    while (base.hasNext()) {
+                        FlowExecutionOwner o = base.next();
+                        try {
+                            FlowExecution e = o.get();
+                            if (!e.isComplete()) {
+                                return e;
+                            }
+                        } catch (Throwable e) {
+                            LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", e);
+                            unregister(o);
+                        }
+                    }
+                    return endOfData();
+                }
+            };
         }
 
         @Override public void register(FlowExecutionOwner o) {
