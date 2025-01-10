@@ -308,7 +308,12 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                     FlowExecutionList list = FlowExecutionList.get();
                     FlowExecutionOwner owner = e.getOwner();
                     if (!list.runningTasks.contains(owner)) {
-                        LOGGER.log(Level.WARNING, "Resuming {0}, which is missing from FlowExecutionList ({1}), so registering it now.", new Object[] {owner, list.runningTasks.getView()});
+                        if (LOGGER.isLoggable(Level.FINE)) {
+                            // Still a warning, but give more details for debugging
+                            LOGGER.log(Level.WARNING, () -> "Resuming " + owner + ", which is missing from FlowExecutionList (" + list.runningTasks.getView() + "), so registering it now.");
+                        } else {
+                            LOGGER.log(Level.WARNING, () -> "Resuming " + owner + ", which is missing from FlowExecutionList, so registering it now.");
+                        }
                         list.register(owner);
                     }
                     LOGGER.log(Level.FINE, "Will resume {0}", result);
