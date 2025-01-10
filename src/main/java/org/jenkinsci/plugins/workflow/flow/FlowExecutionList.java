@@ -214,7 +214,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     public static class ItemListenerImpl extends ItemListener {
         @Override
         public void onLoaded() {
-            FlowExecutionList.get().resume();
+            Timer.get().submit(FlowExecutionList.get()::resume);
         }
     }
 
