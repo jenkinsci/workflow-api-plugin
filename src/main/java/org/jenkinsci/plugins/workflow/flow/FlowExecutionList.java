@@ -368,11 +368,10 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                         // and CpsFlowExecution should not then complete until afterStepExecutionsResumed, so this is defensive.
                         return;
                     }
-                    var storage = ExtensionList.lookupFirst(Storage.class);
                     FlowExecutionOwner owner = e.getOwner();
-                    if (!storage.contains(owner)) {
+                    if (!ExtensionList.lookupFirst(Storage.class).contains(owner)) {
                         LOGGER.warning(() -> "Resuming " + owner + ", which is missing from FlowExecutionList, so registering it now");
-                        storage.register(owner);
+                        FlowExecutionList.get().register(owner);
                     }
                     LOGGER.log(Level.FINE, "Will resume {0}", result);
                     new ParallelResumer(result, e::afterStepExecutionsResumed).run();
