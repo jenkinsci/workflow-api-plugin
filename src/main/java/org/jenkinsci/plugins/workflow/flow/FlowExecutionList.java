@@ -9,12 +9,12 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.ExtensionPoint;
 import hudson.XmlFile;
 import hudson.init.InitMilestone;
 import hudson.init.TermMilestone;
 import hudson.init.Terminator;
 import hudson.model.Computer;
-import hudson.model.Queue;
 import hudson.model.listeners.ItemListener;
 import hudson.remoting.SingleLaneExecutorService;
 import hudson.util.CopyOnWriteList;
@@ -38,18 +38,16 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jenkins.util.SystemProperties;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
- * Tracks the running {@link FlowExecution}s so that it can be enumerated.
- *
- * @author Kohsuke Kawaguchi
+ * Enumerates running builds and ensures they resume after Jenkins is restarted.
  */
 @Extension
 public class FlowExecutionList implements Iterable<FlowExecution> {
@@ -66,74 +64,18 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      */
     public static final String LIST_SAVED = "FlowExecutionList.LIST_SAVED";
 
-    private final CopyOnWriteList<FlowExecutionOwner> runningTasks = new CopyOnWriteList<>();
-    private final SingleLaneExecutorService executor = new SingleLaneExecutorService(Timer.get());
-    private XmlFile configFile;
-
     private transient volatile boolean resumptionComplete;
 
     public FlowExecutionList() {
-        load();
+        ExtensionList.lookupFirst(Storage.class).load();
     }
 
     /**
-     * Lists all the current {@link FlowExecutionOwner}s.
+     * Lists all the current {@link FlowExecution}s.
      */
     @Override
     public Iterator<FlowExecution> iterator() {
-        return new AbstractIterator<>() {
-            final Iterator<FlowExecutionOwner> base = runningTasks.iterator();
-
-            @Override
-            protected FlowExecution computeNext() {
-                while (base.hasNext()) {
-                    FlowExecutionOwner o = base.next();
-                    try {
-                        FlowExecution e = o.get();
-                        if (!e.isComplete()) {
-                            return e;
-                        }
-                    } catch (Throwable e) {
-                        LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", e);
-                        unregister(o);
-                    }
-                }
-                return endOfData();
-            }
-        };
-    }
-
-    private synchronized @CheckForNull XmlFile configFile() {
-        if (configFile == null) {
-            Jenkins j = Jenkins.getInstanceOrNull();
-            if (j != null) {
-                String id = SystemProperties.getString(Queue.class.getName() + ".id");
-                File f;
-                if (id != null) {
-                    f = new File(Jenkins.get().getRootDir(), FlowExecutionList.class.getName() + "/" + id + ".xml");
-                } else {
-                    f = new File(j.getRootDir(), FlowExecutionList.class.getName() + ".xml");
-                }
-                configFile = new XmlFile(f);
-            }
-        }
-        return configFile;
-    }
-
-    @SuppressWarnings("unchecked")
-    private synchronized void load() {
-        XmlFile cf = configFile();
-        if (cf == null) {
-            return; // oh well
-        }
-        if (cf.exists()) {
-            try {
-                runningTasks.replaceBy((List<FlowExecutionOwner>) cf.read());
-                LOGGER.log(Level.FINE, "loaded: {0}", runningTasks);
-            } catch (Exception x) {
-                LOGGER.log(Level.WARNING, "ignoring broken " + cf, x);
-            }
-        }
+        return ExtensionList.lookupFirst(Storage.class).iterator();
     }
 
     /**
@@ -142,54 +84,17 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
      * are no longer running.
      */
     public synchronized void register(final FlowExecutionOwner self) {
-        if (runningTasks.contains(self)) {
-            LOGGER.log(Level.WARNING, "{0} was already in the list: {1}", new Object[] {self, runningTasks.getView()});
-        } else {
-            runningTasks.add(self);
-            saveLater();
-        }
+        ExtensionList.lookupFirst(Storage.class).register(self);
     }
 
     public synchronized void unregister(final FlowExecutionOwner self) {
-        if (runningTasks.remove(self)) {
-            LOGGER.log(Level.FINE, "unregistered {0}", new Object[] {self});
-            saveLater();
-        } else {
-            LOGGER.log(Level.WARNING, "{0} was not in the list to begin with: {1}", new Object[] {self, runningTasks.getView()});
-        }
-    }
-
-    private synchronized void saveLater() {
-        final List<FlowExecutionOwner> copy = new ArrayList<>(runningTasks.getView());
-        LOGGER.log(Level.FINE, "scheduling save of {0}", copy);
-        try {
-            executor.submit(() -> save(copy));
-        } catch (RejectedExecutionException x) {
-            LOGGER.log(Level.FINE, "could not schedule save, perhaps because Jenkins is shutting down; saving immediately", x);
-            save(copy);
-        }
-    }
-    private void save(List<FlowExecutionOwner> copy) {
-        XmlFile cf = configFile();
-        LOGGER.log(Level.FINE, "saving {0} to {1}", new Object[] {copy, cf});
-        if (cf == null) {
-            return; // oh well
-        }
-        try {
-            cf.write(copy);
-        } catch (IOException x) {
-            LOGGER.log(Level.WARNING, null, x);
-        }
+        ExtensionList.lookupFirst(Storage.class).unregister(self);
     }
 
     private static final Logger LOGGER = Logger.getLogger(FlowExecutionList.class.getName());
 
     public static FlowExecutionList get() {
-        FlowExecutionList l = ExtensionList.lookup(FlowExecutionList.class).get(FlowExecutionList.class);
-        if (l == null) { // might be called during shutdown
-            l = new FlowExecutionList();
-        }
-        return l;
+        return ExtensionList.lookupSingleton(FlowExecutionList.class);
     }
 
     /**
@@ -214,32 +119,192 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     public static class ItemListenerImpl extends ItemListener {
         @Override
         public void onLoaded() {
-            FlowExecutionList.get().resume();
+            Timer.get().submit(FlowExecutionList.get()::resume);
         }
     }
 
     private void resume() {
-        boolean needSave = false;
-        for (var it = runningTasks.iterator(); it.hasNext(); ) {
-            var o = it.next();
-            try {
-                FlowExecution e = o.get();
-                LOGGER.log(Level.FINE, "Eagerly loaded {0}", e);
-                if (e.isComplete()) {
-                    LOGGER.log(Level.FINE, "Unregistering completed " + o, e);
+        ExtensionList.lookupFirst(Storage.class).resume();
+        resumptionComplete = true;
+    }
+
+    /**
+     * Alternate mechanism for implementing the storage of the set of builds.
+     */
+    @Restricted(Beta.class)
+    public interface Storage extends ExtensionPoint {
+
+        /**
+         * Enumerate running builds.
+         * Order is unspecified.
+         * The set may be mutated while the iterator is active.
+         */
+        Iterator<FlowExecution> iterator();
+
+        /**
+         * Add an entry, if not already present.
+         */
+        void register(FlowExecutionOwner owner);
+
+        /**
+         * Remove an entry, if present.
+         */
+        void unregister(FlowExecutionOwner owner);
+
+        /**
+         * Check if an entry is present.
+         */
+        boolean contains(FlowExecutionOwner owner);
+
+        /**
+         * Load data during startup.
+         */
+        void load();
+
+        /**
+         * Resume builds.
+         * {@link FlowExecutionOwner#get} should be called on each entry.
+         * If {@link FlowExecution#isComplete} already, or an exception is thrown,
+         * the entry should be removed as if {@link #unregister} had been called.
+         */
+        void resume();
+
+        /**
+         * Flush any unsaved data before Jenkins exits.
+         */
+        void shutDown() throws InterruptedException;
+    }
+
+    @Restricted(NoExternalUse.class)
+    @Extension(ordinal = -1000)
+    public static final class DefaultStorage implements Storage {
+
+        private final CopyOnWriteList<FlowExecutionOwner> runningTasks = new CopyOnWriteList<>();
+        private final SingleLaneExecutorService executor = new SingleLaneExecutorService(Timer.get());
+        private XmlFile configFile;
+
+        @Override public Iterator<FlowExecution> iterator() {
+            return new AbstractIterator<>() {
+                final Iterator<FlowExecutionOwner> base = runningTasks.iterator();
+
+                @Override
+                protected FlowExecution computeNext() {
+                    while (base.hasNext()) {
+                        FlowExecutionOwner o = base.next();
+                        try {
+                            FlowExecution e = o.get();
+                            if (!e.isComplete()) {
+                                return e;
+                            }
+                        } catch (Throwable e) {
+                            LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", e);
+                            unregister(o);
+                        }
+                    }
+                    return endOfData();
+                }
+            };
+        }
+
+        @Override public void register(FlowExecutionOwner o) {
+            if (runningTasks.contains(o)) {
+                LOGGER.log(Level.WARNING, "{0} was already in the list: {1}", new Object[] {o, runningTasks.getView()});
+            } else {
+                runningTasks.add(o);
+                saveLater();
+            }
+        }
+
+        @Override public void unregister(FlowExecutionOwner o) {
+            if (runningTasks.remove(o)) {
+                LOGGER.log(Level.FINE, "unregistered {0}", new Object[] {o});
+                saveLater();
+            } else {
+                LOGGER.log(Level.WARNING, "{0} was not in the list to begin with: {1}", new Object[] {o, runningTasks.getView()});
+            }
+        }
+
+        @Override public boolean contains(FlowExecutionOwner o) {
+            return runningTasks.contains(o);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override public void load() {
+            XmlFile cf = configFile();
+            if (cf == null) {
+                return; // oh well
+            }
+            if (cf.exists()) {
+                try {
+                    runningTasks.replaceBy((List<FlowExecutionOwner>) cf.read());
+                    LOGGER.log(Level.FINE, "loaded: {0}", runningTasks);
+                } catch (Exception x) {
+                    LOGGER.log(Level.WARNING, "ignoring broken " + cf, x);
+                }
+            }
+        }
+
+        @Override public void resume() {
+            boolean needSave = false;
+            for (var it = runningTasks.iterator(); it.hasNext();) {
+                var owner = it.next();
+                try {
+                    var exec = owner.get();
+                    LOGGER.fine(() -> "eagerly loaded " + exec);
+                    if (exec.isComplete()) {
+                        LOGGER.fine(() -> "unregistering completed " + exec);
+                        it.remove();
+                        needSave = true;
+                    }
+                } catch (IOException x) {
+                    LOGGER.log(Level.FINE, x, () -> "failed to load " + owner + "; unregistering");
                     it.remove();
                     needSave = true;
                 }
-            } catch (IOException ex) {
-                LOGGER.log(Level.FINE, "Failed to load " + o + ". Unregistering", ex);
-                it.remove();
-                needSave = true;
+            }
+            if (needSave) {
+                saveLater();
             }
         }
-        if (needSave) {
-            saveLater();
+
+        @Override public void shutDown() throws InterruptedException {
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.MINUTES);
         }
-        resumptionComplete = true;
+
+        private synchronized void saveLater() {
+            final List<FlowExecutionOwner> copy = new ArrayList<>(runningTasks.getView());
+            LOGGER.log(Level.FINE, "scheduling save of {0}", copy);
+            try {
+                executor.submit(() -> save(copy));
+            } catch (RejectedExecutionException x) {
+                LOGGER.log(Level.FINE, "could not schedule save, perhaps because Jenkins is shutting down; saving immediately", x);
+                save(copy);
+            }
+        }
+
+        private void save(List<FlowExecutionOwner> copy) {
+            XmlFile cf = configFile();
+            LOGGER.log(Level.FINE, "saving {0} to {1}", new Object[] {copy, cf});
+            if (cf == null) {
+                return; // oh well
+            }
+            try {
+                cf.write(copy);
+            } catch (IOException x) {
+                LOGGER.log(Level.WARNING, null, x);
+            }
+        }
+
+        private synchronized @CheckForNull XmlFile configFile() {
+            if (configFile == null) {
+                Jenkins j = Jenkins.getInstanceOrNull();
+                if (j != null) {
+                    configFile = new XmlFile(new File(j.getRootDir(), FlowExecutionList.class.getName() + ".xml"));
+                }
+            }
+            return configFile;
+        }
     }
 
     /**
@@ -282,9 +347,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     @Terminator(requires = EXECUTIONS_SUSPENDED, attains = LIST_SAVED)
     public static void saveAll() throws InterruptedException {
         LOGGER.fine("ensuring all executions are saved");
-        SingleLaneExecutorService executor = get().executor;
-        executor.shutdown();
-        executor.awaitTermination(1, TimeUnit.MINUTES);
+        ExtensionList.lookupFirst(Storage.class).shutDown();
     }
 
     /**
@@ -305,16 +368,10 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                         // and CpsFlowExecution should not then complete until afterStepExecutionsResumed, so this is defensive.
                         return;
                     }
-                    FlowExecutionList list = FlowExecutionList.get();
                     FlowExecutionOwner owner = e.getOwner();
-                    if (!list.runningTasks.contains(owner)) {
-                        if (LOGGER.isLoggable(Level.FINE)) {
-                            // Still a warning, but give more details for debugging
-                            LOGGER.log(Level.WARNING, () -> "Resuming " + owner + ", which is missing from FlowExecutionList (" + list.runningTasks.getView() + "), so registering it now.");
-                        } else {
-                            LOGGER.log(Level.WARNING, () -> "Resuming " + owner + ", which is missing from FlowExecutionList, so registering it now.");
-                        }
-                        list.register(owner);
+                    if (!ExtensionList.lookupFirst(Storage.class).contains(owner)) {
+                        LOGGER.warning(() -> "Resuming " + owner + ", which is missing from FlowExecutionList, so registering it now");
+                        FlowExecutionList.get().register(owner);
                     }
                     LOGGER.log(Level.FINE, "Will resume {0}", result);
                     new ParallelResumer(result, e::afterStepExecutionsResumed).run();
