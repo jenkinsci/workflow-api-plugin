@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.workflow.flow;
 
-import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -36,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -313,7 +313,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
     @Extension
     public static class StepExecutionIteratorImpl extends StepExecutionIterator {
         @Override
-        public ListenableFuture<?> apply(final Function<StepExecution, Void> f) {
+        public ListenableFuture<?> accept(Consumer<StepExecution> c) {
             List<ListenableFuture<?>> all = new ArrayList<>();
 
             for (FlowExecution e : FlowExecutionList.get()) {
@@ -325,7 +325,7 @@ public class FlowExecutionList implements Iterable<FlowExecution> {
                 ListenableFuture<Void> results = Futures.transform(execs, (List<StepExecution> result) -> {
                     for (StepExecution se : result) {
                         try {
-                            f.apply(se);
+                            c.accept(se);
                         } catch (RuntimeException x) {
                             LOGGER.log(Level.WARNING, null, x);
                         }
