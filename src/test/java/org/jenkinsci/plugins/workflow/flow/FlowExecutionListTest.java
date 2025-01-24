@@ -214,9 +214,9 @@ public class FlowExecutionListTest {
             stuck.setDefinition(new CpsFlowDefinition("blockSynchronously 'stuck'", false));
             var stuckBuild = stuck.scheduleBuild2(0).waitForStart();
             await().atMost(5, TimeUnit.SECONDS).until(() -> SynchronousBlockingStep.isStarted("stuck"));
-            // Make FlowExecutionList$StepExecutionIteratorImpl.applyAll submit a task to the CpsVmExecutorService
+            // Make FlowExecutionList$StepExecutionIteratorImpl.acceptAll submit a task to the CpsVmExecutorService
             // for stuck #1 that will never complete, so the resulting future will never complete.
-            StepExecution.applyAll(e -> null);
+            StepExecution.acceptAll(e -> {});
             // Let notStuckBuild complete and clean up all references.
             SemaphoreStep.success("wait/1", null);
             r.waitForCompletion(notStuckBuild);
@@ -248,9 +248,9 @@ public class FlowExecutionListTest {
             WeakReference<Object> notStuckBuildRef = new WeakReference<>(notStuckBuild);
             var stuck = r.jenkins.getItemByFullName("stuck", WorkflowJob.class);
             var stuckBuild = stuck.getBuildByNumber(1);
-            // Make FlowExecutionList$StepExecutionIteratorImpl.applyAll submit a task to the CpsVmExecutorService
+            // Make FlowExecutionList$StepExecutionIteratorImpl.acceptAll submit a task to the CpsVmExecutorService
             // for stuck #1 that will never complete, so the resulting future will never complete.
-            StepExecution.applyAll(e -> null);
+            StepExecution.acceptAll(e -> {});
             // Let notStuckBuild complete and clean up all references.
             SemaphoreStep.success("wait/1", null);
             r.waitForCompletion(notStuckBuild);
