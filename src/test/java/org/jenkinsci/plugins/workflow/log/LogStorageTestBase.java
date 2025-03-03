@@ -51,7 +51,6 @@ import java.util.function.BiFunction;
 import java.util.logging.Level;
 import jenkins.model.CauseOfInterruption;
 import jenkins.security.MasterToSlaveCallable;
-import org.acegisecurity.Authentication;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.io.output.NullWriter;
@@ -68,6 +67,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
+import org.springframework.security.core.Authentication;
 
 /**
  * Foundation for compliance tests of {@link LogStorage} implementations.
@@ -393,7 +393,7 @@ public abstract class LogStorageTestBase {
 
         @NonNull
         @Override
-        public Authentication getAuthentication() {
+        public Authentication getAuthentication2() {
             throw new UnsupportedOperationException();
         }
 
