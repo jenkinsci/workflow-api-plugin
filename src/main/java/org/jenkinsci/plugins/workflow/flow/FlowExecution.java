@@ -47,10 +47,10 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import jenkins.model.queue.AsynchronousExecution;
-import org.acegisecurity.Authentication;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.springframework.security.core.Authentication;
 
 /**
  * State of a currently executing workflow.
@@ -248,10 +248,27 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
      * Looks up authentication associated with this flow execution.
      * For example, if a flow is configured to be a trusted agent of a user, that would be set here.
      * A flow run triggered by a user manually might be associated with the runtime, or it might not.
-     * @return an authentication; {@link ACL#SYSTEM} as a fallback, or {@link Jenkins#ANONYMOUS} if the flow is supposed to be limited to a specific user but that user cannot now be looked up
+     * @return an authentication; {@link ACL#SYSTEM2} as a fallback, or {@link Jenkins#ANONYMOUS2} if the flow is supposed to be limited to a specific user but that user cannot now be looked up
      */
-    public abstract @NonNull Authentication getAuthentication();
+    public /* abstract */ @NonNull Authentication getAuthentication2() {
+        return Util.ifOverridden(
+                () -> getAuthentication().toSpring(),
+                org.acegisecurity.Authentication.class,
+                getClass(),
+                "getAuthentication");
+    }
 
+    /**
+     * @deprecated use {@link #getAuthentication2()}
+     */
+    @Deprecated
+    public /* abstract */ @NonNull org.acegisecurity.Authentication getAuthentication() {
+        return Util.ifOverridden(
+                () -> org.acegisecurity.Authentication.fromSpring(getAuthentication2()),
+                Authentication.class,
+                getClass(),
+                "getAuthentication2");
+    }
 
     /** @see GraphLookupView#isActive(FlowNode)
      * @throws IllegalArgumentException If the input {@link FlowNode} does not belong to this execution
