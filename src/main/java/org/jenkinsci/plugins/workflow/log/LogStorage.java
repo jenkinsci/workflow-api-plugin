@@ -186,7 +186,7 @@ public interface LogStorage {
      * Wraps the specified {@link OutputStream} with a buffer that flushes automatically as needed.
      */
     static @NonNull OutputStream wrapWithAutoFlushingBuffer(@NonNull OutputStream os) throws IOException {
-        return new GCFlushedOutputStream(new DelayBufferedOutputStream(os));
+        return new DelayBufferedOutputStream(os);
     }
 
 }

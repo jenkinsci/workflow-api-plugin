@@ -114,7 +114,7 @@ final class BufferedBuildListener extends OutputStreamTaskListener.Default imple
         }
 
         private Object readResolve() {
-            return new BufferedBuildListener(new CloseableOutputStream(new GCFlushedOutputStream(new DelayBufferedOutputStream(ros, tuning))));
+            return new BufferedBuildListener(new CloseableOutputStream(new DelayBufferedOutputStream(ros, tuning)));
         }
 
     }
