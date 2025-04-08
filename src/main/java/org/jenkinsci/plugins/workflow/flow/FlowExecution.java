@@ -253,7 +253,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     public /* abstract */ @NonNull Authentication getAuthentication2() {
         return Util.ifOverridden(
                 () -> getAuthentication().toSpring(),
-                org.acegisecurity.Authentication.class,
+                FlowExecution.class,
                 getClass(),
                 "getAuthentication");
     }
@@ -265,7 +265,7 @@ public abstract class FlowExecution implements FlowActionStorage, GraphLookupVie
     public /* abstract */ @NonNull org.acegisecurity.Authentication getAuthentication() {
         return Util.ifOverridden(
                 () -> org.acegisecurity.Authentication.fromSpring(getAuthentication2()),
-                Authentication.class,
+                FlowExecution.class,
                 getClass(),
                 "getAuthentication2");
     }
