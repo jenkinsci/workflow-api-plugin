@@ -98,9 +98,9 @@ public class ArtifactManagerTest {
     }
 
     /**
-     * Sets up a Docker image, if Docker support is available in this environment.
-     * Used by {@link #artifactArchiveAndDelete} etc.
+     * @deprecated Not actually used externally.
      */
+    @Deprecated
     public static @CheckForNull DockerImage prepareImage() throws Exception {
         Docker docker = new Docker();
         if (!Functions.isWindows() && docker.isAvailable()) { // TODO: Windows agents on ci.jenkins.io have Docker, but cannot build the image.
@@ -151,9 +151,8 @@ public class ArtifactManagerTest {
     /**
      * Test artifact archiving with a manager that does <em>not</em> honor deletion requests.
      * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
-     * @param image as in {@link #artifactArchiveAndDelete}
      */
-    public static void artifactArchive(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    public static void artifactArchive(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters) throws Exception {
         wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
             VirtualFile root = b.getArtifactManager().root();
             new Verify(agent, root, weirdCharacters).run();
@@ -162,13 +161,16 @@ public class ArtifactManagerTest {
             assertTrue(b.getArtifactManager().root().child("file").isFile());
         });
     }
+    @Deprecated
+    public static void artifactArchive(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+        artifactArchive(r, factory, weirdCharacters);
+    }
 
     /**
      * Test artifact archiving in a plain manager.
      * @param weirdCharacters check behavior of files with Unicode and various unusual characters in the name
-     * @param image use {@link #prepareImage} in a {@link BeforeClass} block
      */
-    public static void artifactArchiveAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    public static void artifactArchiveAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters) throws Exception {
         wrapInContainer(r, factory, weirdCharacters, (agent, p, b, ws) -> {
             VirtualFile root = b.getArtifactManager().root();
             new Verify(agent, root, weirdCharacters).run();
@@ -178,13 +180,16 @@ public class ArtifactManagerTest {
             assertFalse(b.getArtifactManager().delete());
         });
     }
+    @Deprecated
+    public static void artifactArchiveAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+        artifactArchiveAndDelete(r, factory, weirdCharacters);
+    }
 
     /**
      * Test stashing and unstashing with a {@link StashManager.StashAwareArtifactManager} that does <em>not</em> honor deletion requests.
      * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
-     * @param image as in {@link #artifactArchiveAndDelete}
      */
-    public static void artifactStash(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    public static void artifactStash(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters) throws Exception {
         wrapInContainer(r, factory, weirdCharacters,
                 new StashFunction(r, weirdCharacters, (p, b, ws, launcher, env, listener) -> {
                     // should not have deleted
@@ -192,13 +197,16 @@ public class ArtifactManagerTest {
                     assertTrue(ws.child("file").exists());
                 }));
     }
+    @Deprecated
+    public static void artifactStash(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+        artifactStash(r, factory, weirdCharacters);
+    }
 
     /**
      * Test stashing and unstashing with a {@link StashManager.StashAwareArtifactManager} with standard behavior.
      * @param weirdCharacters as in {@link #artifactArchiveAndDelete}
-     * @param image as in {@link #artifactArchiveAndDelete}
      */
-    public static void artifactStashAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+    public static void artifactStashAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters) throws Exception {
         wrapInContainer(r, factory, weirdCharacters,
                 new StashFunction(r, weirdCharacters, (p, b, ws, launcher, env, listener) -> {
                     try {
@@ -209,6 +217,10 @@ public class ArtifactManagerTest {
                     }
                     assertFalse(ws.child("file").exists());
                 }));
+    }
+    @Deprecated
+    public static void artifactStashAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
+        artifactStashAndDelete(r, factory, weirdCharacters);
     }
 
     /**
