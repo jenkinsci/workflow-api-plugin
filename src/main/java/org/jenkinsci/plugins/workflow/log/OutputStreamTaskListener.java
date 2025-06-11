@@ -39,6 +39,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.util.BuildListenerAdapter;
 import org.apache.commons.io.output.ClosedOutputStream;
+import org.jenkinsci.plugins.workflow.log.tee.TeePrintStream;
+import org.jenkinsci.plugins.workflow.log.tee.TeeTaskListener;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
 
@@ -63,7 +65,7 @@ public interface OutputStreamTaskListener extends TaskListener {
             return ((OutputStreamTaskListener) listener).getOutputStream();
         }
         PrintStream ps = listener.getLogger();
-        if (ps.getClass() != PrintStream.class) {
+        if (ps.getClass() != PrintStream.class && ps.getClass() != TeePrintStream.class) {
             Logger.getLogger(OutputStreamTaskListener.class.getName()).warning(() -> "Unexpected PrintStream subclass " + ps.getClass().getName() + " which might override write(…); error handling is degraded unless OutputStreamTaskListener is used: " + listener.getClass().getName());
             return ps;
         }
@@ -73,7 +75,9 @@ public interface OutputStreamTaskListener extends TaskListener {
                 listener.getClass() == StreamTaskListener.class ||
                 listener.getClass() == LogTaskListener.class ||
                 listener.getClass() == StreamBuildListener.class ||
-                listener.getClass() == BuildListenerAdapter.class;
+                listener.getClass() == BuildListenerAdapter.class ||
+                listener.getClass() == TeeTaskListener.class;
+                ;
             Logger.getLogger(OutputStreamTaskListener.class.getName()).log(core ? Level.FINE : Level.WARNING, () -> "On Java 17+ error handling is degraded unless OutputStreamTaskListener is used: " + listener.getClass().getName());
             return ps;
         }
