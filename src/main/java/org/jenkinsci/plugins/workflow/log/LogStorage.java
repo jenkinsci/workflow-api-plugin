@@ -35,12 +35,16 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorage;
+import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -52,7 +56,6 @@ import org.kohsuke.accmod.restrictions.Beta;
  */
 @Restricted(Beta.class)
 public interface LogStorage {
-
 
     /**
      * Provides an alternate way of emitting output from a build.
@@ -160,6 +163,11 @@ public interface LogStorage {
      */
     static @NonNull LogStorage of(@NonNull FlowExecutionOwner b) {
         try {
+            Optional<TeeLogStorage> teeLogStorage = TeeLogStorageFactory.handleFactories(b);
+            if (teeLogStorage.isPresent()) {
+                return teeLogStorage.get();
+            }
+
             for (LogStorageFactory factory : ExtensionList.lookup(LogStorageFactory.class)) {
                 LogStorage storage = factory.forBuild(b);
                 if (storage != null) {
@@ -172,6 +180,22 @@ public interface LogStorage {
         } catch (Exception x) {
             return new BrokenLogStorage(x);
         }
+    }
+
+    /**
+     * Return the primary Log Storage. By default, it's the current implementation.
+     * See {@link TeeLogStorage} for overriden implementation.
+     */
+    default LogStorage getPrimary() {
+        return this;
+    }
+
+    /**
+     * Return a list of secondary Log Storages. Buy default it's an empty list.
+     * See {@link TeeLogStorage} for overriden implementation.
+     */
+    default List<LogStorage> getSecondaries() {
+        return List.of();
     }
 
     /**
@@ -188,5 +212,4 @@ public interface LogStorage {
     static @NonNull OutputStream wrapWithAutoFlushingBuffer(@NonNull OutputStream os) throws IOException {
         return new GCFlushedOutputStream(new DelayBufferedOutputStream(os));
     }
-
 }
