@@ -103,7 +103,11 @@ public class GlobalDefaultFlowDurabilityLevel extends AbstractDescribableImpl<Gl
     public static FlowDurabilityHint getDefaultDurabilityHint() {
         Jenkins j = Jenkins.getInstanceOrNull();
         if (j != null) {
-            FlowDurabilityHint hint = j.getExtensionList(DescriptorImpl.class).get(0).durabilityHint;
+            List<DescriptorImpl> descriptor = j.getExtensionList(DescriptorImpl.class);
+            if (descriptor.isEmpty()) {
+                return SUGGESTED_DURABILITY_HINT;
+            }
+            FlowDurabilityHint hint = descriptor.get(0).durabilityHint;
             if (hint != null) {
                 return hint;
             }

@@ -1,19 +1,37 @@
 package org.jenkinsci.plugins.workflow.log.tee;
 
+import hudson.model.Describable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryConfiguration;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 
-public class TeeLogStorageFactory {
+/***
+ * Allows a {@link LogStorage} to be teeable, meaning it can be configured as a primary or secondary log storage.
+ * See {@link TeeLogStorage}.
+ */
+@Restricted(Beta.class)
+public interface TeeLogStorageFactory extends LogStorageFactory, Describable<TeeLogStorageFactory> {
 
-    public static Optional<TeeLogStorage> handleFactories(List<LogStorageFactory> factories, FlowExecutionOwner b) {
-        if (factories.size() <= 1) {
+    /**
+     * Handle the factories configured in {@link TeeLogStorageFactoryConfiguration}
+     */
+    public static Optional<TeeLogStorage> handleFactories(FlowExecutionOwner b) {
+        TeeLogStorageFactoryConfiguration configuration = TeeLogStorageFactoryConfiguration.get();
+
+        if (!configuration.isEnabled()) {
             return Optional.empty();
         }
-        List<LogStorageFactory> copy = new ArrayList<>(factories);
+        if (configuration.getFactories().isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<LogStorageFactory> copy = new ArrayList<>(configuration.getFactories());
         LogStorage primary = copy.remove(0).forBuild(b);
         List<LogStorage> secondaries = new ArrayList<>();
         for (LogStorageFactory factory : copy) {

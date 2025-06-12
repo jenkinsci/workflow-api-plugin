@@ -57,7 +57,6 @@ import org.kohsuke.accmod.restrictions.Beta;
 @Restricted(Beta.class)
 public interface LogStorage {
 
-
     /**
      * Provides an alternate way of emitting output from a build.
      * <p>May implement {@link AutoCloseable} to clean up at the end of a build;
@@ -164,13 +163,12 @@ public interface LogStorage {
      */
     static @NonNull LogStorage of(@NonNull FlowExecutionOwner b) {
         try {
-            List<LogStorageFactory> factories = ExtensionList.lookup(LogStorageFactory.class);
-            Optional<TeeLogStorage> teeLogStorage = TeeLogStorageFactory.handleFactories(factories, b);
+            Optional<TeeLogStorage> teeLogStorage = TeeLogStorageFactory.handleFactories(b);
             if (teeLogStorage.isPresent()) {
                 return teeLogStorage.get();
             }
-            
-            for (LogStorageFactory factory : factories) {
+
+            for (LogStorageFactory factory : ExtensionList.lookup(LogStorageFactory.class)) {
                 LogStorage storage = factory.forBuild(b);
                 if (storage != null) {
                     // Pending integration with JEP-207 / JEP-212, this choice is not persisted.
@@ -214,5 +212,4 @@ public interface LogStorage {
     static @NonNull OutputStream wrapWithAutoFlushingBuffer(@NonNull OutputStream os) throws IOException {
         return new GCFlushedOutputStream(new DelayBufferedOutputStream(os));
     }
-
 }
