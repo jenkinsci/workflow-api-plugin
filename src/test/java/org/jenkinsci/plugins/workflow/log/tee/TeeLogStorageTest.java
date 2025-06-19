@@ -7,36 +7,31 @@ import static org.hamcrest.Matchers.not;
 import java.io.File;
 import org.jenkinsci.plugins.workflow.log.FileLogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
-import org.jenkinsci.plugins.workflow.log.LogStorageTestBase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public class TeeLogStorageTest extends LogStorageTestBase {
+public class TeeLogStorageTest extends TeeLogStorageTestBase {
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 
     private File primaryFile;
-    private File secondaryFile1;
-    private File secondaryFile2;
+    /**
+     * By default, check all the log files have the same length
+     */
     private boolean primarySameLength = true;
 
     @Before
-    public void setup() throws Exception {
+    public void primaryFile() throws Exception {
         primaryFile = tmp.newFile();
-        secondaryFile1 = tmp.newFile();
-        secondaryFile2 = tmp.newFile();
     }
 
     @Override
-    protected LogStorage createStorage() {
-        return new TeeLogStorage(
-                FileLogStorage.forFile(primaryFile),
-                FileLogStorage.forFile(secondaryFile1),
-                FileLogStorage.forFile(secondaryFile2));
+    protected LogStorage primaryStorage() {
+        return FileLogStorage.forFile(primaryFile);
     }
 
     @Override
