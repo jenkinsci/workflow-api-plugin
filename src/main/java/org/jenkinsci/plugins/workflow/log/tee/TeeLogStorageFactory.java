@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.workflow.log.tee;
 
-import hudson.model.Describable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -16,7 +15,11 @@ import org.kohsuke.accmod.restrictions.Beta;
  * See {@link TeeLogStorage}.
  */
 @Restricted(Beta.class)
-public interface TeeLogStorageFactory extends LogStorageFactory, Describable<TeeLogStorageFactory> {
+public interface TeeLogStorageFactory extends LogStorageFactory {
+
+    String getId();
+
+    String getDisplayName();
 
     /**
      * Handle the factories configured in {@link TeeLogStorageFactoryConfiguration}
@@ -27,7 +30,7 @@ public interface TeeLogStorageFactory extends LogStorageFactory, Describable<Tee
         if (!configuration.isEnabled()) {
             return Optional.empty();
         }
-        if (configuration.getFactories().isEmpty()) {
+        if (configuration.getWrappers().isEmpty()) {
             return Optional.empty();
         }
 

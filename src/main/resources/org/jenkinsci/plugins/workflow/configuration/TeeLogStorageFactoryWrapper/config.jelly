@@ -1,0 +1,6 @@
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <!-- This is required to ensure "typeId" is submitted with each item -->
+  <f:entry field="typeId">
+    <input type="hidden" name="typeId" value="${instance.typeId}" />
+  </f:entry>
+</j:jelly>

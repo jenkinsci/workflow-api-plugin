@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import jenkins.model.GlobalConfiguration;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
@@ -26,7 +27,7 @@ import org.kohsuke.stapler.StaplerRequest2;
 public class TeeLogStorageFactoryConfiguration extends GlobalConfiguration {
     private static final Logger LOGGER = Logger.getLogger(TeeLogStorageFactoryConfiguration.class.getName());
     private boolean enabled = false;
-    private List<TeeLogStorageFactory> factories;
+    private List<TeeLogStorageFactoryWrapper> wrappers;
 
     public TeeLogStorageFactoryConfiguration() {
         load();
@@ -36,13 +37,30 @@ public class TeeLogStorageFactoryConfiguration extends GlobalConfiguration {
         return enabled;
     }
 
-    public List<TeeLogStorageFactory> getFactories() {
-        return factories;
+    private Object readResolve() {
+        // remove the unknown wrappers
+        if (this.wrappers != null) {
+            this.wrappers = this.wrappers.stream()
+                    .filter(w -> {
+                        try {
+                            return w.resolve() != null;
+                        } catch (AssertionError e) {
+                            LOGGER.log(Level.WARNING, e.getMessage(), e);
+                            return false;
+                        }
+                    })
+                    .collect(Collectors.toList());
+        }
+        return this;
+    }
+
+    public List<TeeLogStorageFactoryWrapper> getWrappers() {
+        return wrappers;
     }
 
     @DataBoundSetter
-    public void setFactories(List<TeeLogStorageFactory> factories) {
-        this.factories = factories;
+    public void setWrappers(List<TeeLogStorageFactoryWrapper> wrappers) {
+        this.wrappers = wrappers;
     }
 
     @DataBoundSetter
@@ -52,10 +70,10 @@ public class TeeLogStorageFactoryConfiguration extends GlobalConfiguration {
 
     @Override
     public boolean configure(StaplerRequest2 req, JSONObject json) throws FormException {
-        // We have to null out providers before data binding to allow all providers to be deleted in the config UI.
+        // We have to null out wrappers before data binding to allow all wrappers to be deleted in the config UI.
         // We use a BulkChange to avoid double saves in other cases.
         try (BulkChange bc = new BulkChange(this)) {
-            factories = null;
+            wrappers = null;
             req.bindJSON(this, json);
             bc.commit();
         } catch (IOException e) {
@@ -68,22 +86,23 @@ public class TeeLogStorageFactoryConfiguration extends GlobalConfiguration {
         return ExtensionList.lookupSingleton(TeeLogStorageFactoryConfiguration.class);
     }
 
+    public List<Descriptor<TeeLogStorageFactoryWrapper>> getDescriptors() {
+        return new TeeLogStorageFactoryWrapper.DescriptorImpl().getDescriptors();
+    }
+
     public List<TeeLogStorageFactory> getAll() {
         return ExtensionList.lookup(TeeLogStorageFactory.class);
     }
 
-    //    public List<TeeLogStorageFactory> getFactoryInstances() {
-    //        List<TeeLogStorageFactory> result = new ArrayList<>();
-    //        List<TeeLogStorageFactory> all = ExtensionList.lookup(TeeLogStorageFactory.class);
-    //        for(String factory : factories) {
-    //            all.stream().filter(f -> f.getId().equals(factory)).findFirst().ifPresent(result::add);
-    //        }
-    //        return result;
-    //    }
+    public List<TeeLogStorageFactory> getFactories() {
+        if (wrappers == null) {
+            return List.of();
+        }
+        return wrappers.stream().map(TeeLogStorageFactoryWrapper::resolve).collect(Collectors.toList());
+    }
 
     @Extension
-    public static class TeeLogStorgeFactoryConfigurationFilter extends DescriptorVisibilityFilter {
-
+    public static class TeeLogStorageFactoryConfigurationFilter extends DescriptorVisibilityFilter {
         @Override
         public boolean filter(@CheckForNull Object context, @NonNull Descriptor descriptor) {
             if (descriptor instanceof TeeLogStorageFactoryConfiguration) {

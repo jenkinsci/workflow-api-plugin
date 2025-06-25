@@ -3,12 +3,21 @@
     <f:section title="${%Tee Log Storage Factory}">
       <f:optionalBlock field="enabled"
                        title="Enabled"
-                       inline="true">
+                       inline="true"
+                       name="teeLogStorageEnabled"
+      >
         <f:block>
           ${%description}
         </f:block>
         <f:entry>
-          <f:repeatableHeteroProperty field="factories" hasHeader="true" oneEach="true"/>
+          <f:hetero-list
+              name="wrappers"
+              items="${instance.wrappers}"
+              descriptors="${instance.descriptors}"
+              oneEach="true"
+              honorOrder="true"
+              hasHeader="true" 
+              addCaption="${%Add Factory}"/>
         </f:entry>
       </f:optionalBlock>
     </f:section>

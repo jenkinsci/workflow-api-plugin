@@ -1,0 +1,15 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryConfiguration>
+  <enabled>true</enabled>
+  <wrappers>
+    <org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryWrapper>
+      <typeId>TeeLogStorageFactoryMock2</typeId>
+    </org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryWrapper>
+    <org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryWrapper>
+      <typeId>Unknown</typeId>
+    </org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryWrapper>
+    <org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryWrapper>
+      <typeId>TeeLogStorageFactoryMock1</typeId>
+    </org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryWrapper>
+  </wrappers>
+</org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryConfiguration>
