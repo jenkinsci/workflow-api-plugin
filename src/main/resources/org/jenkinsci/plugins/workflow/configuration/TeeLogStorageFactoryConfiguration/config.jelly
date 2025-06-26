@@ -9,15 +9,11 @@
         <f:block>
           ${%description}
         </f:block>
-        <f:entry>
-          <f:hetero-list
-              name="wrappers"
-              items="${instance.wrappers}"
-              descriptors="${instance.descriptors}"
-              oneEach="true"
-              honorOrder="true"
-              hasHeader="true" 
-              addCaption="${%Add Factory}"/>
+        <f:entry field="primaryId" title="${%Primary Factory}">
+          <f:select />
+        </f:entry>
+        <f:entry field="secondaryId" title="${%Secondary Factory}">
+          <f:select />
         </f:entry>
       </f:optionalBlock>
     </f:section>

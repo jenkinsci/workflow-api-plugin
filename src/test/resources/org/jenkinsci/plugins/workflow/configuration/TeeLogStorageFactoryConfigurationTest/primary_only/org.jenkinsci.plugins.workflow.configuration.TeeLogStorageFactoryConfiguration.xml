@@ -1,6 +1,5 @@
 <?xml version='1.1' encoding='UTF-8'?>
 <org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryConfiguration>
   <enabled>true</enabled>
-  <primaryId>org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryConfigurationTest$TeeLogStorageFactoryMock2</primaryId>
-  <secondaryId>unknown</secondaryId>
+  <primaryId>org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryConfigurationTest$TeeLogStorageFactoryMock1</primaryId>
 </org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryConfiguration>
