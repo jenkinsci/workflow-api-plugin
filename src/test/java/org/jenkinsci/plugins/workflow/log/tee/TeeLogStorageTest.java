@@ -5,6 +5,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import org.jenkinsci.plugins.workflow.log.FileLogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.junit.After;
@@ -20,9 +22,11 @@ public class TeeLogStorageTest extends TeeLogStorageTestBase {
 
     private File primaryFile;
     /**
-     * By default, check all the log files have the same length
+     * By default, check all the log files have the same content
      */
-    private boolean primarySameLength = true;
+    private boolean secondary1SameAsPrimary = true;
+
+    private boolean secondary2SameAsPrimary = true;
 
     @Before
     public void primaryFile() throws Exception {
@@ -35,21 +39,35 @@ public class TeeLogStorageTest extends TeeLogStorageTestBase {
     }
 
     @Override
+    public void remoting() throws Exception {
+        secondary2SameAsPrimary = false;
+        super.remoting();
+    }
+
+    @Override
     @Test
     public void mangledLines() throws Exception {
-        primarySameLength = false;
+        // primary lines are tweaked
+        secondary1SameAsPrimary = false;
+        secondary2SameAsPrimary = false;
         super.mangledLines();
     }
 
     @After
-    public void additional_checks() {
-        if (primarySameLength) {
-            assertThat(primaryFile.length(), is(secondaryFile1.length()));
-            assertThat(primaryFile.length(), is(secondaryFile2.length()));
+    public void additional_checks() throws IOException {
+        if (secondary1SameAsPrimary) {
+            assertThat(getContent(secondaryFile1), is(getContent(primaryFile)));
         } else {
-            assertThat(primaryFile.length(), not(is(secondaryFile1.length())));
-            assertThat(primaryFile.length(), not(is(secondaryFile2.length())));
+            assertThat(getContent(secondaryFile1), not(is(getContent(primaryFile))));
         }
-        assertThat(secondaryFile1.length(), is(secondaryFile2.length()));
+        if (secondary2SameAsPrimary) {
+            assertThat(getContent(secondaryFile2), is(getContent(primaryFile)));
+        } else {
+            assertThat(getContent(secondaryFile2), not(is(getContent(primaryFile))));
+        }
+    }
+
+    private String getContent(File file) throws IOException {
+        return Files.readString(file.toPath());
     }
 }

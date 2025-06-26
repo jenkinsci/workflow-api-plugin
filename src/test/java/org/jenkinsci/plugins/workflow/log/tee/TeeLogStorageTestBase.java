@@ -33,6 +33,8 @@ public abstract class TeeLogStorageTestBase extends LogStorageTestBase {
     @Override
     protected LogStorage createStorage() {
         return new TeeLogStorage(
-                primaryStorage(), FileLogStorage.forFile(secondaryFile1), FileLogStorage.forFile(secondaryFile2));
+                primaryStorage(),
+                FileLogStorage.forFile(secondaryFile1),
+                RemoteCustomFileLogStorage.forFile(secondaryFile2));
     }
 }
