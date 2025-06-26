@@ -81,6 +81,7 @@ public class TeeLogStorageFactoryConfiguration extends GlobalConfiguration {
     }
 
     @Restricted(NoExternalUse.class)
+    @RequirePOST
     public FormValidation doCheckPrimaryId(@QueryParameter String primaryId) {
         if (Util.fixEmptyAndTrim(primaryId) == null) {
             return FormValidation.error("Primary Factory must be set");
@@ -89,6 +90,7 @@ public class TeeLogStorageFactoryConfiguration extends GlobalConfiguration {
     }
 
     @Restricted(NoExternalUse.class)
+    @RequirePOST
     public FormValidation doCheckSecondaryId(@QueryParameter String primaryId, @QueryParameter String secondaryId) {
         if (Util.fixEmptyAndTrim(primaryId) != null && Objects.equals(primaryId, secondaryId)) {
             return FormValidation.error("Secondary Factory can't be the same as Primary Factory");
