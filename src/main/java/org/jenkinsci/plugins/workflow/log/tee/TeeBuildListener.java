@@ -62,13 +62,29 @@ class TeeBuildListener implements BuildListener, OutputStreamTaskListener, AutoC
 
     @Override
     public void close() throws Exception {
+        Exception exception = null;
         if (primary instanceof AutoCloseable) {
-            ((AutoCloseable) primary).close();
+            try {
+                ((AutoCloseable) primary).close();
+            } catch (Exception e) {
+                exception = e;
+            }
         }
         for (BuildListener secondary : secondaries) {
             if (secondary instanceof AutoCloseable) {
-                ((AutoCloseable) secondary).close();
+                try {
+                    ((AutoCloseable) secondary).close();
+                } catch (Exception e) {
+                    if (exception == null) {
+                        exception = e;
+                    } else {
+                        exception.addSuppressed(e);
+                    }
+                }
             }
+        }
+        if (exception != null) {
+            throw exception;
         }
     }
 }
