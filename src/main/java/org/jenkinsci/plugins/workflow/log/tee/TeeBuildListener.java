@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Serial;
 import java.util.List;
+import java.util.stream.Stream;
 import org.jenkinsci.plugins.workflow.log.OutputStreamTaskListener;
 
 class TeeBuildListener implements BuildListener, OutputStreamTaskListener, AutoCloseable {
@@ -31,9 +32,16 @@ class TeeBuildListener implements BuildListener, OutputStreamTaskListener, AutoC
                 throw new ClassCastException("Secondary is not an instance of OutputStreamTaskListener: " + secondary);
             }
         });
-
         this.primary = primary;
         this.secondaries = List.of(secondaries);
+    }
+
+    TeeBuildListener(TaskListener primary, TaskListener... secondaries) {
+        this(
+                (BuildListener) primary,
+                Stream.of(secondaries)
+                        .map(secondary -> (BuildListener) secondary)
+                        .toArray(BuildListener[]::new));
     }
 
     @NonNull

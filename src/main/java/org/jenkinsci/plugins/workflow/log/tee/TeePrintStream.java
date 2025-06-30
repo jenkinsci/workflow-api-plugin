@@ -16,35 +16,40 @@ public class TeePrintStream extends PrintStream {
 
     @Override
     public void flush() {
-        super.flush();
-        for (PrintStream secondary : secondaries) {
-            secondary.flush();
+        synchronized (this) {
+            super.flush();
+            for (PrintStream secondary : secondaries) {
+                secondary.flush();
+            }
         }
     }
 
     @Override
     public void close() {
-        RuntimeException e1 = null;
-        try {
-            super.close();
-        } catch (RuntimeException e) {
-            e1 = e;
-        }
-        RuntimeException e2 = null;
-        for (PrintStream secondary : secondaries) {
+        synchronized (this) {
+            RuntimeException e1 = null;
             try {
-                secondary.close();
+                super.close();
             } catch (RuntimeException e) {
-                e2 = e;
-                break;
+                e1 = e;
             }
-        }
-        if (e1 != null && e2 != null) {
-            throw new RuntimeException("All print streams failed to close: primary=" + e1 + ", secondary=" + e2, e1);
-        } else if (e1 != null) {
-            throw e1;
-        } else if (e2 != null) {
-            throw e2;
+            RuntimeException e2 = null;
+            for (PrintStream secondary : secondaries) {
+                try {
+                    secondary.close();
+                } catch (RuntimeException e) {
+                    e2 = e;
+                    break;
+                }
+            }
+            if (e1 != null && e2 != null) {
+                throw new RuntimeException(
+                        "All print streams failed to close: primary=" + e1 + ", secondary=" + e2, e1);
+            } else if (e1 != null) {
+                throw e1;
+            } else if (e2 != null) {
+                throw e2;
+            }
         }
     }
 
@@ -56,17 +61,21 @@ public class TeePrintStream extends PrintStream {
 
     @Override
     public void write(int b) {
-        super.write(b);
-        for (PrintStream secondary : secondaries) {
-            secondary.write(b);
+        synchronized (this) {
+            super.write(b);
+            for (PrintStream secondary : secondaries) {
+                secondary.write(b);
+            }
         }
     }
 
     @Override
     public void write(@NonNull byte[] buf, int off, int len) {
-        super.write(buf, off, len);
-        for (PrintStream secondary : secondaries) {
-            secondary.write(buf, off, len);
+        synchronized (this) {
+            super.write(buf, off, len);
+            for (PrintStream secondary : secondaries) {
+                secondary.write(buf, off, len);
+            }
         }
     }
 }

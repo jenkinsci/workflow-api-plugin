@@ -51,22 +51,25 @@ public class TeeLogStorage implements LogStorage {
     @NonNull
     @Override
     public BuildListener overallListener() throws IOException, InterruptedException {
-        List<BuildListener> secondaryListeners = new ArrayList<>();
-        for (LogStorage secondary : secondaries) {
-            secondaryListeners.add(secondary.overallListener());
+        synchronized (this) {
+            List<BuildListener> secondaryListeners = new ArrayList<>();
+            for (LogStorage secondary : secondaries) {
+                secondaryListeners.add(secondary.overallListener());
+            }
+            return new TeeBuildListener(primary.overallListener(), secondaryListeners.toArray(BuildListener[]::new));
         }
-
-        return new TeeBuildListener(primary.overallListener(), secondaryListeners.toArray(BuildListener[]::new));
     }
 
     @NonNull
     @Override
     public TaskListener nodeListener(@NonNull FlowNode node) throws IOException, InterruptedException {
-        List<TaskListener> secondaryListeners = new ArrayList<>();
-        for (LogStorage secondary : secondaries) {
-            secondaryListeners.add(secondary.nodeListener(node));
+        synchronized (this) {
+            List<TaskListener> secondaryListeners = new ArrayList<>();
+            for (LogStorage secondary : secondaries) {
+                secondaryListeners.add(secondary.nodeListener(node));
+            }
+            return new TeeBuildListener(primary.nodeListener(node), secondaryListeners.toArray(TaskListener[]::new));
         }
-        return new TeeTaskListener(primary.nodeListener(node), secondaryListeners.toArray(TaskListener[]::new));
     }
 
     @NonNull
