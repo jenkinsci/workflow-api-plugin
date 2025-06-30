@@ -44,26 +44,20 @@ public class TeeLogStorageTest extends TeeLogStorageTestBase {
         super.remoting();
     }
 
-    @Override
-    @Test
-    public void mangledLines() throws Exception {
-        // primary lines are tweaked
-        secondary1SameAsPrimary = false;
-        secondary2SameAsPrimary = false;
-        super.mangledLines();
-    }
-
     @After
     public void additional_checks() throws IOException {
+        var primary = getContent(primaryFile);
+        var secondary1 = getContent(secondaryFile1);
+        var secondary2 = getContent(secondaryFile2);
         if (secondary1SameAsPrimary) {
-            assertThat(getContent(secondaryFile1), is(getContent(primaryFile)));
+            assertThat(secondary1, is(primary));
         } else {
-            assertThat(getContent(secondaryFile1), not(is(getContent(primaryFile))));
+            assertThat(secondary1, not(is(primary)));
         }
         if (secondary2SameAsPrimary) {
-            assertThat(getContent(secondaryFile2), is(getContent(primaryFile)));
+            assertThat(secondary2, is(primary));
         } else {
-            assertThat(getContent(secondaryFile2), not(is(getContent(primaryFile))));
+            assertThat(secondary2, not(is(primary)));
         }
     }
 
