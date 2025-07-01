@@ -11,9 +11,7 @@ import org.jenkinsci.plugins.workflow.log.FileLogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 public class TeeLogStorageTest extends TeeLogStorageTestBase {
@@ -43,13 +41,6 @@ public class TeeLogStorageTest extends TeeLogStorageTestBase {
     public void remoting() throws Exception {
         secondary2SameAsPrimary = false;
         super.remoting();
-    }
-
-    @Override
-    @Test
-    @Ignore("TODO fix it in order to have the additional_checks() method passing")
-    public void mangledLines() throws Exception {
-        super.mangledLines();
     }
 
     @After

@@ -56,7 +56,8 @@ public class TeeLogStorage implements LogStorage {
             for (LogStorage secondary : secondaries) {
                 secondaryListeners.add(secondary.overallListener());
             }
-            return new TeeBuildListener(primary.overallListener(), secondaryListeners.toArray(BuildListener[]::new));
+            return new TeeBuildListener(
+                    this, primary.overallListener(), secondaryListeners.toArray(BuildListener[]::new));
         }
     }
 
@@ -68,7 +69,8 @@ public class TeeLogStorage implements LogStorage {
             for (LogStorage secondary : secondaries) {
                 secondaryListeners.add(secondary.nodeListener(node));
             }
-            return new TeeBuildListener(primary.nodeListener(node), secondaryListeners.toArray(TaskListener[]::new));
+            return new TeeBuildListener(
+                    this, primary.nodeListener(node), secondaryListeners.toArray(TaskListener[]::new));
         }
     }
 

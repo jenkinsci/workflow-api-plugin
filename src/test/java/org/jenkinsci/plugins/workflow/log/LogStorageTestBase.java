@@ -271,6 +271,7 @@ public abstract class LogStorageTestBase {
         // assertLength("2", pos);
         // assertStepLog("2", pos, "", true);
         text("2").writeRawLogTo(0, new NullOutputStream());
+        close(ls.overallListener());
     }
 
     @SuppressWarnings("deprecation")

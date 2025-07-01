@@ -7,16 +7,18 @@ import java.util.List;
 
 public class TeePrintStream extends PrintStream {
 
+    final transient TeeLogStorage teeLogStorage;
     final List<PrintStream> secondaries;
 
-    TeePrintStream(@NonNull PrintStream primary, PrintStream... secondaries) {
+    TeePrintStream(@NonNull TeeLogStorage teeLogStorage, @NonNull PrintStream primary, PrintStream... secondaries) {
         super(primary, false, StandardCharsets.UTF_8);
         this.secondaries = List.of(secondaries);
+        this.teeLogStorage = teeLogStorage;
     }
 
     @Override
     public void flush() {
-        synchronized (this) {
+        synchronized (synced()) {
             super.flush();
             for (PrintStream secondary : secondaries) {
                 secondary.flush();
@@ -26,7 +28,7 @@ public class TeePrintStream extends PrintStream {
 
     @Override
     public void close() {
-        synchronized (this) {
+        synchronized (synced()) {
             RuntimeException e1 = null;
             try {
                 super.close();
@@ -61,7 +63,7 @@ public class TeePrintStream extends PrintStream {
 
     @Override
     public void write(int b) {
-        synchronized (this) {
+        synchronized (synced()) {
             super.write(b);
             for (PrintStream secondary : secondaries) {
                 secondary.write(b);
@@ -71,11 +73,15 @@ public class TeePrintStream extends PrintStream {
 
     @Override
     public void write(@NonNull byte[] buf, int off, int len) {
-        synchronized (this) {
+        synchronized (synced()) {
             super.write(buf, off, len);
             for (PrintStream secondary : secondaries) {
                 secondary.write(buf, off, len);
             }
         }
+    }
+
+    private Object synced() {
+        return teeLogStorage == null ? this : teeLogStorage;
     }
 }

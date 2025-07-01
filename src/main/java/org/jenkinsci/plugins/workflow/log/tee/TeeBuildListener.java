@@ -15,6 +15,8 @@ class TeeBuildListener implements BuildListener, OutputStreamTaskListener, AutoC
     @Serial
     private static final long serialVersionUID = 1L;
 
+    private final transient TeeLogStorage teeLogStorage;
+
     private final BuildListener primary;
 
     private final List<BuildListener> secondaries;
@@ -23,7 +25,7 @@ class TeeBuildListener implements BuildListener, OutputStreamTaskListener, AutoC
 
     private transient PrintStream printStream;
 
-    TeeBuildListener(BuildListener primary, BuildListener... secondaries) {
+    TeeBuildListener(TeeLogStorage teeLogStorage, BuildListener primary, BuildListener... secondaries) {
         if (!(primary instanceof OutputStreamTaskListener)) {
             throw new ClassCastException("Primary is not an instance of OutputStreamTaskListener: " + primary);
         }
@@ -32,12 +34,14 @@ class TeeBuildListener implements BuildListener, OutputStreamTaskListener, AutoC
                 throw new ClassCastException("Secondary is not an instance of OutputStreamTaskListener: " + secondary);
             }
         });
+        this.teeLogStorage = teeLogStorage;
         this.primary = primary;
         this.secondaries = List.of(secondaries);
     }
 
-    TeeBuildListener(TaskListener primary, TaskListener... secondaries) {
+    TeeBuildListener(TeeLogStorage teeLogStorage, TaskListener primary, TaskListener... secondaries) {
         this(
+                teeLogStorage,
                 (BuildListener) primary,
                 Stream.of(secondaries)
                         .map(secondary -> (BuildListener) secondary)
@@ -49,6 +53,7 @@ class TeeBuildListener implements BuildListener, OutputStreamTaskListener, AutoC
     public synchronized OutputStream getOutputStream() {
         if (outputStream == null) {
             outputStream = new TeeOutputStream(
+                    teeLogStorage,
                     ((OutputStreamTaskListener) primary).getOutputStream(),
                     secondaries.stream()
                             .map(secondary -> ((OutputStreamTaskListener) secondary).getOutputStream())
@@ -62,6 +67,7 @@ class TeeBuildListener implements BuildListener, OutputStreamTaskListener, AutoC
     public synchronized PrintStream getLogger() {
         if (printStream == null) {
             printStream = new TeePrintStream(
+                    teeLogStorage,
                     primary.getLogger(),
                     secondaries.stream().map(TaskListener::getLogger).toArray(PrintStream[]::new));
         }
