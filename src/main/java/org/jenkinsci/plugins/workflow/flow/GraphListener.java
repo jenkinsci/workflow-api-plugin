@@ -44,6 +44,25 @@ public interface GraphListener extends ExtensionPoint {
     void onNewHead(FlowNode node);
 
     /**
+     * Controls the order in which listeners are notified of new nodes.
+     * Like {@link Extension#ordinal}, but can also be used for instantiated listeners passed to
+     * {@link FlowExecution#addListener(GraphListener)}.
+     * <p>
+     * The default implementation returns {@code 1000} for listeners that are not annotated with {@link Extension}.
+     * For listeners annotated with {@link Extension}, the default value matches {@link Extension#ordinal}.
+     *
+     * @see Extension#ordinal
+     */
+    default double ordinal() {
+        Class<?> listener = getClass();
+        Extension extension = listener.getAnnotation(Extension.class);
+        if (extension != null) {
+            return extension.ordinal();
+        }
+        return 1000;
+    }
+
+    /**
      * Listener which should be notified of events immediately as they occur.
      * You must be very careful not to acquire locks or block.
      * If you do not implement this marker interface, you will receive notifications in batched deliveries.
