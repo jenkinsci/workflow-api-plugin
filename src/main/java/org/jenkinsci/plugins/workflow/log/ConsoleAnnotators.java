@@ -49,8 +49,8 @@ import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 
 /**
  * Some utility code extracted from {@link AnnotatedLargeText} which probably belongs in {@link ConsoleAnnotator} or {@link ConsoleAnnotationOutputStream}.
@@ -64,7 +64,7 @@ public class ConsoleAnnotators {
      * What to pass to {@link ConsoleAnnotationOutputStream#ConsoleAnnotationOutputStream} when overriding {@link AnnotatedLargeText#writeHtmlTo}.
      */
     public static <T> ConsoleAnnotator<T> createAnnotator(T context) throws IOException {
-        StaplerRequest req = Stapler.getCurrentRequest();
+        StaplerRequest2 req = Stapler.getCurrentRequest2();
         try {
             String base64 = req != null ? req.getHeader("X-ConsoleAnnotator") : null;
             if (base64 != null) {
@@ -98,7 +98,7 @@ public class ConsoleAnnotators {
             oos.writeLong(System.currentTimeMillis());
             oos.writeObject(annotator);
         }
-        StaplerResponse rsp = Stapler.getCurrentResponse();
+        StaplerResponse2 rsp = Stapler.getCurrentResponse2();
         if (rsp != null) {
             rsp.setHeader("X-ConsoleAnnotator", new String(Base64.getEncoder().encode(baos.toByteArray()), StandardCharsets.US_ASCII));
         }

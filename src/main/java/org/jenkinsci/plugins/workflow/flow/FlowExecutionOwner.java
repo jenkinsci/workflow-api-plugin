@@ -44,6 +44,8 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
  */
 public abstract class FlowExecutionOwner implements Serializable {
 
+    private static final long serialVersionUID = 1796027762257567194L;
+
     private static final Logger LOGGER = Logger.getLogger(FlowExecutionOwner.class.getName());
 
     /**
@@ -52,17 +54,6 @@ public abstract class FlowExecutionOwner implements Serializable {
      */
     @NonNull
     public abstract FlowExecution get() throws IOException;
-
-    /**
-     * @deprecated No longer used.
-     */
-    @Deprecated
-    void notifyShutdown() {
-        FlowExecution exec = getOrNull();
-        if (exec != null) {
-            exec.notifyShutdown();
-        }
-    }
 
     /**
      * Same as {@link #get} but avoids throwing an exception or blocking.
@@ -108,6 +99,25 @@ public abstract class FlowExecutionOwner implements Serializable {
 
     public String getUrlOfExecution() throws IOException {
         return getUrl()+"execution/";
+    }
+
+    /**
+     * The {@link Run#getExternalizableId}, if this owner is indeed a {@link Run}.
+     * The default implementation uses {@link #getExecutable}
+     * but an implementation may override this to avoid loading the actual {@link Run}.
+     * @return an id, or null if unknown, unloadable, or unapplicable
+     */
+    @CheckForNull
+    public String getExternalizableId() {
+        try {
+            var exec = getExecutable();
+            if (exec instanceof Run) {
+                return ((Run<?, ?>) exec).getExternalizableId();
+            }
+        } catch (IOException x) {
+            LOGGER.log(Level.WARNING, "cannot look up externalizableId of " + this, x);
+        }
+        return null;
     }
 
     /**
