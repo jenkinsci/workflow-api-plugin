@@ -50,9 +50,17 @@ final class GCFlushedOutputStream extends FilterOutputStream {
     private static final Cleaner CLEANER = Cleaner.create(
             new NamingThreadFactory(new DaemonThreadFactory(), GCFlushedOutputStream.class.getName() + ".CLEANER"));
 
+    static boolean DISABLED = Boolean.getBoolean(GCFlushedOutputStream.class.getName() + ".DISABLED");
+
     GCFlushedOutputStream(OutputStream out) {
+        this(out, DISABLED);
+    }
+
+    GCFlushedOutputStream(OutputStream out, boolean disabled) {
         super(out);
-        CLEANER.register(this, new CleanerTask(out));
+        if (!disabled) {
+            CLEANER.register(this, new CleanerTask(out));
+        }
     }
 
     @Override public void write(@NonNull byte[] b, int off, int len) throws IOException {
