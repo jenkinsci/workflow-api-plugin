@@ -26,7 +26,9 @@ package org.jenkinsci.plugins.workflow.log;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeThat;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.console.AnnotatedLargeText;
@@ -71,8 +73,6 @@ import org.jvnet.hudson.test.FlagRule;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
 import org.springframework.security.core.Authentication;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assume.assumeThat;
 
 /**
  * Foundation for compliance tests of {@link LogStorage} implementations.

@@ -28,6 +28,7 @@ import java.io.BufferedOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.ref.Cleaner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,7 +37,6 @@ import hudson.remoting.ChannelClosedException;
 import hudson.remoting.DaemonThreadFactory;
 import hudson.remoting.NamingThreadFactory;
 import java.io.EOFException;
-import java.lang.ref.Cleaner;
 import java.nio.channels.ClosedChannelException;
 import java.util.stream.Stream;
 
