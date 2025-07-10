@@ -6,14 +6,12 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
-import org.jenkinsci.plugins.workflow.log.LogStorage;
-import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
+import java.util.List;
+import org.jenkinsci.plugins.workflow.configuration.mock.TeeLogStorageFactoryMock1;
+import org.jenkinsci.plugins.workflow.configuration.mock.TeeLogStorageFactoryMock2;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsSessionRule;
-import org.jvnet.hudson.test.TestExtension;
 import org.jvnet.hudson.test.recipes.LocalData;
 
 public class TeeLogStorageFactoryConfigurationTest {
@@ -30,9 +28,7 @@ public class TeeLogStorageFactoryConfigurationTest {
             assertThat(config.isEnabled(), is(true));
 
             assertThat(config.getFactories(), empty());
-            config.setPrimaryId(TeeLogStorageFactoryMock1.class.getName());
-            config.setSecondaryId(TeeLogStorageFactoryMock2.class.getName());
-
+            config.setFactories(List.of(new TeeLogStorageFactoryMock1(), new TeeLogStorageFactoryMock2()));
             assertThat(
                     config.getFactories(),
                     contains(instanceOf(TeeLogStorageFactoryMock1.class), instanceOf(TeeLogStorageFactoryMock2.class)));
@@ -42,6 +38,8 @@ public class TeeLogStorageFactoryConfigurationTest {
             assertThat(
                     TeeLogStorageFactoryConfiguration.get().getFactories(),
                     contains(instanceOf(TeeLogStorageFactoryMock1.class), instanceOf(TeeLogStorageFactoryMock2.class)));
+            assertThat(TeeLogStorageFactoryConfiguration.get().lookup(TeeLogStorageFactoryMock1.class),
+                       contains(instanceOf(TeeLogStorageFactoryMock1.class)));
         });
     }
 
@@ -63,35 +61,9 @@ public class TeeLogStorageFactoryConfigurationTest {
             assertThat(TeeLogStorageFactoryConfiguration.get().isEnabled(), is(true));
             assertThat(
                     TeeLogStorageFactoryConfiguration.get().getFactories(),
-                    contains(instanceOf(TeeLogStorageFactoryMock2.class)));
+                    contains(
+                        instanceOf(TeeLogStorageFactoryMock1.class),
+                        instanceOf(TeeLogStorageFactoryMock2.class)));
         });
-    }
-
-    @TestExtension
-    public static class TeeLogStorageFactoryMock1 implements TeeLogStorageFactory {
-
-        @Override
-        public String getDisplayName() {
-            return "Tee Log Storage Factory Mock 1";
-        }
-
-        @Override
-        public LogStorage forBuild(@NonNull FlowExecutionOwner b) {
-            return null;
-        }
-    }
-
-    @TestExtension
-    public static class TeeLogStorageFactoryMock2 implements TeeLogStorageFactory {
-
-        @Override
-        public String getDisplayName() {
-            return "Tee Log Storage Factory Mock 2";
-        }
-
-        @Override
-        public LogStorage forBuild(@NonNull FlowExecutionOwner b) {
-            return null;
-        }
     }
 }

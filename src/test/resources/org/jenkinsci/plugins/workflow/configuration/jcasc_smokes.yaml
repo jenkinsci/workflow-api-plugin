@@ -1,0 +1,6 @@
+unclassified:
+  teeLogStorageFactoryConfiguration:
+    enabled: true
+    factories:
+      - teeLogStorageFactoryMock1: {}
+      - teeLogStorageFactoryMock2: {}

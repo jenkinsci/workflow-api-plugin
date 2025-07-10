@@ -1,20 +1,15 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:section title="${%Tee Log Storage Factory}">
-      <f:optionalBlock field="enabled"
-                       title="Enabled"
-                       inline="true"
-                       name="teeLogStorageEnabled"
-      >
-        <f:block>
-          ${%description}
-        </f:block>
-        <f:entry field="primaryId" title="${%Primary Factory}">
-          <f:select />
-        </f:entry>
-        <f:entry field="secondaryId" title="${%Secondary Factory}">
-          <f:select />
-        </f:entry>
-      </f:optionalBlock>
-    </f:section>
+  <f:section title="${%Tee Log Storage Factory}">
+    <f:optionalBlock field="enabled"
+                     title="Enabled"
+                     inline="true">
+      <f:block>
+        ${%description}
+      </f:block>
+      <f:entry>
+        <f:repeatableHeteroProperty field="factories" hasHeader="true" oneEach="true"/>
+      </f:entry>
+    </f:optionalBlock>
+  </f:section>
 </j:jelly>

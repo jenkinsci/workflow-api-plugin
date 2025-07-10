@@ -1,9 +1,12 @@
 package org.jenkinsci.plugins.workflow.log.tee;
 
 import hudson.ExtensionList;
+import hudson.model.Describable;
+import hudson.model.Descriptor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.configuration.TeeLogStorageFactoryConfiguration;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
@@ -16,9 +19,7 @@ import org.kohsuke.accmod.restrictions.Beta;
  * See {@link TeeLogStorage}.
  */
 @Restricted(Beta.class)
-public interface TeeLogStorageFactory extends LogStorageFactory {
-
-    String getDisplayName();
+public interface TeeLogStorageFactory extends LogStorageFactory, Describable<TeeLogStorageFactory> {
 
     public static List<TeeLogStorageFactory> all() {
         return ExtensionList.lookup(TeeLogStorageFactory.class);
@@ -47,5 +48,9 @@ public interface TeeLogStorageFactory extends LogStorageFactory {
             return Optional.empty();
         }
         return Optional.of(new TeeLogStorage(primary, secondaries.toArray(LogStorage[]::new)));
+    }
+
+    default Descriptor<TeeLogStorageFactory> getDescriptor() {
+        return Jenkins.get().getDescriptorOrDie(this.getClass());
     }
 }

@@ -2,35 +2,33 @@ package org.jenkinsci.plugins.workflow.configuration;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.BulkChange;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.Util;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
 import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.interceptor.RequirePOST;
+import org.kohsuke.stapler.StaplerRequest2;
 
 @Extension
 @Symbol("teeLogStorageFactoryConfiguration")
-@Restricted(NoExternalUse.class)
+@Restricted(Beta.class)
 public class TeeLogStorageFactoryConfiguration extends GlobalConfiguration {
     private static final Logger LOGGER = Logger.getLogger(TeeLogStorageFactoryConfiguration.class.getName());
     private boolean enabled = false;
-    private String primaryId;
-    private String secondaryId;
+    private List<TeeLogStorageFactory> factories = new ArrayList<>();
 
     public TeeLogStorageFactoryConfiguration() {
         load();
@@ -40,106 +38,51 @@ public class TeeLogStorageFactoryConfiguration extends GlobalConfiguration {
         return enabled;
     }
 
+    public List<TeeLogStorageFactory> getFactories() {
+        return factories;
+    }
+
+    public <T> List<T> lookup(Class<T> type) {
+        return getFactories().stream().filter(type::isInstance).map(type::cast).toList();
+    }
+
+    @DataBoundSetter
+    public void setFactories(List<TeeLogStorageFactory> factories) {
+        this.factories = factories;
+    }
+
     @DataBoundSetter
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-        save();
     }
 
-    public String getPrimaryId() {
-        return primaryId;
-    }
-
-    @DataBoundSetter
-    public void setPrimaryId(@CheckForNull String primaryId) {
-        this.primaryId = Util.fixEmptyAndTrim(primaryId);
-        save();
-    }
-
-    public String getSecondaryId() {
-        return secondaryId;
-    }
-
-    @DataBoundSetter
-    public void setSecondaryId(@CheckForNull String secondaryId) {
-        this.secondaryId = Util.fixEmptyAndTrim(secondaryId);
-        save();
-    }
-
-    @Restricted(NoExternalUse.class)
-    @RequirePOST
-    public ListBoxModel doFillPrimaryIdItems() {
-        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-        return fillItems(primaryId);
-    }
-
-    @Restricted(NoExternalUse.class)
-    @RequirePOST
-    public ListBoxModel doFillSecondaryIdItems() {
-        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-        return fillItems(secondaryId);
-    }
-
-    @Restricted(NoExternalUse.class)
-    @RequirePOST
-    public FormValidation doCheckPrimaryId(@QueryParameter String primaryId) {
-        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-        if (Util.fixEmptyAndTrim(primaryId) == null) {
-            return FormValidation.error("Primary Factory must be set");
+    @Override
+    public boolean configure(StaplerRequest2 req, JSONObject json) throws FormException {
+        // We have to null out providers before data binding to allow all providers to be deleted in the config UI.
+        // We use a BulkChange to avoid double saves in other cases.
+        try (BulkChange bc = new BulkChange(this)) {
+            factories = new ArrayList<>();
+            req.bindJSON(this, json);
+            bc.commit();
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to save " + getConfigFile(), e);
         }
-        return FormValidation.ok();
-    }
-
-    @Restricted(NoExternalUse.class)
-    @RequirePOST
-    public FormValidation doCheckSecondaryId(@QueryParameter String primaryId, @QueryParameter String secondaryId) {
-        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-        if (Util.fixEmptyAndTrim(primaryId) != null && Objects.equals(primaryId, secondaryId)) {
-            return FormValidation.error("Secondary Factory can't be the same as Primary Factory");
-        }
-        return FormValidation.ok();
-    }
-
-    private ListBoxModel fillItems(String selectedId) {
-        ListBoxModel items = new ListBoxModel();
-        items.add(new ListBoxModel.Option("", "", selectedId == null));
-        for (var factory : TeeLogStorageFactory.all()) {
-            items.add(new ListBoxModel.Option(
-                    factory.getDisplayName(),
-                    factory.getClass().getName(),
-                    Objects.equals(selectedId, factory.getClass().getName())));
-        }
-        return items;
+        return true;
     }
 
     public static TeeLogStorageFactoryConfiguration get() {
         return ExtensionList.lookupSingleton(TeeLogStorageFactoryConfiguration.class);
     }
 
-    public List<TeeLogStorageFactory> getFactories() {
-        if (primaryId == null) {
-            return List.of();
-        }
-        List<TeeLogStorageFactory> factories = new ArrayList<>(2);
-        for (var factory : TeeLogStorageFactory.all()) {
-            if (factory.getClass().getName().equals(primaryId)) {
-                factories.add(0, factory);
-                continue;
-            }
-            if (factory.getClass().getName().equals(secondaryId)) {
-                factories.add(1, factory);
-                continue;
-            }
-        }
-        return factories;
-    }
-
     @Extension
-    public static class TeeLogStorageFactoryConfigurationFilter extends DescriptorVisibilityFilter {
+    public static class TeeLogStorgeFactoryConfigurationFilter extends DescriptorVisibilityFilter {
+
         @Override
         public boolean filter(@CheckForNull Object context, @NonNull Descriptor descriptor) {
             if (descriptor instanceof TeeLogStorageFactoryConfiguration) {
-                return !ExtensionList.lookup(TeeLogStorageFactory.class).isEmpty();
+                return !Jenkins.get()
+                        .getDescriptorList(TeeLogStorageFactory.class)
+                        .isEmpty();
             }
             return true;
         }

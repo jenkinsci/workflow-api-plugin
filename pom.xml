@@ -139,5 +139,10 @@
           <artifactId>apache-httpcomponents-client-4-api</artifactId>
           <scope>test</scope>
         </dependency>
+        <dependency>
+          <groupId>io.jenkins.configuration-as-code</groupId>
+          <artifactId>test-harness</artifactId>
+          <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
