@@ -58,7 +58,6 @@ import hudson.util.StreamTaskListener;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -74,14 +73,14 @@ import jenkins.security.MasterToSlaveCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.flow.StashManager;
-import org.jenkinsci.test.acceptance.docker.Docker;
-import org.jenkinsci.test.acceptance.docker.DockerImage;
-import org.jenkinsci.test.acceptance.docker.fixtures.JavaContainer;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
+import org.testcontainers.DockerClientFactory;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.images.builder.ImageFromDockerfile;
 
 /**
  * {@link #artifactArchiveAndDelete} and variants allow an implementation of {@link ArtifactManager} plus {@link VirtualFile} to be run through a standard gantlet of tests.
@@ -90,21 +89,18 @@ public class ArtifactManagerTest {
 
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public LoggerRule logging = new LoggerRule();
-    
-    private static DockerImage image;
-    
-    @BeforeClass public static void doPrepareImage() throws Exception {
-        image = prepareImage();
+
+    private static GenericContainer<?> container;
+
+    @BeforeClass public static void doPrepareImage() {
+        container = prepareImage();
     }
 
-    /**
-     * @deprecated Not actually used externally.
-     */
-    @Deprecated
-    public static @CheckForNull DockerImage prepareImage() throws Exception {
-        Docker docker = new Docker();
-        if (!Functions.isWindows() && docker.isAvailable()) { // TODO: Windows agents on ci.jenkins.io have Docker, but cannot build the image.
-            return docker.build(JavaContainer.class);
+    public static @CheckForNull GenericContainer<?> prepareImage() {
+        if (!Functions.isWindows() && DockerClientFactory.instance().isDockerAvailable()) { // TODO: Windows agents on ci.jenkins.io have Docker, but cannot build the image.
+            return new GenericContainer<>(new ImageFromDockerfile("java17-ssh", false)
+                    .withFileFromClasspath("Dockerfile", ArtifactManagerTest.class.getName().replace('.', '/') + "/Dockerfile"))
+                    .withExposedPorts(22);
         } else {
             System.err.println("No Docker support; falling back to running tests against an agent in a process on the same machine.");
             return null;
@@ -119,14 +115,13 @@ public class ArtifactManagerTest {
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
         }
-        JavaContainer runningContainer = null;
         try {
             DumbSlave agent;
-            if (image != null) {
-                runningContainer = image.start(JavaContainer.class).start();
+            if (container != null) {
+                container.start();
                 StandardUsernameCredentials creds = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM, "test", "desc", "test", "test");
                 CredentialsProvider.lookupStores(Jenkins.get()).iterator().next().addCredentials(Domain.global(), creds);
-                agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(runningContainer.ipBound(22), runningContainer.port(22), "test"));
+                agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(container.getHost(), container.getMappedPort(22), "test"));
                 Jenkins.get().addNode(agent);
                 r.waitOnline(agent);
             } else {
@@ -142,8 +137,8 @@ public class ArtifactManagerTest {
             FreeStyleBuild b = r.buildAndAssertSuccess(p);
             f.apply(agent, p, b, ws);
         } finally {
-            if (runningContainer != null) {
-                runningContainer.close();
+            if (container != null) {
+                container.stop();
             }
         }
     }
@@ -161,10 +156,6 @@ public class ArtifactManagerTest {
             assertTrue(b.getArtifactManager().root().child("file").isFile());
         });
     }
-    @Deprecated
-    public static void artifactArchive(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        artifactArchive(r, factory, weirdCharacters);
-    }
 
     /**
      * Test artifact archiving in a plain manager.
@@ -180,10 +171,6 @@ public class ArtifactManagerTest {
             assertFalse(b.getArtifactManager().delete());
         });
     }
-    @Deprecated
-    public static void artifactArchiveAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        artifactArchiveAndDelete(r, factory, weirdCharacters);
-    }
 
     /**
      * Test stashing and unstashing with a {@link StashManager.StashAwareArtifactManager} that does <em>not</em> honor deletion requests.
@@ -196,10 +183,6 @@ public class ArtifactManagerTest {
                     StashManager.unstash(b, "stuff", ws, launcher, env, listener);
                     assertTrue(ws.child("file").exists());
                 }));
-    }
-    @Deprecated
-    public static void artifactStash(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        artifactStash(r, factory, weirdCharacters);
     }
 
     /**
@@ -217,10 +200,6 @@ public class ArtifactManagerTest {
                     }
                     assertFalse(ws.child("file").exists());
                 }));
-    }
-    @Deprecated
-    public static void artifactStashAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        artifactStashAndDelete(r, factory, weirdCharacters);
     }
 
     /**
@@ -471,7 +450,7 @@ public class ArtifactManagerTest {
     @Test public void standard() throws Exception {
         logging.record(StandardArtifactManager.class, Level.FINE);
         // Who knows about weird characters on NTFS; also case-sensitivity could confuse things
-        artifactArchiveAndDelete(r, null, !Functions.isWindows(), image);
+        artifactArchiveAndDelete(r, null, !Functions.isWindows());
     }
 
 }
