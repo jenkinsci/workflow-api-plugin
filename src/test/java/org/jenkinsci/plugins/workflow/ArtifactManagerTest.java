@@ -1,4 +1,4 @@
-/*
+/*d
  * The MIT License
  *
  * Copyright 2018 CloudBees, Inc.
@@ -35,11 +35,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.CredentialsScope;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.domains.Domain;
-import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.ExtensionList;
@@ -50,7 +45,6 @@ import hudson.Util;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.TaskListener;
-import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.remoting.Callable;
 import hudson.slaves.DumbSlave;
 import hudson.tasks.ArtifactArchiver;
@@ -67,20 +61,16 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.ArtifactManager;
 import jenkins.model.ArtifactManagerConfiguration;
 import jenkins.model.ArtifactManagerFactory;
-import jenkins.model.Jenkins;
 import jenkins.model.StandardArtifactManager;
 import jenkins.security.MasterToSlaveCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.flow.StashManager;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
-import org.testcontainers.DockerClientFactory;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.images.builder.ImageFromDockerfile;
+import test.ssh_agent.OutboundAgent;
 
 /**
  * {@link #artifactArchiveAndDelete} and variants allow an implementation of {@link ArtifactManager} plus {@link VirtualFile} to be run through a standard gantlet of tests.
@@ -90,23 +80,6 @@ public class ArtifactManagerTest {
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public LoggerRule logging = new LoggerRule();
 
-    private static GenericContainer<?> container;
-
-    @BeforeClass public static void doPrepareImage() {
-        container = prepareImage();
-    }
-
-    public static @CheckForNull GenericContainer<?> prepareImage() {
-        if (!Functions.isWindows() && DockerClientFactory.instance().isDockerAvailable()) { // TODO: Windows agents on ci.jenkins.io have Docker, but cannot build the image.
-            return new GenericContainer<>(new ImageFromDockerfile("java17-ssh", false)
-                    .withFileFromClasspath("Dockerfile", ArtifactManagerTest.class.getName().replace('.', '/') + "/Dockerfile"))
-                    .withExposedPorts(22);
-        } else {
-            System.err.println("No Docker support; falling back to running tests against an agent in a process on the same machine.");
-            return null;
-        }
-    }
-
     /**
      * Creates an agent, in a Docker container when possible, calls {@link #setUpWorkspace}, then runs some tests.
      */
@@ -115,18 +88,10 @@ public class ArtifactManagerTest {
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
         }
-        try {
-            DumbSlave agent;
-            if (container != null) {
-                container.start();
-                StandardUsernameCredentials creds = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM, "test", "desc", "test", "test");
-                CredentialsProvider.lookupStores(Jenkins.get()).iterator().next().addCredentials(Domain.global(), creds);
-                agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(container.getHost(), container.getMappedPort(22), "test"));
-                Jenkins.get().addNode(agent);
-                r.waitOnline(agent);
-            } else {
-                agent = r.createOnlineSlave();
-            }
+        try (var outboundAgent = new OutboundAgent()) {
+            OutboundAgent.createAgent(r, "remote", outboundAgent.start());
+            var agent = (DumbSlave) r.jenkins.getNode("remote");
+            r.waitOnline(agent);
             FreeStyleProject p = r.createFreeStyleProject();
             p.setAssignedNode(agent);
             FilePath ws = agent.getWorkspaceFor(p);
@@ -136,10 +101,6 @@ public class ArtifactManagerTest {
             p.getPublishersList().add(aa);
             FreeStyleBuild b = r.buildAndAssertSuccess(p);
             f.apply(agent, p, b, ws);
-        } finally {
-            if (container != null) {
-                container.stop();
-            }
         }
     }
 
