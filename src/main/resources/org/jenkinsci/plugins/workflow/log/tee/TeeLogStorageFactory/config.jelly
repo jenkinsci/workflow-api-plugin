@@ -1,0 +1,11 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:section title="${%Tee Log Storage Factory}">
+      <f:block>
+        ${%description}
+      </f:block>
+      <f:entry>
+        <f:repeatableHeteroProperty field="factories" hasHeader="true" oneEach="true" honorOrder="true" />
+      </f:entry>
+  </f:section>
+</j:jelly>

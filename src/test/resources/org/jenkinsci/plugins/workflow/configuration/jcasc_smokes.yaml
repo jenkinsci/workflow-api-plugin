@@ -1,0 +1,7 @@
+unclassified:
+  pipelineLoggingGlobalConfiguration:
+    factory:
+      teeLogStorageFactory:
+        factories:
+          - logStorageFactoryMock1: {}
+          - logStorageFactoryMock2

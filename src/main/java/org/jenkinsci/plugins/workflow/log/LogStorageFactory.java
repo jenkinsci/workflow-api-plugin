@@ -24,9 +24,12 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
-import hudson.ExtensionPoint;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.DescriptorExtensionList;
+import hudson.model.Describable;
+import hudson.model.Descriptor;
+import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -35,13 +38,21 @@ import org.kohsuke.accmod.restrictions.Beta;
  * Factory interface for {@link LogStorage}.
  */
 @Restricted(Beta.class)
-public interface LogStorageFactory extends ExtensionPoint {
+public interface LogStorageFactory extends Describable<LogStorageFactory> {
 
     /**
      * Checks whether we should handle a given build.
      * @param b a build about to start
      * @return a mechanism for handling this build, or null to fall back to the next implementation or the default
      */
-    @CheckForNull LogStorage forBuild(@NonNull FlowExecutionOwner b);
+    @CheckForNull
+    LogStorage forBuild(@NonNull FlowExecutionOwner b);
 
+    default Descriptor<LogStorageFactory> getDescriptor() {
+        return Jenkins.get().getDescriptorOrDie(this.getClass());
+    }
+
+    static DescriptorExtensionList<LogStorageFactory, Descriptor<LogStorageFactory>> all() {
+        return Jenkins.get().getDescriptorList(LogStorageFactory.class);
+    }
 }
