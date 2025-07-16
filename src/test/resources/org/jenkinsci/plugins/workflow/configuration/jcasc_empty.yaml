@@ -1,0 +1,4 @@
+unclassified:
+  pipelineLoggingGlobalConfiguration:
+    factory:
+      teeLogStorageFactory

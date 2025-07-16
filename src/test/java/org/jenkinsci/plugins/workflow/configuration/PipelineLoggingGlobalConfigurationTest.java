@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.workflow.configuration;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -45,6 +46,21 @@ public class PipelineLoggingGlobalConfigurationTest {
             assertThat(
                     factory.getFactories(),
                     contains(instanceOf(LogStorageFactoryMock1.class), instanceOf(LogStorageFactoryMock2.class)));
+        });
+    }
+
+    @Test
+    public void teeLogStorageFactory_empty() throws Throwable {
+        sessions.then(r -> {
+            TeeLogStorageFactory factory = new TeeLogStorageFactory();
+            PipelineLoggingGlobalConfiguration.get().setFactory(factory);
+            r.configRoundtrip();
+        });
+        sessions.then(r -> {
+            var configuration = PipelineLoggingGlobalConfiguration.get();
+            assertThat(configuration.getFactory(), instanceOf(TeeLogStorageFactory.class));
+            var factory = (TeeLogStorageFactory) configuration.getFactory();
+            assertThat(factory.getFactories(), emptyIterable());
         });
     }
 }

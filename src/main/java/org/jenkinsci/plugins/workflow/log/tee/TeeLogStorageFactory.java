@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.logging.Logger;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
+import org.jenkinsci.plugins.workflow.log.BrokenLogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
 import org.kohsuke.accmod.Restricted;
@@ -34,7 +35,7 @@ public class TeeLogStorageFactory implements LogStorageFactory {
 
     private List<LogStorageFactory> factories = new ArrayList<>();
 
-    public List<LogStorageFactory> getFactories() {
+    public @CheckForNull List<LogStorageFactory> getFactories() {
         return factories;
     }
 
@@ -42,7 +43,7 @@ public class TeeLogStorageFactory implements LogStorageFactory {
     public void setFactories(List<LogStorageFactory> factories) {
         this.factories = factories;
 
-        if (this.factories == null) {
+        if (this.factories == null || this.factories.isEmpty()) {
             this.primary = null;
             this.secondaries = null;
             return;
@@ -56,11 +57,16 @@ public class TeeLogStorageFactory implements LogStorageFactory {
     @Override
     public LogStorage forBuild(@NonNull FlowExecutionOwner b) {
         if (this.primary == null) {
-            return null;
+            return new BrokenLogStorage(new IllegalArgumentException("The primary TeeLogStorageFactory is not set."));
+        }
+        var primaryLogStorage = this.primary.forBuild(b);
+        if (primaryLogStorage == null) {
+            return new BrokenLogStorage(new IllegalArgumentException(String.format(
+                    "The primary TeeLogStorageFactory of type %s returned null",
+                    primary.getClass().getName())));
         }
         return new TeeLogStorage(
-                primary.forBuild(b),
-                secondaries.stream().map(s -> s.forBuild(b)).toArray(LogStorage[]::new));
+                primaryLogStorage, secondaries.stream().map(s -> s.forBuild(b)).toArray(LogStorage[]::new));
     }
 
     @Extension
