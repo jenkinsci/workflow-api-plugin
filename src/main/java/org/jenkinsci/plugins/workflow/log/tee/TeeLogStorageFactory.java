@@ -22,7 +22,6 @@ import org.kohsuke.stapler.DataBoundSetter;
  * Allows a {@link LogStorage} to be teeable, meaning it can be configured as a primary or secondary log storage.
  * See {@link TeeLogStorage}.
  */
-@Restricted(Beta.class)
 public class TeeLogStorageFactory implements LogStorageFactory {
 
     private static final Logger LOGGER = Logger.getLogger(TeeLogStorageFactory.class.getName());
@@ -70,7 +69,7 @@ public class TeeLogStorageFactory implements LogStorageFactory {
     }
 
     @Extension
-    @Symbol("teeLogStorageFactory")
+    @Symbol("tee")
     public static final class DescriptorImpl extends Descriptor<LogStorageFactory> {
         @NonNull
         @Override

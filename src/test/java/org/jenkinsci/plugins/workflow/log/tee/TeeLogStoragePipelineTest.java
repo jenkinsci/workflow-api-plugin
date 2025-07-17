@@ -5,7 +5,7 @@ import static org.hamcrest.Matchers.instanceOf;
 
 import hudson.model.Result;
 import java.util.List;
-import org.jenkinsci.plugins.workflow.configuration.PipelineLoggingGlobalConfiguration;
+import org.jenkinsci.plugins.workflow.log.configuration.PipelineLoggingGlobalConfiguration;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.log.BrokenLogStorage;

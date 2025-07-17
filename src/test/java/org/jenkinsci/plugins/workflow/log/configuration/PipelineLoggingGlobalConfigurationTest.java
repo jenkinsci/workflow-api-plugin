@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins.workflow.configuration;
+package org.jenkinsci.plugins.workflow.log.configuration;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -7,8 +7,8 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
-import org.jenkinsci.plugins.workflow.configuration.mock.LogStorageFactoryMock1;
-import org.jenkinsci.plugins.workflow.configuration.mock.LogStorageFactoryMock2;
+import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1;
+import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock2;
 import org.jenkinsci.plugins.workflow.log.FileLogStorageFactory;
 import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
 import org.junit.Rule;

@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
-import org.jenkinsci.plugins.workflow.configuration.PipelineLoggingGlobalConfiguration;
+import org.jenkinsci.plugins.workflow.log.configuration.PipelineLoggingGlobalConfiguration;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -54,6 +54,7 @@ import org.kohsuke.accmod.restrictions.Beta;
 @Restricted(Beta.class)
 public interface LogStorage {
 
+
     /**
      * Provides an alternate way of emitting output from a build.
      * <p>May implement {@link AutoCloseable} to clean up at the end of a build;
@@ -62,8 +63,7 @@ public interface LogStorage {
      * @return a (remotable) build listener; do not bother overriding anything except {@link TaskListener#getLogger}
      * @see FlowExecutionOwner#getListener
      */
-    @NonNull
-    BuildListener overallListener() throws IOException, InterruptedException;
+    @NonNull BuildListener overallListener() throws IOException, InterruptedException;
 
     /**
      * Provides an alternate way of emitting output from a node (such as a step).
@@ -74,8 +74,7 @@ public interface LogStorage {
      * @return a (remotable) task listener; do not bother overriding anything except {@link TaskListener#getLogger}
      * @see StepContext#get
      */
-    @NonNull
-    TaskListener nodeListener(@NonNull FlowNode node) throws IOException, InterruptedException;
+    @NonNull TaskListener nodeListener(@NonNull FlowNode node) throws IOException, InterruptedException;
 
     /**
      * Provides an alternate way of retrieving output from a build.
@@ -86,9 +85,7 @@ public interface LogStorage {
      *                  so implementations should be sure to retrieve final log lines
      * @return a log
      */
-    @NonNull
-    AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(
-            @NonNull FlowExecutionOwner.Executable build, boolean complete);
+    @NonNull AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(@NonNull FlowExecutionOwner.Executable build, boolean complete);
 
     /**
      * Introduces an HTML block with a {@code pipeline-node-<ID>} CSS class based on {@link FlowNode#getId}.
@@ -116,46 +113,45 @@ public interface LogStorage {
      * @return a log for this just this node
      * @see LogAction
      */
-    @NonNull
-    AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete);
+    @NonNull AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete);
 
-    /**
-     * Provide a file containing the log text.
-     * The default implementation creates a temporary file based on the current contents of {@link #overallLog}.
-     * @param build as in {@link #overallLog}
-     * @param complete as in {@link #overallLog}
-     * @return a possibly temporary file
-     * @deprecated Only used for compatibility with {@link Run#getLogFile}.
-     */
-    @SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "silly rule")
-    @Deprecated
-    default @NonNull File getLogFile(@NonNull FlowExecutionOwner.Executable build, boolean complete) {
-        try {
-            AnnotatedLargeText<FlowExecutionOwner.Executable> logText = overallLog(build, complete);
-            FlowExecutionOwner owner = build.asFlowExecutionOwner();
-            File f = File.createTempFile("deprecated", ".log", owner != null ? owner.getRootDir() : null);
-            f.deleteOnExit();
-            try (OutputStream os = new FileOutputStream(f)) {
-                // Similar to Run#writeWholeLogTo but terminates even if !complete:
-                long pos = 0;
-                while (true) {
-                    long pos2 = logText.writeRawLogTo(pos, os);
-                    if (pos2 <= pos) {
-                        break;
-                    }
-                    pos = pos2;
-                }
-            }
-            return f;
-        } catch (Exception x) {
-            Logger.getLogger(LogStorage.class.getName()).log(Level.WARNING, null, x);
-            if (build instanceof Run) {
-                return new File(((Run<?, ?>) build).getRootDir(), "log");
-            } else {
-                return new File("broken.log"); // not much we can do
-            }
-        }
-    }
+     /**
+      * Provide a file containing the log text.
+      * The default implementation creates a temporary file based on the current contents of {@link #overallLog}.
+      * @param build as in {@link #overallLog}
+      * @param complete as in {@link #overallLog}
+      * @return a possibly temporary file
+      * @deprecated Only used for compatibility with {@link Run#getLogFile}.
+      */
+     @SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "silly rule")
+     @Deprecated
+     default @NonNull File getLogFile(@NonNull FlowExecutionOwner.Executable build, boolean complete) {
+         try {
+             AnnotatedLargeText<FlowExecutionOwner.Executable> logText = overallLog(build, complete);
+             FlowExecutionOwner owner = build.asFlowExecutionOwner();
+             File f = File.createTempFile("deprecated", ".log", owner != null ? owner.getRootDir() : null);
+             f.deleteOnExit();
+             try (OutputStream os = new FileOutputStream(f)) {
+                 // Similar to Run#writeWholeLogTo but terminates even if !complete:
+                 long pos = 0;
+                 while (true) {
+                     long pos2 = logText.writeRawLogTo(pos, os);
+                     if (pos2 <= pos) {
+                         break;
+                     }
+                     pos = pos2;
+                 }
+             }
+             return f;
+         } catch (Exception x) {
+             Logger.getLogger(LogStorage.class.getName()).log(Level.WARNING, null, x);
+             if (build instanceof Run) {
+                 return new File(((Run<?, ?>) build).getRootDir(), "log");
+             } else {
+                 return new File("broken.log"); // not much we can do
+             }
+         }
+     }
 
     /**
      * Gets the available log storage method for a given build.
@@ -210,4 +206,5 @@ public interface LogStorage {
     static @NonNull OutputStream wrapWithAutoFlushingBuffer(@NonNull OutputStream os) throws IOException {
         return new GCFlushedOutputStream(new DelayBufferedOutputStream(os));
     }
+
 }

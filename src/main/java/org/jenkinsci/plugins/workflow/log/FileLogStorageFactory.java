@@ -26,7 +26,7 @@ public class FileLogStorageFactory implements LogStorageFactory {
     }
 
     @Extension
-    @Symbol("fileLogStorageFactory")
+    @Symbol("file")
     public static final class DescriptorImpl extends Descriptor<LogStorageFactory> {
         @NonNull
         @Override

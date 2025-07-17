@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins.workflow.configuration;
+package org.jenkinsci.plugins.workflow.log.configuration;
 
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
@@ -14,7 +14,7 @@ import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.stapler.DataBoundSetter;
 
 @Extension
-@Symbol("pipelineLoggingGlobalConfiguration")
+@Symbol("pipelineLogging")
 @Restricted(Beta.class)
 public class PipelineLoggingGlobalConfiguration extends GlobalConfiguration {
     private static final Logger LOGGER = Logger.getLogger(PipelineLoggingGlobalConfiguration.class.getName());

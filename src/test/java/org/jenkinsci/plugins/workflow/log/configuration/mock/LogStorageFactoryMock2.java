@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins.workflow.configuration.mock;
+package org.jenkinsci.plugins.workflow.log.configuration.mock;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
@@ -20,7 +20,7 @@ public class LogStorageFactoryMock2 implements LogStorageFactory {
     }
 
     @Extension
-    @Symbol("logStorageFactoryMock2")
+    @Symbol("logMock2")
     public static final class DescriptorImpl extends Descriptor<LogStorageFactory> {
         @NonNull
         @Override

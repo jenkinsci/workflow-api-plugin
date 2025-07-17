@@ -45,8 +45,7 @@ public interface LogStorageFactory extends Describable<LogStorageFactory> {
      * @param b a build about to start
      * @return a mechanism for handling this build, or null to fall back to the next implementation or the default
      */
-    @CheckForNull
-    LogStorage forBuild(@NonNull FlowExecutionOwner b);
+    @CheckForNull LogStorage forBuild(@NonNull FlowExecutionOwner b);
 
     default Descriptor<LogStorageFactory> getDescriptor() {
         return Jenkins.get().getDescriptorOrDie(this.getClass());

@@ -1,0 +1,6 @@
+unclassified:
+  pipelineLogging:
+    factory:
+      tee:
+        factories:
+          - logMock1

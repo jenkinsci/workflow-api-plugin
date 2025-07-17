@@ -1,12 +1,12 @@
-package org.jenkinsci.plugins.workflow.configuration;
+package org.jenkinsci.plugins.workflow.log.configuration;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.instanceOf;
 
 import io.jenkins.plugins.casc.misc.junit.jupiter.AbstractRoundTripTest;
-import org.jenkinsci.plugins.workflow.configuration.mock.LogStorageFactoryMock1;
-import org.jenkinsci.plugins.workflow.configuration.mock.LogStorageFactoryMock2;
+import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1;
+import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock2;
 import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
 import org.jvnet.hudson.test.JenkinsRule;
 
