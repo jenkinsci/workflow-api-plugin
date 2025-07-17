@@ -29,6 +29,6 @@ public class PipelineLoggingGlobalConfigurationJCascRoundTripTest extends Abstra
 
     @Override
     protected String stringInLogExpected() {
-        return "pipelineLoggingGlobalConfiguration";
+        return "pipelineLogging";
     }
 }
