@@ -29,6 +29,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.DescriptorExtensionList;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
+import java.util.List;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.kohsuke.accmod.Restricted;
@@ -51,7 +52,7 @@ public interface LogStorageFactory extends Describable<LogStorageFactory> {
         return Jenkins.get().getDescriptorOrDie(this.getClass());
     }
 
-    static DescriptorExtensionList<LogStorageFactory, Descriptor<LogStorageFactory>> all() {
+    static List<Descriptor<LogStorageFactory>> all() {
         return Jenkins.get().getDescriptorList(LogStorageFactory.class);
     }
 }

@@ -1,15 +1,14 @@
 package org.jenkinsci.plugins.workflow.log.configuration;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertThrows;
 
-import java.util.List;
+import org.jenkinsci.plugins.workflow.log.FileLogStorageFactory;
 import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1;
 import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock2;
-import org.jenkinsci.plugins.workflow.log.FileLogStorageFactory;
 import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,8 +33,8 @@ public class PipelineLoggingGlobalConfigurationTest {
     @Test
     public void teeLogStorageFactory() throws Throwable {
         sessions.then(r -> {
-            TeeLogStorageFactory factory = new TeeLogStorageFactory();
-            factory.setFactories(List.of(new LogStorageFactoryMock1(), new LogStorageFactoryMock2()));
+            TeeLogStorageFactory factory =
+                    new TeeLogStorageFactory(new LogStorageFactoryMock1(), new LogStorageFactoryMock2());
             PipelineLoggingGlobalConfiguration.get().setFactory(factory);
             r.configRoundtrip();
         });
@@ -43,24 +42,38 @@ public class PipelineLoggingGlobalConfigurationTest {
             var configuration = PipelineLoggingGlobalConfiguration.get();
             assertThat(configuration.getFactory(), instanceOf(TeeLogStorageFactory.class));
             var factory = (TeeLogStorageFactory) configuration.getFactory();
-            assertThat(
-                    factory.getFactories(),
-                    contains(instanceOf(LogStorageFactoryMock1.class), instanceOf(LogStorageFactoryMock2.class)));
+            assertThat(factory.getPrimary(), instanceOf(LogStorageFactoryMock1.class));
+            assertThat(factory.getSecondary(), instanceOf(LogStorageFactoryMock2.class));
         });
     }
 
     @Test
-    public void teeLogStorageFactory_empty() throws Throwable {
+    public void teeLogStorageFactory_primary_null() throws Throwable {
         sessions.then(r -> {
-            TeeLogStorageFactory factory = new TeeLogStorageFactory();
-            PipelineLoggingGlobalConfiguration.get().setFactory(factory);
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                new TeeLogStorageFactory(null, new LogStorageFactoryMock2());
+            });
+            assertThat(exception.getMessage(), is("Primary LogStorageFactory cannot be null"));
             r.configRoundtrip();
         });
         sessions.then(r -> {
             var configuration = PipelineLoggingGlobalConfiguration.get();
-            assertThat(configuration.getFactory(), instanceOf(TeeLogStorageFactory.class));
-            var factory = (TeeLogStorageFactory) configuration.getFactory();
-            assertThat(factory.getFactories(), emptyIterable());
+            assertThat(configuration.getFactory(), instanceOf(FileLogStorageFactory.class));
+        });
+    }
+
+    @Test
+    public void teeLogStorageFactory_secondary_null() throws Throwable {
+        sessions.then(r -> {
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                new TeeLogStorageFactory(new LogStorageFactoryMock1(), null);
+            });
+            assertThat(exception.getMessage(), is("Secondary LogStorageFactory cannot be null"));
+            r.configRoundtrip();
+        });
+        sessions.then(r -> {
+            var configuration = PipelineLoggingGlobalConfiguration.get();
+            assertThat(configuration.getFactory(), instanceOf(FileLogStorageFactory.class));
         });
     }
 }

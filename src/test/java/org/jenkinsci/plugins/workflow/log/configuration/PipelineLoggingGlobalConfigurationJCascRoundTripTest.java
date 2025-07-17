@@ -1,7 +1,6 @@
 package org.jenkinsci.plugins.workflow.log.configuration;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.instanceOf;
 
 import io.jenkins.plugins.casc.misc.junit.jupiter.AbstractRoundTripTest;
@@ -22,9 +21,8 @@ public class PipelineLoggingGlobalConfigurationJCascRoundTripTest extends Abstra
         PipelineLoggingGlobalConfiguration config = PipelineLoggingGlobalConfiguration.get();
         assertThat(config.getFactory(), instanceOf(TeeLogStorageFactory.class));
         var factory = (TeeLogStorageFactory) config.getFactory();
-        assertThat(
-                factory.getFactories(),
-                contains(instanceOf(LogStorageFactoryMock1.class), instanceOf(LogStorageFactoryMock2.class)));
+        assertThat(factory.getPrimary(), instanceOf(LogStorageFactoryMock1.class));
+        assertThat(factory.getSecondary(), instanceOf(LogStorageFactoryMock2.class));
     }
 
     @Override

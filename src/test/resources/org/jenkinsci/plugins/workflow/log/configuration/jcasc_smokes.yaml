@@ -2,6 +2,7 @@ unclassified:
   pipelineLogging:
     factory:
       tee:
-        factories:
-          - logMock1: {}
-          - logMock2
+        primary:
+          logMock1: {}
+        secondary:
+          logMock2

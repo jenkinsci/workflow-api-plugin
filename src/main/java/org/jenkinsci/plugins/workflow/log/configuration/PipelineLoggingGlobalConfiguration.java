@@ -4,6 +4,7 @@ import hudson.DescriptorExtensionList;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
+import java.util.List;
 import java.util.logging.Logger;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
@@ -34,12 +35,12 @@ public class PipelineLoggingGlobalConfiguration extends GlobalConfiguration {
         save();
     }
 
-    public DescriptorExtensionList<LogStorageFactory, Descriptor<LogStorageFactory>> getLogStorageFactoryDescriptors() {
+    public List<Descriptor<LogStorageFactory>> getLogStorageFactoryDescriptors() {
         return LogStorageFactory.all();
     }
 
     public Descriptor<LogStorageFactory> getDefaultLogStorageFactoryDescriptor() {
-        return Jenkins.get().getDescriptor("fileLogStorageFactory");
+        return Jenkins.get().getDescriptor("file");
     }
 
     public static PipelineLoggingGlobalConfiguration get() {
