@@ -230,9 +230,10 @@ public abstract class LogStorageTestBase {
      */
     @Test public void mangledLines() throws Exception {
         Random r = new Random();
-        BiFunction<Character, TaskListener, Thread> thread = (c, l) -> new Thread(() -> {
+        BiFunction<String, TaskListener, Thread> thread = (alphabet, l) -> new Thread(() -> {
+            var len = alphabet.length();
             for (int i = 0; i < 1000; i++) {
-                l.getLogger().print(c);
+                l.getLogger().print(alphabet.charAt(i % len));
                 if (r.nextDouble() < 0.1) {
                     l.getLogger().println();
                 }
@@ -247,9 +248,9 @@ public abstract class LogStorageTestBase {
         });
         List<Thread> threads = new ArrayList<>();
         LogStorage ls = createStorage();
-        threads.add(thread.apply('.', ls.overallListener()));
-        threads.add(thread.apply('1', ls.nodeListener(new MockNode("1"))));
-        threads.add(thread.apply('2', ls.nodeListener(new MockNode("2"))));
+        threads.add(thread.apply("0123456789", ls.overallListener()));
+        threads.add(thread.apply("abcdefghijklmnopqrstuvwxyz", ls.nodeListener(new MockNode("1"))));
+        threads.add(thread.apply("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ls.nodeListener(new MockNode("2"))));
         threads.forEach(Thread::start);
         threads.forEach(t -> {
             try {
