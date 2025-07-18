@@ -1,4 +1,4 @@
-/*
+/*d
  * The MIT License
  *
  * Copyright 2018 CloudBees, Inc.
@@ -35,11 +35,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.CredentialsScope;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.domains.Domain;
-import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.ExtensionList;
@@ -50,7 +45,6 @@ import hudson.Util;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.TaskListener;
-import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.remoting.Callable;
 import hudson.slaves.DumbSlave;
 import hudson.tasks.ArtifactArchiver;
@@ -58,7 +52,6 @@ import hudson.util.StreamTaskListener;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,20 +61,16 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.ArtifactManager;
 import jenkins.model.ArtifactManagerConfiguration;
 import jenkins.model.ArtifactManagerFactory;
-import jenkins.model.Jenkins;
 import jenkins.model.StandardArtifactManager;
 import jenkins.security.MasterToSlaveCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.flow.StashManager;
-import org.jenkinsci.test.acceptance.docker.Docker;
-import org.jenkinsci.test.acceptance.docker.DockerImage;
-import org.jenkinsci.test.acceptance.docker.fixtures.JavaContainer;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
+import test.ssh_agent.OutboundAgent;
 
 /**
  * {@link #artifactArchiveAndDelete} and variants allow an implementation of {@link ArtifactManager} plus {@link VirtualFile} to be run through a standard gantlet of tests.
@@ -90,26 +79,6 @@ public class ArtifactManagerTest {
 
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public LoggerRule logging = new LoggerRule();
-    
-    private static DockerImage image;
-    
-    @BeforeClass public static void doPrepareImage() throws Exception {
-        image = prepareImage();
-    }
-
-    /**
-     * @deprecated Not actually used externally.
-     */
-    @Deprecated
-    public static @CheckForNull DockerImage prepareImage() throws Exception {
-        Docker docker = new Docker();
-        if (!Functions.isWindows() && docker.isAvailable()) { // TODO: Windows agents on ci.jenkins.io have Docker, but cannot build the image.
-            return docker.build(JavaContainer.class);
-        } else {
-            System.err.println("No Docker support; falling back to running tests against an agent in a process on the same machine.");
-            return null;
-        }
-    }
 
     /**
      * Creates an agent, in a Docker container when possible, calls {@link #setUpWorkspace}, then runs some tests.
@@ -119,19 +88,10 @@ public class ArtifactManagerTest {
         if (factory != null) {
             ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(factory);
         }
-        JavaContainer runningContainer = null;
-        try {
-            DumbSlave agent;
-            if (image != null) {
-                runningContainer = image.start(JavaContainer.class).start();
-                StandardUsernameCredentials creds = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM, "test", "desc", "test", "test");
-                CredentialsProvider.lookupStores(Jenkins.get()).iterator().next().addCredentials(Domain.global(), creds);
-                agent = new DumbSlave("test-agent", "/home/test/slave", new SSHLauncher(runningContainer.ipBound(22), runningContainer.port(22), "test"));
-                Jenkins.get().addNode(agent);
-                r.waitOnline(agent);
-            } else {
-                agent = r.createOnlineSlave();
-            }
+        try (var outboundAgent = new OutboundAgent()) {
+            OutboundAgent.createAgent(r, "remote", outboundAgent.start());
+            var agent = (DumbSlave) r.jenkins.getNode("remote");
+            r.waitOnline(agent);
             FreeStyleProject p = r.createFreeStyleProject();
             p.setAssignedNode(agent);
             FilePath ws = agent.getWorkspaceFor(p);
@@ -141,10 +101,6 @@ public class ArtifactManagerTest {
             p.getPublishersList().add(aa);
             FreeStyleBuild b = r.buildAndAssertSuccess(p);
             f.apply(agent, p, b, ws);
-        } finally {
-            if (runningContainer != null) {
-                runningContainer.close();
-            }
         }
     }
 
@@ -161,10 +117,6 @@ public class ArtifactManagerTest {
             assertTrue(b.getArtifactManager().root().child("file").isFile());
         });
     }
-    @Deprecated
-    public static void artifactArchive(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        artifactArchive(r, factory, weirdCharacters);
-    }
 
     /**
      * Test artifact archiving in a plain manager.
@@ -180,10 +132,6 @@ public class ArtifactManagerTest {
             assertFalse(b.getArtifactManager().delete());
         });
     }
-    @Deprecated
-    public static void artifactArchiveAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        artifactArchiveAndDelete(r, factory, weirdCharacters);
-    }
 
     /**
      * Test stashing and unstashing with a {@link StashManager.StashAwareArtifactManager} that does <em>not</em> honor deletion requests.
@@ -196,10 +144,6 @@ public class ArtifactManagerTest {
                     StashManager.unstash(b, "stuff", ws, launcher, env, listener);
                     assertTrue(ws.child("file").exists());
                 }));
-    }
-    @Deprecated
-    public static void artifactStash(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        artifactStash(r, factory, weirdCharacters);
     }
 
     /**
@@ -217,10 +161,6 @@ public class ArtifactManagerTest {
                     }
                     assertFalse(ws.child("file").exists());
                 }));
-    }
-    @Deprecated
-    public static void artifactStashAndDelete(@NonNull JenkinsRule r, @CheckForNull ArtifactManagerFactory factory, boolean weirdCharacters, @CheckForNull DockerImage image) throws Exception {
-        artifactStashAndDelete(r, factory, weirdCharacters);
     }
 
     /**
@@ -471,7 +411,7 @@ public class ArtifactManagerTest {
     @Test public void standard() throws Exception {
         logging.record(StandardArtifactManager.class, Level.FINE);
         // Who knows about weird characters on NTFS; also case-sensitivity could confuse things
-        artifactArchiveAndDelete(r, null, !Functions.isWindows(), image);
+        artifactArchiveAndDelete(r, null, !Functions.isWindows());
     }
 
 }
