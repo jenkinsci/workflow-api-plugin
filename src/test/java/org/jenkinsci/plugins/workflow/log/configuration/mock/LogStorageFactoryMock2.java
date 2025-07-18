@@ -2,11 +2,11 @@ package org.jenkinsci.plugins.workflow.log.configuration.mock;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.Descriptor;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
+import org.jenkinsci.plugins.workflow.log.LogStorageFactoryDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class LogStorageFactoryMock2 implements LogStorageFactory {
@@ -21,7 +21,7 @@ public class LogStorageFactoryMock2 implements LogStorageFactory {
 
     @Extension
     @Symbol("logMock2")
-    public static final class DescriptorImpl extends Descriptor<LogStorageFactory> {
+    public static final class DescriptorImpl extends LogStorageFactoryDescriptor<LogStorageFactoryMock2> {
         @NonNull
         @Override
         public String getDisplayName() {

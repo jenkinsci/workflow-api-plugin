@@ -27,7 +27,7 @@ public class FileLogStorageFactory implements LogStorageFactory {
 
     @Extension
     @Symbol("file")
-    public static final class DescriptorImpl extends Descriptor<LogStorageFactory> {
+    public static final class DescriptorImpl extends LogStorageFactoryDescriptor<FileLogStorageFactory> {
         @NonNull
         @Override
         public String getDisplayName() {

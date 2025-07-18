@@ -1,15 +1,14 @@
 package org.jenkinsci.plugins.workflow.log.configuration;
 
-import hudson.DescriptorExtensionList;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.model.Descriptor;
 import java.util.List;
 import java.util.logging.Logger;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
+import org.jenkinsci.plugins.workflow.log.LogStorageFactoryDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -35,12 +34,12 @@ public class PipelineLoggingGlobalConfiguration extends GlobalConfiguration {
         save();
     }
 
-    public List<Descriptor<LogStorageFactory>> getLogStorageFactoryDescriptors() {
+    public List<LogStorageFactoryDescriptor<?>> getLogStorageFactoryDescriptors() {
         return LogStorageFactory.all();
     }
 
-    public Descriptor<LogStorageFactory> getDefaultLogStorageFactoryDescriptor() {
-        return Jenkins.get().getDescriptor("file");
+    public LogStorageFactoryDescriptor<?> getDefaultLogStorageFactoryDescriptor() {
+        return (LogStorageFactoryDescriptor<?>) Jenkins.get().getDescriptor("file");
     }
 
     public static PipelineLoggingGlobalConfiguration get() {

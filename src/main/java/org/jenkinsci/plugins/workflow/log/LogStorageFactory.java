@@ -48,11 +48,11 @@ public interface LogStorageFactory extends Describable<LogStorageFactory> {
      */
     @CheckForNull LogStorage forBuild(@NonNull FlowExecutionOwner b);
 
-    default Descriptor<LogStorageFactory> getDescriptor() {
-        return Jenkins.get().getDescriptorOrDie(this.getClass());
+    default LogStorageFactoryDescriptor<?> getDescriptor() {
+        return (LogStorageFactoryDescriptor<?>) Jenkins.get().getDescriptorOrDie(this.getClass());
     }
 
-    static List<Descriptor<LogStorageFactory>> all() {
+    static List<LogStorageFactoryDescriptor<?>> all() {
         return Jenkins.get().getDescriptorList(LogStorageFactory.class);
     }
 }

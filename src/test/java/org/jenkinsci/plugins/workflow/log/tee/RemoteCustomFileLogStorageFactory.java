@@ -1,11 +1,11 @@
 package org.jenkinsci.plugins.workflow.log.tee;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.model.Descriptor;
 import java.io.File;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
+import org.jenkinsci.plugins.workflow.log.LogStorageFactoryDescriptor;
 
 public class RemoteCustomFileLogStorageFactory implements LogStorageFactory {
 
@@ -21,7 +21,7 @@ public class RemoteCustomFileLogStorageFactory implements LogStorageFactory {
     }
 
     @Override
-    public Descriptor<LogStorageFactory> getDescriptor() {
+    public LogStorageFactoryDescriptor<?> getDescriptor() {
         return null;
     }
 }

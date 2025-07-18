@@ -6,12 +6,12 @@
     </f:block>
     <f:dropdownDescriptorSelector
         field="primary" title="${%Primary}"
-        descriptors="${descriptor.getLogStorageFactoryDescriptors()}"
+        descriptors="${descriptor.getFilteredDescriptors()}"
         default="${descriptor.getDefaultLogStorageFactoryDescriptor()}"
     />
     <f:dropdownDescriptorSelector
         field="secondary" title="${%Secondary}"
-        descriptors="${descriptor.getLogStorageFactoryDescriptors()}"
+        descriptors="${descriptor.getFilteredDescriptors()}"
         default="${descriptor.getDefaultLogStorageFactoryDescriptor()}"
     />
   </f:section>

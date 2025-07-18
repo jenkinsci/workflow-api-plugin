@@ -1,10 +1,7 @@
 package org.jenkinsci.plugins.workflow.log.tee;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.Descriptor;
-import hudson.model.DescriptorVisibilityFilter;
 import java.util.List;
 import java.util.logging.Logger;
 import org.jenkinsci.Symbol;
@@ -12,6 +9,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.log.BrokenLogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
+import org.jenkinsci.plugins.workflow.log.LogStorageFactoryDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /***
@@ -25,7 +23,7 @@ public class TeeLogStorageFactory implements LogStorageFactory {
     private final LogStorageFactory primary;
 
     private final LogStorageFactory secondary;
-
+    
     @DataBoundConstructor
     public TeeLogStorageFactory(LogStorageFactory primary, LogStorageFactory secondary) {
         if (primary == null) {
@@ -67,32 +65,19 @@ public class TeeLogStorageFactory implements LogStorageFactory {
 
     @Extension
     @Symbol("tee")
-    public static final class DescriptorImpl extends Descriptor<LogStorageFactory> {
+    public static final class DescriptorImpl extends LogStorageFactoryDescriptor<TeeLogStorageFactory> {
         @NonNull
         @Override
         public String getDisplayName() {
             return "Tee Log Storage Factory";
         }
 
-        public List<Descriptor<LogStorageFactory>> getLogStorageFactoryDescriptors() {
+        public List<LogStorageFactoryDescriptor<?>> getFilteredDescriptors() {
             return LogStorageFactory.all().stream()
                     .filter(descriptor -> {
                         return !TeeLogStorageFactory.class.getName().equals(descriptor.getId());
                     })
                     .toList();
-        }
-    }
-
-    @Extension
-    public static class TeeLogStorageFactoryFilter extends DescriptorVisibilityFilter {
-
-        @Override
-        public boolean filter(@CheckForNull Object context, @NonNull Descriptor descriptor) {
-            if (descriptor instanceof TeeLogStorageFactory.DescriptorImpl) {
-                // avoids nesting in TeeLogStorageFactory/config.jelly
-                return false;
-            }
-            return true;
         }
     }
 }
