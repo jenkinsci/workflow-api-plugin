@@ -177,22 +177,6 @@ public interface LogStorage {
     }
 
     /**
-     * Return the primary Log Storage. By default, it's the current implementation.
-     * See {@link org.jenkinsci.plugins.workflow.log.tee.TeeLogStorage} for overriden implementation.
-     */
-    default LogStorage getPrimary() {
-        return this;
-    }
-
-    /**
-     * Return a list of secondary Log Storages. Buy default it's an empty list.
-     * See {@link org.jenkinsci.plugins.workflow.log.tee.TeeLogStorage} for overriden implementation.
-     */
-    default List<LogStorage> getSecondaries() {
-        return List.of();
-    }
-
-    /**
      * Wraps the specified {@link OutputStream} with a {@link BuildListener} that automatically buffers and flushes
      * remote writes.
      */
