@@ -6,13 +6,11 @@
     </f:block>
     <f:dropdownDescriptorSelector
         field="primary" title="${%Primary}"
-        descriptors="${descriptor.getFilteredDescriptors()}"
-        default="${descriptor.getDefaultLogStorageFactoryDescriptor()}"
+        descriptors="${descriptor.getPrimaryDescriptors()}"
     />
     <f:dropdownDescriptorSelector
         field="secondary" title="${%Secondary}"
-        descriptors="${descriptor.getFilteredDescriptors()}"
-        default="${descriptor.getDefaultLogStorageFactoryDescriptor()}"
+        descriptors="${descriptor.getSecondaryDescriptors()}"
     />
   </f:section>
 </j:jelly>

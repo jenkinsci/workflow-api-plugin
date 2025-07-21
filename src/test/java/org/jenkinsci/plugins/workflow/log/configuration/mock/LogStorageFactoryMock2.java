@@ -19,13 +19,13 @@ public class LogStorageFactoryMock2 implements LogStorageFactory {
         return null;
     }
 
-    @Extension
+    @Extension(ordinal = -1)
     @Symbol("logMock2")
     public static final class DescriptorImpl extends LogStorageFactoryDescriptor<LogStorageFactoryMock2> {
         @NonNull
         @Override
         public String getDisplayName() {
-            return "Log Storage Factory Mock 2";
+            return "Another Log Storage Factory Mock 2";
         }
     }
 }

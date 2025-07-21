@@ -12,17 +12,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jenkinsci.plugins.workflow.log.FileLogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
+import org.jenkinsci.plugins.workflow.log.LogStorageTestBase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
-public class TeeLogStorageTest extends TeeLogStorageTestBase {
+public class TeeLogStorageTest extends LogStorageTestBase {
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 
     private File primaryFile;
+    private File fileLogStorageFile;
+    private File remoteCustomFileLogStorageFile;
     /**
      * For the remoteCustomFileLogStorage, the logs are tranfromed in uppercase, meaning the case should be different
      */
@@ -33,13 +36,18 @@ public class TeeLogStorageTest extends TeeLogStorageTestBase {
     private boolean mangledCase = false;
 
     @Before
-    public void primaryFile() throws Exception {
+    public void before() throws Exception {
         primaryFile = tmp.newFile();
+        fileLogStorageFile = tmp.newFile();
+        remoteCustomFileLogStorageFile = tmp.newFile();
     }
 
     @Override
-    protected LogStorage primaryStorage() {
-        return FileLogStorage.forFile(primaryFile);
+    protected LogStorage createStorage() {
+        return new TeeLogStorage(
+            FileLogStorage.forFile(primaryFile),
+            FileLogStorage.forFile(fileLogStorageFile),
+            RemoteCustomFileLogStorage.forFile(remoteCustomFileLogStorageFile));
     }
 
     @Override

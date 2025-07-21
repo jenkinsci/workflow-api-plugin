@@ -3,7 +3,6 @@ package org.jenkinsci.plugins.workflow.log.configuration;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
 
 import org.jenkinsci.plugins.workflow.log.FileLogStorageFactory;
@@ -22,7 +21,7 @@ public class PipelineLoggingGlobalConfigurationTest {
     @Test
     public void default_factory() throws Throwable {
         sessions.then(r -> {
-            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), nullValue());
+            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(FileLogStorageFactory.class));
             r.configRoundtrip();
         });
         sessions.then(r -> {

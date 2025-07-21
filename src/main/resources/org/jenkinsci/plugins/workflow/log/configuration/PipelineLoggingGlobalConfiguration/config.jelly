@@ -7,7 +7,6 @@
     <f:dropdownDescriptorSelector
         field="factory" title="${%Logging Factory}"
         descriptors="${descriptor.getLogStorageFactoryDescriptors()}"
-        default="${descriptor.getDefaultLogStorageFactoryDescriptor()}"
     />
   </f:section>
 </j:jelly>

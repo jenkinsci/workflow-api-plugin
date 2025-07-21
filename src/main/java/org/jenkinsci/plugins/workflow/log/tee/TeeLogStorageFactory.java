@@ -23,7 +23,7 @@ public class TeeLogStorageFactory implements LogStorageFactory {
     private final LogStorageFactory primary;
 
     private final LogStorageFactory secondary;
-    
+
     @DataBoundConstructor
     public TeeLogStorageFactory(LogStorageFactory primary, LogStorageFactory secondary) {
         if (primary == null) {
@@ -72,11 +72,33 @@ public class TeeLogStorageFactory implements LogStorageFactory {
             return "Tee Log Storage Factory";
         }
 
-        public List<LogStorageFactoryDescriptor<?>> getFilteredDescriptors() {
+        @Override
+        public boolean isConfigurableAsPrimaryTeeLogStorageFactory() {
+            return false;
+        }
+
+        @Override
+        public boolean isConfigurableAsSecondaryTeeLogStorageFactory() {
+            return false;
+        }
+
+        /**
+         * Return the selectable descriptors for the primary dropdown in the UI.
+         * Filter on the {@link LogStorageFactoryDescriptor#isConfigurableAsPrimaryTeeLogStorageFactory()} implementations
+         */
+        public List<LogStorageFactoryDescriptor<?>> getPrimaryDescriptors() {
             return LogStorageFactory.all().stream()
-                    .filter(descriptor -> {
-                        return !TeeLogStorageFactory.class.getName().equals(descriptor.getId());
-                    })
+                    .filter(LogStorageFactoryDescriptor::isConfigurableAsPrimaryTeeLogStorageFactory)
+                    .toList();
+        }
+
+        /**
+         * Return the selectable descriptors for the secondary dropdown in the UI.
+         * Filter on the {@link LogStorageFactoryDescriptor#isConfigurableAsSecondaryTeeLogStorageFactory()} implementations
+         */
+        public List<LogStorageFactoryDescriptor<?>> getSecondaryDescriptors() {
+            return LogStorageFactory.all().stream()
+                    .filter(LogStorageFactoryDescriptor::isConfigurableAsSecondaryTeeLogStorageFactory)
                     .toList();
         }
     }

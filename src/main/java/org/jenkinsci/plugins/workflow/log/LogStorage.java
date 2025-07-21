@@ -24,7 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
@@ -35,9 +34,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.log.configuration.PipelineLoggingGlobalConfiguration;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -113,7 +112,7 @@ public interface LogStorage {
      * @return a log for this just this node
      * @see LogAction
      */
-    @NonNull AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete);
+     @NonNull AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete);
 
      /**
       * Provide a file containing the log text.

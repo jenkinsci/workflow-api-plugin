@@ -6,6 +6,11 @@ import static org.hamcrest.Matchers.instanceOf;
 import io.jenkins.plugins.casc.ConfiguratorException;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.log.FileLogStorage;
+import org.jenkinsci.plugins.workflow.log.FileLogStorageFactory;
+import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1;
 import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock2;
 import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
@@ -20,6 +25,18 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
 
     @Rule
     public JenkinsConfiguredWithCodeRule r = new JenkinsConfiguredWithCodeRule();
+
+    @Test
+    public void no_configuration() throws Throwable {
+        PipelineLoggingGlobalConfiguration config = PipelineLoggingGlobalConfiguration.get();
+        assertThat(config.getFactory(), instanceOf(FileLogStorageFactory.class));
+
+        WorkflowJob workflowJob = r.createProject(WorkflowJob.class);
+        workflowJob.setDefinition(new CpsFlowDefinition("echo 'Hello World'", true));
+
+        r.buildAndAssertSuccess(workflowJob);
+        assertThat(LogStorage.of(workflowJob.getLastBuild().asFlowExecutionOwner()), instanceOf(FileLogStorage.class));
+    }
 
     @Test
     @ConfiguredWithCode("jcasc_smokes.yaml")
