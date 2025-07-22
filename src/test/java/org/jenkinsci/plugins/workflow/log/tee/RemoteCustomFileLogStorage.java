@@ -38,12 +38,24 @@ public class RemoteCustomFileLogStorage implements LogStorage {
             Collections.synchronizedMap(new HashMap<>());
 
     public static synchronized LogStorage forFile(File log) {
-        return openStorages.computeIfAbsent(log, RemoteCustomFileLogStorage::new);
+        return forFile(log, null);
     }
 
-    public RemoteCustomFileLogStorage(File log) {
+    public static synchronized LogStorage forFile(File log, OutputStream outputStream) {
+        return openStorages.computeIfAbsent(log, key -> new RemoteCustomFileLogStorage(key, outputStream));
+    }
+
+    private RemoteCustomFileLogStorage(File log) {
+        this(log, null);
+    }
+
+    private RemoteCustomFileLogStorage(File log, OutputStream outputStream) {
         this.log = log;
         try {
+            if (outputStream != null) {
+                this.out = outputStream;
+                return;
+            }
             this.out = new FileOutputStream(log, true);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

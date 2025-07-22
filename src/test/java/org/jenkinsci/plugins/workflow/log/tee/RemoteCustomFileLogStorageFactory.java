@@ -17,7 +17,7 @@ public class RemoteCustomFileLogStorageFactory implements LogStorageFactory {
 
     @Override
     public LogStorage forBuild(@NonNull FlowExecutionOwner b) {
-        return new RemoteCustomFileLogStorage(file);
+        return RemoteCustomFileLogStorage.forFile(file);
     }
 
     @Override

@@ -16,71 +16,39 @@ class TeeOutputStream extends OutputStream {
 
     @Override
     public void write(int b) throws IOException {
-        IOException exception = null;
-        primary.write(b);
-        for (OutputStream secondary : secondaries) {
-            try {
-                secondary.write(b);
-            } catch (IOException e) {
-                if (exception == null) {
-                    exception = e;
-                } else {
-                    exception.addSuppressed(e);
-                }
-            }
-        }
-        if (exception != null) {
-            throw exception;
-        }
+        handleAction(outputStream -> outputStream.write(b));
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
-        IOException exception = null;
-        primary.write(b, off, len);
-        for (OutputStream secondary : secondaries) {
-            try {
-                secondary.write(b, off, len);
-            } catch (IOException e) {
-                if (exception == null) {
-                    exception = e;
-                } else {
-                    exception.addSuppressed(e);
-                }
-            }
-        }
-        if (exception != null) {
-            throw exception;
-        }
+        handleAction(outputStream -> outputStream.write(b, off, len));
     }
 
     @Override
     public void flush() throws IOException {
-        IOException exception = null;
-        primary.flush();
-        for (OutputStream secondary : secondaries) {
-            try {
-                secondary.flush();
-            } catch (IOException e) {
-                if (exception == null) {
-                    exception = e;
-                } else {
-                    exception.addSuppressed(e);
-                }
-            }
-        }
-        if (exception != null) {
-            throw exception;
-        }
+        handleAction(OutputStream::flush);
     }
 
     @Override
     public void close() throws IOException {
+        handleAction(OutputStream::close);
+    }
+
+    @FunctionalInterface
+    private interface ActionFunction<T> {
+        void apply(T t) throws IOException;
+    }
+
+    private void handleAction(ActionFunction<OutputStream> function) throws IOException {
         IOException exception = null;
-        primary.close();
+        try {
+            function.apply(primary);
+        } catch (IOException e) {
+            exception = e;
+        }
         for (OutputStream secondary : secondaries) {
             try {
-                secondary.close();
+                function.apply(secondary);
             } catch (IOException e) {
                 if (exception == null) {
                     exception = e;
