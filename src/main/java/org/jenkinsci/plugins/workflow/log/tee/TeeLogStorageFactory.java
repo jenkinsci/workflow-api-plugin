@@ -32,6 +32,9 @@ public class TeeLogStorageFactory implements LogStorageFactory {
         if (secondary == null) {
             throw new IllegalArgumentException("Secondary LogStorageFactory cannot be null");
         }
+        if (primary.getClass() == secondary.getClass()) {
+            throw new IllegalArgumentException("Primary and secondary LogStorageFactory must be distinct, but both were " + primary.getClass());
+        }
         this.primary = primary;
         this.secondary = secondary;
     }

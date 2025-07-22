@@ -71,4 +71,12 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
             message =
                     "Arguments: [null, null].\n Expected Parameters: primary org.jenkinsci.plugins.workflow.log.LogStorageFactory, secondary org.jenkinsci.plugins.workflow.log.LogStorageFactory")
     public void empty() throws Throwable {}
+
+    @Test
+    @ConfiguredWithCode(
+            value = "jcasc_duplicate.yaml",
+            expected = ConfiguratorException.class,
+            message =
+                    "Arguments: [org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1, org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1].\n Expected Parameters: primary org.jenkinsci.plugins.workflow.log.LogStorageFactory, secondary org.jenkinsci.plugins.workflow.log.LogStorageFactory")
+    public void duplicate() throws Throwable {}
 }

@@ -1,0 +1,8 @@
+unclassified:
+  pipelineLogging:
+    factory:
+      tee:
+        primary:
+          logMock1: {}
+        secondary:
+          logMock1
