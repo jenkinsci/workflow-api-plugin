@@ -29,11 +29,9 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Describable;
 import java.util.List;
 import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
-import org.kohsuke.stapler.StaplerRequest2;
 
 /**
  * Factory interface for {@link LogStorage}.
@@ -57,13 +55,15 @@ public interface LogStorageFactory extends Describable<LogStorageFactory> {
     }
 
     /**
-     * Returns the default {@link LogStorageFactory} based on the descriptor {@code @Extension#ordinal} order.
+     * Returns the default {@link LogStorageFactory} based on the descriptor {@code @Extension#ordinal} order and the {@link LogStorageFactoryDescriptor#getDefaultInstance()} implmentations.
      */
     static LogStorageFactory getDefaultFactory() {
-        try {
-            return all().get(0).newInstance((StaplerRequest2) null, new JSONObject());
-        } catch (Exception e) {
-            return null;
+        for (LogStorageFactoryDescriptor<?> descriptor : all()) {
+            var instance = descriptor.getDefaultInstance();
+            if (instance != null) {
+                return instance;
+            }
         }
+        return new FileLogStorageFactory();
     }
 }

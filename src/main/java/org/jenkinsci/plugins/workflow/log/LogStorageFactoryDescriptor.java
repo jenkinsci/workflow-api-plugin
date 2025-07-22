@@ -16,4 +16,11 @@ public abstract class LogStorageFactoryDescriptor<T extends LogStorageFactory> e
     public boolean isConfigurableAsSecondaryTeeLogStorageFactory() {
         return true;
     }
+
+    /**
+     * Allow to define the default factory instance to use if no configuration exists
+     */
+    public LogStorageFactory getDefaultInstance() {
+        return null;
+    }
 }
