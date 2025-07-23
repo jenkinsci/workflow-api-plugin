@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -39,10 +40,14 @@ public class TeeLogStoragePipelineTest {
         assertThat(logIndex, anExistingFile());
         File log = new File(b.getRootDir(), "log");
         assertThat(log, anExistingFile());
-        assertThat(Files.readString(log.toPath()), containsString("Hello World"));
+        assertThat(getContent(log), containsString("Hello World"));
 
         File customLog = new File(b.getRootDir(), "custom-log");
         assertThat(customLog, anExistingFile());
-        assertThat(Files.readString(customLog.toPath()), containsString("Hello World"));
+        assertThat(getContent(customLog), containsString("Hello World"));
+    }
+
+    private String getContent(File file) throws IOException {
+        return Files.readString(file.toPath());
     }
 }
