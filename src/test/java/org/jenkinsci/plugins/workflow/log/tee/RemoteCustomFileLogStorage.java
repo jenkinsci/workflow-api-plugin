@@ -32,6 +32,7 @@ public class RemoteCustomFileLogStorage implements LogStorage {
 
     private final File log;
     private OutputStream out;
+    private OutputStreamSupplier supplier;
 
     private static final Map<File, RemoteCustomFileLogStorage> openStorages =
             Collections.synchronizedMap(new HashMap<>());
@@ -40,23 +41,30 @@ public class RemoteCustomFileLogStorage implements LogStorage {
         return forFile(log, null);
     }
 
-    public static synchronized LogStorage forFile(File log, OutputStream outputStream) {
-        return openStorages.computeIfAbsent(log, key -> new RemoteCustomFileLogStorage(key, outputStream));
+    public static synchronized LogStorage forFile(File log, OutputStreamSupplier supplier) {
+        return openStorages.computeIfAbsent(log, key -> new RemoteCustomFileLogStorage(key, supplier));
     }
 
     private RemoteCustomFileLogStorage(File log) {
         this(log, null);
     }
-
-    private RemoteCustomFileLogStorage(File log, OutputStream outputStream) {
+    
+    @FunctionalInterface
+    public interface OutputStreamSupplier{
+        OutputStream apply() throws IOException;
+    }
+    
+    private RemoteCustomFileLogStorage(File log, OutputStreamSupplier supplier) {
         this.log = log;
-        this.out = outputStream;
+        this.supplier = supplier;
     }
 
     private synchronized void open() throws IOException {
-        if (this.out == null) {
+        if (this.supplier == null) {
             this.out = new FileOutputStream(log, true);
+            return;
         }
+        this.out = supplier.apply();
     }
 
     @Override

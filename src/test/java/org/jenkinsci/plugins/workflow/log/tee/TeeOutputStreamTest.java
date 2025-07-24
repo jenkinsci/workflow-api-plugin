@@ -9,7 +9,6 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import org.jenkinsci.plugins.workflow.log.FileLogStorage;
 import org.junit.Before;
@@ -52,7 +51,7 @@ public class TeeOutputStreamTest {
     @Test
     public void primary_fails_write_char() throws Exception {
         char content = 'a';
-        var ls = primaryFails(new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
+        var ls = primaryFails(() -> new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
             @Override
             public void write(int b) throws IOException {
                 throw new IOException();
@@ -72,7 +71,7 @@ public class TeeOutputStreamTest {
      */
     @Test
     public void primary_fails_write_string() throws Exception {
-        var ls = primaryFails(new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
+        var ls = primaryFails(() -> new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
             @Override
             public void write(byte[] b, int off, int len) throws IOException {
                 throw new IOException();
@@ -92,7 +91,7 @@ public class TeeOutputStreamTest {
      */
     @Test
     public void primary_fails_flush() throws Exception {
-        var ls = primaryFails(new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
+        var ls = primaryFails(() -> new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
             @Override
             public void flush() throws IOException {
                 throw new IOException("Exception for test");
@@ -114,7 +113,7 @@ public class TeeOutputStreamTest {
     @Test
     @Ignore
     public void primary_fails_close() throws Exception {
-        var ls = primaryFails(new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
+        var ls = primaryFails(() -> new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
             @Override
             public void close() throws IOException {
                 throw new IOException("Exception for test");
@@ -135,7 +134,7 @@ public class TeeOutputStreamTest {
     @Test
     public void secondary_fails_write_char() throws Exception {
         char content = 'a';
-        var ls = secondaryFails(new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
+        var ls = secondaryFails(() -> new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
             @Override
             public void write(int b) throws IOException {
                 throw new IOException();
@@ -155,7 +154,7 @@ public class TeeOutputStreamTest {
      */
     @Test
     public void secondary_fails_write_string() throws Exception {
-        var ls = secondaryFails(new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
+        var ls = secondaryFails(() -> new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
             @Override
             public void write(byte[] b, int off, int len) throws IOException {
                 throw new IOException();
@@ -175,7 +174,7 @@ public class TeeOutputStreamTest {
      */
     @Test
     public void secondary_fails_flush() throws Exception {
-        var ls = secondaryFails(new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
+        var ls = secondaryFails(() -> new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
             @Override
             public void flush() throws IOException {
                 throw new IOException("Exception for test");
@@ -197,7 +196,7 @@ public class TeeOutputStreamTest {
     @Test
     @Ignore
     public void secondary_fails_close() throws Exception {
-        var ls = secondaryFails(new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
+        var ls = secondaryFails(() -> new BufferedOutputStream(new FileOutputStream(remoteCustomFileLogStorageFile)) {
             @Override
             public void close() throws IOException {
                 throw new IOException("Exception for test");
@@ -213,14 +212,14 @@ public class TeeOutputStreamTest {
         }
     }
 
-    private TeeLogStorage primaryFails(OutputStream failingOutputStream) {
+    private TeeLogStorage primaryFails(RemoteCustomFileLogStorage.OutputStreamSupplier failingOutputStream) {
         return new TeeLogStorage(
                 RemoteCustomFileLogStorage.forFile(remoteCustomFileLogStorageFile, failingOutputStream),
                 FileLogStorage.forFile(fileLogStorageFileA),
                 FileLogStorage.forFile(fileLogStorageFileB));
     }
 
-    private TeeLogStorage secondaryFails(OutputStream failingOutputStream) {
+    private TeeLogStorage secondaryFails(RemoteCustomFileLogStorage.OutputStreamSupplier failingOutputStream) {
         return new TeeLogStorage(
                 FileLogStorage.forFile(fileLogStorageFileA),
                 RemoteCustomFileLogStorage.forFile(remoteCustomFileLogStorageFile, failingOutputStream),
