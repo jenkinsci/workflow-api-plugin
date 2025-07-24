@@ -161,8 +161,8 @@ public interface LogStorage {
     static @NonNull LogStorage of(@NonNull FlowExecutionOwner b) {
         try {
             PipelineLoggingGlobalConfiguration config = PipelineLoggingGlobalConfiguration.get();
-            if (config.getFactory() != null) {
-                LogStorage storage = config.getFactory().forBuild(b);
+            if (config.getFactoryOrDefault() != null) {
+                LogStorage storage = config.getFactoryOrDefault().forBuild(b);
                 if (storage != null) {
                     // Pending integration with JEP-207 / JEP-212, this choice is not persisted.
                     return storage;

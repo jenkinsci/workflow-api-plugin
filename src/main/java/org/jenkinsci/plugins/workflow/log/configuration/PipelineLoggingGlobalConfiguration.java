@@ -10,6 +10,7 @@ import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactoryDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundSetter;
 
 @Extension
@@ -23,10 +24,11 @@ public class PipelineLoggingGlobalConfiguration extends GlobalConfiguration {
         load();
     }
 
+    /**
+     * For configuration only. Use {@link #getFactoryOrDefault()} instead.
+     */
+    @Restricted(NoExternalUse.class)
     public LogStorageFactory getFactory() {
-        if (factory == null) {
-            factory = LogStorageFactory.getDefaultFactory();
-        }
         return factory;
     }
 
@@ -36,8 +38,19 @@ public class PipelineLoggingGlobalConfiguration extends GlobalConfiguration {
         save();
     }
 
+    public LogStorageFactory getFactoryOrDefault() {
+        if (factory == null) {
+            return LogStorageFactory.getDefaultFactory();
+        }
+        return factory;
+    }
+
     public List<LogStorageFactoryDescriptor<?>> getLogStorageFactoryDescriptors() {
         return LogStorageFactory.all();
+    }
+
+    public LogStorageFactoryDescriptor<?> getDefaultFactoryDescriptor() {
+        return LogStorageFactory.getDefaultFactory().getDescriptor();
     }
 
     public static PipelineLoggingGlobalConfiguration get() {

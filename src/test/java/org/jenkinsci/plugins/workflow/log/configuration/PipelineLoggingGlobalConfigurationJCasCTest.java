@@ -1,22 +1,39 @@
 package org.jenkinsci.plugins.workflow.log.configuration;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.jenkins.plugins.casc.ConfiguratorException;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import java.io.File;
+import org.htmlunit.HttpMethod;
+import org.htmlunit.WebRequest;
+import org.htmlunit.WebResponse;
+import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.log.BrokenLogStorage;
 import org.jenkinsci.plugins.workflow.log.FileLogStorage;
-import org.jenkinsci.plugins.workflow.log.FileLogStorageFactory;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
+import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
+import org.jenkinsci.plugins.workflow.log.LogStorageFactoryDescriptor;
 import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1;
 import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock2;
+import org.jenkinsci.plugins.workflow.log.tee.RemoteCustomFileLogStorage;
+import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorage;
 import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 public class PipelineLoggingGlobalConfigurationJCasCTest {
 
@@ -27,15 +44,35 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
     public JenkinsConfiguredWithCodeRule r = new JenkinsConfiguredWithCodeRule();
 
     @Test
-    public void no_configuration() throws Throwable {
+    public void default_factory() throws Throwable {
         PipelineLoggingGlobalConfiguration config = PipelineLoggingGlobalConfiguration.get();
-        assertThat(config.getFactory(), instanceOf(FileLogStorageFactory.class));
+        assertThat(config.getFactory(), nullValue());
 
+        // check build happens with the default file log storage
         WorkflowJob workflowJob = r.createProject(WorkflowJob.class);
         workflowJob.setDefinition(new CpsFlowDefinition("echo 'Hello World'", true));
 
         r.buildAndAssertSuccess(workflowJob);
         assertThat(LogStorage.of(workflowJob.getLastBuild().asFlowExecutionOwner()), instanceOf(FileLogStorage.class));
+
+        checkNoPipelineLoggingCasCConfiguration();
+    }
+
+    @Test
+    public void custom_default_factory() throws Throwable {
+        PipelineLoggingGlobalConfiguration config = PipelineLoggingGlobalConfiguration.get();
+        assertThat(config.getFactory(), nullValue());
+
+        // check build happens with the default file log storage
+        WorkflowJob workflowJob = r.createProject(WorkflowJob.class);
+        workflowJob.setDefinition(new CpsFlowDefinition("echo 'Hello World'", true));
+
+        r.buildAndAssertSuccess(workflowJob);
+        assertThat(
+                LogStorage.of(workflowJob.getLastBuild().asFlowExecutionOwner()),
+                instanceOf(RemoteCustomFileLogStorage.class));
+
+        checkNoPipelineLoggingCasCConfiguration();
     }
 
     @Test
@@ -46,6 +83,23 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
         var factory = (TeeLogStorageFactory) config.getFactory();
         assertThat(factory.getPrimary(), instanceOf(LogStorageFactoryMock1.class));
         assertThat(factory.getSecondary(), instanceOf(LogStorageFactoryMock2.class));
+
+        WorkflowJob workflowJob = r.createProject(WorkflowJob.class);
+        workflowJob.setDefinition(new CpsFlowDefinition("echo 'Hello World'", true));
+
+        r.buildAndAssertSuccess(workflowJob);
+        assertThat(LogStorage.of(workflowJob.getLastBuild().asFlowExecutionOwner()), instanceOf(TeeLogStorage.class));
+
+        try (JenkinsRule.WebClient webClient = r.createWebClient()) {
+            WebRequest req =
+                    new WebRequest(webClient.createCrumbedUrl("manage/configuration-as-code/export"), HttpMethod.POST);
+            WebResponse response = webClient.loadWebResponse(req);
+            String content = response.getContentAsString();
+            assertThat(content, containsString("pipelineLogging"));
+            assertThat(content, containsString("tee"));
+            assertThat(content, containsString("logMock1"));
+            assertThat(content, containsString("logMock2"));
+        }
     }
 
     @Test
@@ -79,4 +133,46 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
             message =
                     "Arguments: [org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1, org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1].\n Expected Parameters: primary org.jenkinsci.plugins.workflow.log.LogStorageFactory, secondary org.jenkinsci.plugins.workflow.log.LogStorageFactory")
     public void duplicate() throws Throwable {}
+
+    private void checkNoPipelineLoggingCasCConfiguration() throws Exception {
+        // check exported CasC
+        try (JenkinsRule.WebClient webClient = r.createWebClient()) {
+            WebRequest req =
+                    new WebRequest(webClient.createCrumbedUrl("manage/configuration-as-code/export"), HttpMethod.POST);
+            WebResponse response = webClient.loadWebResponse(req);
+            String content = response.getContentAsString();
+            assertThat(content, not(containsString("pipelineLogging")));
+        }
+    }
+
+    public static class LogStorageFactoryCustom implements LogStorageFactory {
+        @DataBoundConstructor
+        public LogStorageFactoryCustom() {}
+
+        @Override
+        public LogStorage forBuild(@NonNull FlowExecutionOwner b) {
+            try {
+                File file = new File(b.getRootDir(), "custom-log");
+                return RemoteCustomFileLogStorage.forFile(file);
+            } catch (Exception x) {
+                return new BrokenLogStorage(x);
+            }
+        }
+
+        @TestExtension("custom_default_factory")
+        @Symbol("logCustom")
+        public static final class DescriptorImpl
+                extends LogStorageFactoryDescriptor<PipelineLoggingGlobalConfigurationTest.LogStorageFactoryCustom> {
+            @NonNull
+            @Override
+            public String getDisplayName() {
+                return "My Custom Log";
+            }
+
+            @Override
+            public LogStorageFactory getDefaultInstance() {
+                return new PipelineLoggingGlobalConfigurationTest.LogStorageFactoryCustom();
+            }
+        }
+    }
 }

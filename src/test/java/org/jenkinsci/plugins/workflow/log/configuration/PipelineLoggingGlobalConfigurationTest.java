@@ -3,17 +3,21 @@ package org.jenkinsci.plugins.workflow.log.configuration;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.io.File;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
+import org.jenkinsci.plugins.workflow.log.BrokenLogStorage;
 import org.jenkinsci.plugins.workflow.log.FileLogStorageFactory;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactoryDescriptor;
 import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock1;
 import org.jenkinsci.plugins.workflow.log.configuration.mock.LogStorageFactoryMock2;
+import org.jenkinsci.plugins.workflow.log.tee.RemoteCustomFileLogStorage;
 import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,10 +33,14 @@ public class PipelineLoggingGlobalConfigurationTest {
     @Test
     public void default_factory() throws Throwable {
         sessions.then(r -> {
-            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(FileLogStorageFactory.class));
+            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), nullValue());
+            assertThat(
+                    PipelineLoggingGlobalConfiguration.get().getFactoryOrDefault(),
+                    instanceOf(FileLogStorageFactory.class));
             r.configRoundtrip();
         });
         sessions.then(r -> {
+            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(FileLogStorageFactory.class));
             assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(FileLogStorageFactory.class));
         });
     }
@@ -40,13 +48,18 @@ public class PipelineLoggingGlobalConfigurationTest {
     @Test
     public void custom_default_factory() throws Throwable {
         sessions.then(r -> {
+            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), nullValue());
             assertThat(
-                    PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(LogStorageFactoryCustom.class));
+                    PipelineLoggingGlobalConfiguration.get().getFactoryOrDefault(),
+                    instanceOf(LogStorageFactoryCustom.class));
             r.configRoundtrip();
         });
         sessions.then(r -> {
             assertThat(
                     PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(LogStorageFactoryCustom.class));
+            assertThat(
+                    PipelineLoggingGlobalConfiguration.get().getFactoryOrDefault(),
+                    instanceOf(LogStorageFactoryCustom.class));
         });
     }
 
@@ -103,7 +116,12 @@ public class PipelineLoggingGlobalConfigurationTest {
 
         @Override
         public LogStorage forBuild(@NonNull FlowExecutionOwner b) {
-            return null;
+            try {
+                File file = new File(b.getRootDir(), "custom-log");
+                return RemoteCustomFileLogStorage.forFile(file);
+            } catch (Exception x) {
+                return new BrokenLogStorage(x);
+            }
         }
 
         @TestExtension("custom_default_factory")

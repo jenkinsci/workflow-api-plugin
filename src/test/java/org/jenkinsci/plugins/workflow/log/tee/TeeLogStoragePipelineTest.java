@@ -13,15 +13,17 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.log.FileLogStorageFactory;
 import org.jenkinsci.plugins.workflow.log.LogStorage;
 import org.jenkinsci.plugins.workflow.log.configuration.PipelineLoggingGlobalConfiguration;
-import org.junit.jupiter.api.Test;
+import org.junit.Rule;
+import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-@WithJenkins
 public class TeeLogStoragePipelineTest {
 
+    @Rule
+    public JenkinsRule j = new JenkinsRule();
+
     @Test
-    public void smokes(JenkinsRule j) throws Exception {
+    public void smokes() throws Exception {
         var storageFactory =
                 new TeeLogStorageFactory(new FileLogStorageFactory(), new RemoteCustomFileLogStorageFactory());
         var config = PipelineLoggingGlobalConfiguration.get();
