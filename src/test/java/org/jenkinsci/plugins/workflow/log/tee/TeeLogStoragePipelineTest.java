@@ -1,10 +1,12 @@
 package org.jenkinsci.plugins.workflow.log.tee;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
 
 import java.io.File;
+import java.nio.file.Files;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -39,7 +41,7 @@ public class TeeLogStoragePipelineTest {
         assertThat(log, anExistingFile());
         assertThat(customLog, anExistingFile());
 
-        //        assertThat(Files.readString(log.toPath()), containsString("Hello World"));
-        //        assertThat(Files.readString(customLog.toPath()), containsString("Hello World"));
+        assertThat(Files.readString(log.toPath()), containsString("Hello World"));
+        assertThat(Files.readString(customLog.toPath()), containsString("Hello World"));
     }
 }

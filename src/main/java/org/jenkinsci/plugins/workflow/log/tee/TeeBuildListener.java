@@ -48,6 +48,7 @@ class TeeBuildListener extends OutputStreamTaskListener.Default
 
     @Override
     public void close() throws Exception {
+        getLogger().close();
         Exception exception = null;
         if (primary instanceof AutoCloseable) {
             try {
