@@ -11,7 +11,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,7 +31,7 @@ public class RemoteCustomFileLogStorage implements LogStorage {
     private static final Logger LOGGER = Logger.getLogger(RemoteCustomFileLogStorage.class.getName());
 
     private final File log;
-    private final OutputStream out;
+    private OutputStream out;
 
     private static final Map<File, RemoteCustomFileLogStorage> openStorages =
             Collections.synchronizedMap(new HashMap<>());
@@ -51,14 +50,12 @@ public class RemoteCustomFileLogStorage implements LogStorage {
 
     private RemoteCustomFileLogStorage(File log, OutputStream outputStream) {
         this.log = log;
-        try {
-            if (outputStream != null) {
-                this.out = outputStream;
-                return;
-            }
+        this.out = outputStream;
+    }
+
+    private synchronized void open() throws IOException {
+        if (this.out == null) {
             this.out = new FileOutputStream(log, true);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 
@@ -77,33 +74,34 @@ public class RemoteCustomFileLogStorage implements LogStorage {
 
     private static final class MyListener extends OutputStreamTaskListener.Default implements BuildListener, Closeable {
         private static final long serialVersionUID = 1;
-        private final OutputStream out;
+        private final OutputStream listenerOut;
 
-        public MyListener(OutputStream out) {
-            this.out = out;
+        public MyListener(OutputStream listenerOut) {
+            this.listenerOut = listenerOut;
         }
 
         @Override
         @NonNull
         public OutputStream getOutputStream() {
-            return out;
+            return listenerOut;
         }
 
         @Override
         public void close() throws IOException {
-            out.close();
+            listenerOut.close();
         }
 
         private Object writeReplace() throws IOException {
-            return new MyListener(new UppercaseWriter(out));
+            return new MyListener(new UppercaseWriter(listenerOut));
         }
     }
 
     private final class Writer extends OutputStream implements SerializableOnlyOverRemoting {
         private final String node;
 
-        public Writer(String node) {
+        public Writer(String node) throws IOException {
             this.node = node;
+            open();
         }
 
         @Override
