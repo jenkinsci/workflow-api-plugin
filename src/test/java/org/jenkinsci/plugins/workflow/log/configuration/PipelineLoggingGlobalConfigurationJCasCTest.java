@@ -11,9 +11,6 @@ import io.jenkins.plugins.casc.ConfiguratorException;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
 import java.io.File;
-import org.htmlunit.HttpMethod;
-import org.htmlunit.WebRequest;
-import org.htmlunit.WebResponse;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -30,15 +27,10 @@ import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorage;
 import org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class PipelineLoggingGlobalConfigurationJCasCTest {
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Rule
     public JenkinsConfiguredWithCodeRule r = new JenkinsConfiguredWithCodeRule();
@@ -90,16 +82,11 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
         r.buildAndAssertSuccess(workflowJob);
         assertThat(LogStorage.of(workflowJob.getLastBuild().asFlowExecutionOwner()), instanceOf(TeeLogStorage.class));
 
-        try (JenkinsRule.WebClient webClient = r.createWebClient()) {
-            WebRequest req =
-                    new WebRequest(webClient.createCrumbedUrl("manage/configuration-as-code/export"), HttpMethod.POST);
-            WebResponse response = webClient.loadWebResponse(req);
-            String content = response.getContentAsString();
-            assertThat(content, containsString("pipelineLogging"));
-            assertThat(content, containsString("tee"));
-            assertThat(content, containsString("logMock1"));
-            assertThat(content, containsString("logMock2"));
-        }
+        String content = r.exportToString(true);
+        assertThat(content, containsString("pipelineLogging"));
+        assertThat(content, containsString("tee"));
+        assertThat(content, containsString("logMock1"));
+        assertThat(content, containsString("logMock2"));
     }
 
     @Test
@@ -136,13 +123,8 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
 
     private void checkNoPipelineLoggingCasCConfiguration() throws Exception {
         // check exported CasC
-        try (JenkinsRule.WebClient webClient = r.createWebClient()) {
-            WebRequest req =
-                    new WebRequest(webClient.createCrumbedUrl("manage/configuration-as-code/export"), HttpMethod.POST);
-            WebResponse response = webClient.loadWebResponse(req);
-            String content = response.getContentAsString();
-            assertThat(content, not(containsString("pipelineLogging")));
-        }
+        String content = r.exportToString(true);
+        assertThat(content, not(containsString("pipelineLogging")));
     }
 
     public static class LogStorageFactoryCustom implements LogStorageFactory {
