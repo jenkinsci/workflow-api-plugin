@@ -28,7 +28,7 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import hudson.AbortException;
@@ -40,6 +40,8 @@ import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
+
+import java.io.Serial;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
@@ -64,26 +66,30 @@ import org.jenkinsci.plugins.workflow.steps.StepExecutions;
 import org.jenkinsci.plugins.workflow.support.pickles.SingleTypedPickleFactory;
 import org.jenkinsci.plugins.workflow.support.pickles.TryRepeatedly;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.Rule;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.LoggerRule;
-import org.jvnet.hudson.test.JenkinsSessionRule;
+import org.jvnet.hudson.test.LogRecorder;
 import org.jvnet.hudson.test.MemoryAssert;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.JenkinsSessionExtension;
 import org.jvnet.hudson.test.recipes.LocalData;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-public class FlowExecutionListTest {
+class FlowExecutionListTest {
 
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
-    @Rule public JenkinsSessionRule sessions = new JenkinsSessionRule();
-    @Rule public LoggerRule logging = new LoggerRule().record(FlowExecutionList.class, Level.FINE);
+    @RegisterExtension
+    private static final BuildWatcherExtension buildWatcher = new BuildWatcherExtension();
+
+    @RegisterExtension
+    private final JenkinsSessionExtension sessions = new JenkinsSessionExtension();
+
+    private final LogRecorder logging = new LogRecorder().record(FlowExecutionList.class, Level.FINE);
 
     @Issue("JENKINS-40771")
-    @Test public void simultaneousRegister() throws Throwable {
+    @Test
+    void simultaneousRegister() throws Throwable {
         sessions.then(j -> {
                 WorkflowJob p = j.createProject(WorkflowJob.class, "p");
                 { // make sure there is an initial FlowExecutionList.xml
@@ -112,7 +118,8 @@ public class FlowExecutionListTest {
         });
     }
 
-    @Test public void forceLoadRunningExecutionsAfterRestart() throws Throwable {
+    @Test
+    void forceLoadRunningExecutionsAfterRestart() throws Throwable {
         logging.capture(50);
         sessions.then(r -> {
             WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
@@ -155,7 +162,8 @@ public class FlowExecutionListTest {
     }
 
     @Issue("JENKINS-67164")
-    @Test public void resumeStepExecutions() throws Throwable {
+    @Test
+    void resumeStepExecutions() throws Throwable {
         sessions.then(r -> {
             WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
             p.setDefinition(new CpsFlowDefinition("noResume()", true));
@@ -174,7 +182,8 @@ public class FlowExecutionListTest {
     }
 
     @LocalData
-    @Test public void resumeStepExecutionsWithCorruptFlowGraphWithCycle() throws Throwable {
+    @Test
+    void resumeStepExecutionsWithCorruptFlowGraphWithCycle() throws Throwable {
         // LocalData created using the following snippet while the build was waiting in the _second_ sleep, except
         // for build.xml, which was captured during the sleep step. The StepEndNode for the stage was then adjusted to
         // have its startId point to the timeout step's StepStartNode, creating a loop.
@@ -197,12 +206,13 @@ public class FlowExecutionListTest {
                     .map(LogRecord::getThrown)
                     .filter(Objects::nonNull)
                     .map(Throwable::toString)
-                    .collect(Collectors.toList());
+                    .toList();
             assertThat(loggedExceptions, hasItem(containsString("Cycle in flow graph")));
         });
     }
 
-    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenCpsVmIsStuck() throws Throwable {
+    @Test
+    void stepExecutionIteratorDoesNotLeakBuildsWhenCpsVmIsStuck() throws Throwable {
         sessions.then(r -> {
             var notStuck = r.createProject(WorkflowJob.class, "not-stuck");
             notStuck.setDefinition(new CpsFlowDefinition("semaphore 'wait'", true));
@@ -230,13 +240,15 @@ public class FlowExecutionListTest {
         });
     }
 
-    @Test public void stepExecutionIteratorDoesNotLeakBuildsWhenProgramPromiseIsStuck() throws Throwable {
+    @Test
+    void stepExecutionIteratorDoesNotLeakBuildsWhenProgramPromiseIsStuck() throws Throwable {
         sessions.then(r -> {
             var stuck = r.createProject(WorkflowJob.class, "stuck");
             stuck.setDefinition(new CpsFlowDefinition(
-                    "def x = new org.jenkinsci.plugins.workflow.flow.FlowExecutionListTest.StuckPickle.Marker()\n" +
-                    "semaphore 'stuckWait'\n" +
-                    "echo x.getClass().getName()", false));
+                    """
+                            def x = new org.jenkinsci.plugins.workflow.flow.FlowExecutionListTest.StuckPickle.Marker()
+                            semaphore 'stuckWait'
+                            echo x.getClass().getName()""", false));
             var stuckBuild = stuck.scheduleBuild2(0).waitForStart();
             SemaphoreStep.waitForStart("stuckWait/1", stuckBuild);
         });
@@ -267,7 +279,8 @@ public class FlowExecutionListTest {
     }
 
     public static class NonResumableStep extends Step implements Serializable {
-        public static final long serialVersionUID = 1L;
+        @Serial
+        private static final long serialVersionUID = 1L;
         @DataBoundConstructor
         public NonResumableStep() { }
         @Override
@@ -276,7 +289,8 @@ public class FlowExecutionListTest {
         }
 
         private static class ExecutionImpl extends StepExecution implements Serializable {
-            public static final long serialVersionUID = 1L;
+            @Serial
+            private static final long serialVersionUID = 1L;
             private ExecutionImpl(StepContext sc) {
                 super(sc);
             }
@@ -307,6 +321,7 @@ public class FlowExecutionListTest {
      * Blocks the CPS VM thread synchronously (bad!) to test related problems.
      */
     public static class SynchronousBlockingStep extends Step implements Serializable {
+        @Serial
         private static final long serialVersionUID = 1L;
         private static final Map<String, State> blocked = new HashMap<>();
         private final String id;
@@ -362,15 +377,19 @@ public class FlowExecutionListTest {
     public static class StuckPickle extends Pickle {
         @Override
         public ListenableFuture<Marker> rehydrate(FlowExecutionOwner owner) {
-            return new TryRepeatedly<Marker>(1) {
+            return new TryRepeatedly<>(1) {
                 @Override
                 protected Marker tryResolve() {
                     return ExtensionList.lookupSingleton(Factory.class).resolved;
                 }
-                @Override protected FlowExecutionOwner getOwner() {
+
+                @Override
+                protected FlowExecutionOwner getOwner() {
                     return owner;
                 }
-                @Override public String toString() {
+
+                @Override
+                public String toString() {
                     return "StuckPickle for " + owner;
                 }
             };

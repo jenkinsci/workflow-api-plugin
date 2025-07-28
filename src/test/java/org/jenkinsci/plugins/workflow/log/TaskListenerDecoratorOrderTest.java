@@ -14,25 +14,37 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.*;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.*;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.Set;
 
 @For(TaskListenerDecorator.class)
-public class TaskListenerDecoratorOrderTest {
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
+@WithJenkins
+class TaskListenerDecoratorOrderTest {
 
-    @Rule public JenkinsRule r = new JenkinsRule();
+    @RegisterExtension
+    private static final BuildWatcherExtension buildWatcher = new BuildWatcherExtension();
 
-    @Test public void verifyTaskListenerDecoratorOrder() throws Exception {
+    private JenkinsRule r;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @Test
+    void verifyTaskListenerDecoratorOrder() throws Exception {
         r.createSlave("remote", null, null);
         WorkflowJob p = r.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("filter {node('remote') {remotePrint()}}", true));
@@ -51,12 +63,14 @@ public class TaskListenerDecoratorOrderTest {
     }
 
     private static final class DecoratorImpl extends TaskListenerDecorator {
+        @Serial
         private static final long serialVersionUID = 1L;
 
         private final String tagName;
         DecoratorImpl(String tagName) {
             this.tagName = tagName;
         }
+        @Serial
         private Object writeReplace() {
             Channel ch = Channel.current();
             return ch != null ? new DecoratorImpl(tagName + " via " + ch.getName()) : this;
@@ -107,6 +121,7 @@ public class TaskListenerDecoratorOrderTest {
             return new Execution(context);
         }
         private static final class Execution extends StepExecution {
+            @Serial
             private static final long serialVersionUID = 1L;
 
             Execution(StepContext context) {
@@ -118,17 +133,18 @@ public class TaskListenerDecoratorOrderTest {
             }
         }
         private static final class Filter extends ConsoleLogFilter implements Serializable {
+            @Serial
             private static final long serialVersionUID = 1L;
 
             private final String message;
             Filter(String message) {
                 this.message = message;
             }
+            @Serial
             private Object writeReplace() {
                 Channel ch = Channel.current();
                 return ch != null ? new Filter(message + " via " + ch.getName()) : this;
             }
-            @SuppressWarnings("rawtypes")
             @Override public OutputStream decorateLogger(AbstractBuild _ignore, OutputStream logger) throws IOException, InterruptedException {
                 return new DecoratorImpl(message).decorate(logger);
             }
@@ -155,6 +171,7 @@ public class TaskListenerDecoratorOrderTest {
             return new Execution(context);
         }
         private static final class Execution extends SynchronousNonBlockingStepExecution<Void> {
+            @Serial
             private static final long serialVersionUID = 1L;
 
             Execution(StepContext context) {
@@ -165,6 +182,7 @@ public class TaskListenerDecoratorOrderTest {
             }
         }
         private static final class PrintCallable extends MasterToSlaveCallable<Void, RuntimeException> {
+            @Serial
             private static final long serialVersionUID = 1L;
 
             private final TaskListener listener;

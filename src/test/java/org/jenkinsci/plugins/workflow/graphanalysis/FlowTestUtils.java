@@ -23,13 +23,38 @@ package org.jenkinsci.plugins.workflow.graphanalysis;
  * THE SOFTWARE.
  */
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2016, CloudBees, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 import com.google.common.base.Predicate;
 import org.jenkinsci.plugins.workflow.cps.nodes.StepAtomNode;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.junit.Assert;
-
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,10 +65,10 @@ import java.util.Collection;
  * @author Sam Van Oort
  */
 public class FlowTestUtils {
+
     public static Predicate<FlowNode> predicateMatchStepDescriptor(@NonNull final String descriptorId) {
         return input -> {
-            if (input instanceof StepAtomNode) {
-                StepAtomNode san = (StepAtomNode)input;
+            if (input instanceof StepAtomNode san) {
                 StepDescriptor sd = san.getDescriptor();
                 return sd != null && descriptorId.equals(sd.getId());
             }
@@ -75,10 +100,10 @@ public class FlowTestUtils {
     public static void assertNodeOrder(String description, Iterable<FlowNode> nodes, String... nodeIds) {
         ArrayList<String> realIds = new ArrayList<>();
         for (FlowNode f: nodes) {
-            Assert.assertNotNull(f);
+            assertNotNull(f);
             realIds.add(f.getId());
         }
-        Assert.assertArrayEquals(description, nodeIds, realIds.toArray());
+        assertArrayEquals(nodeIds, realIds.toArray(), description);
     }
 
     /** Assert node ordering using iotas for their ids */

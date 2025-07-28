@@ -1,10 +1,17 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.junit.Assert;
 import org.jvnet.hudson.test.Issue;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -19,6 +26,7 @@ import java.util.Map;
  * Test visitor class, tracks invocations of methods
  */
 public class TestVisitor implements SimpleChunkVisitor {
+
     public enum CallType {
         ATOM_NODE,
         CHUNK_START,
@@ -64,17 +72,16 @@ public class TestVisitor implements SimpleChunkVisitor {
 
         @Override
         public boolean equals(Object o) {
-            if (!(o instanceof CallEntry)) {
+            if (!(o instanceof CallEntry entry)) {
                 return false;
             }
-            CallEntry entry = (CallEntry)o;
             return this.type == entry.type && Arrays.equals(this.ids, entry.ids);
         }
 
         public void assertEquals(CallEntry test) {
-            Assert.assertNotNull(test);
-            Assert.assertNotNull(test.type);
-            Assert.assertArrayEquals(this.ids, test.ids);
+            assertNotNull(test);
+            assertNotNull(test.type);
+            assertArrayEquals(this.ids, test.ids);
         }
 
         /** Return ID of the node pointed at by this event or null if none */
@@ -202,30 +209,30 @@ public class TestVisitor implements SimpleChunkVisitor {
         for (CallEntry ce : this.calls) {
             // Complete equality check
             if (entries.contains(ce)) {
-                Assert.fail("Duplicate call: "+ce.toString());
+                fail("Duplicate call: "+ce.toString());
             }
             // A node is either a start or end to a chunk, or an atom (a node within a chunk)
             if (CHUNK_EVENTS.contains(ce.type)) {
                 int idToCheck = (ce.type == CallType.ATOM_NODE) ? ce.ids[1] : ce.ids[0];
                 if (ce.type == CallType.ATOM_NODE) {
                     if (visitedAtomNodes.contains(idToCheck)) {
-                        Assert.fail("Duplicate atomNode callback for node "+idToCheck+" with "+ce);
+                        fail("Duplicate atomNode callback for node "+idToCheck+" with "+ce);
                     } else if (visitedChunkStartNodes.contains(idToCheck)) {
-                        Assert.fail("Illegal atomNode callback where chunkStart callback existed for node "+idToCheck+" with "+ce);
+                        fail("Illegal atomNode callback where chunkStart callback existed for node "+idToCheck+" with "+ce);
                     } else if (visitedChunkEndNodes.contains(idToCheck)) {
-                        Assert.fail("Illegal atomNode callback where chunkEnd callback existed for node "+idToCheck+" with "+ce);
+                        fail("Illegal atomNode callback where chunkEnd callback existed for node "+idToCheck+" with "+ce);
                     }
                     visitedAtomNodes.add(idToCheck);
                 } else { // Start/end
                     if (visitedAtomNodes.contains(idToCheck)) {
-                        Assert.fail("Illegal chunk start/end callback where atomNode callback existed for node "+idToCheck+" with "+ce);
+                        fail("Illegal chunk start/end callback where atomNode callback existed for node "+idToCheck+" with "+ce);
                     }
                     if (ce.type == CallType.CHUNK_START){
                         boolean added = visitedChunkStartNodes.add(idToCheck);
-                        Assert.assertTrue("Duplicate chunkStart callback for node "+idToCheck+" with "+ce, added);
+                        assertTrue(added, "Duplicate chunkStart callback for node "+idToCheck+" with "+ce);
                     } else { // ChunkEnd
                         boolean added = visitedChunkEndNodes.add(idToCheck);
-                        Assert.assertTrue("Duplicate chunkEnd callback for node "+idToCheck+" with "+ce, added);
+                        assertTrue(added, "Duplicate chunkEnd callback for node "+idToCheck+" with "+ce);
                     }
                 }
             }
@@ -237,10 +244,10 @@ public class TestVisitor implements SimpleChunkVisitor {
     public void assertNoIllegalNullsInEvents() {
         for (CallEntry ce : calls) {
             Integer id = ce.getNodeId();
-            Assert.assertNotNull("Callback with illegally null node: "+ce, id);
+            assertNotNull(id, "Callback with illegally null node: "+ce);
             if (ce.type == CallType.PARALLEL_START || ce.type == CallType.PARALLEL_END
                     || ce.type == CallType.PARALLEL_BRANCH_START || ce.type == CallType.PARALLEL_BRANCH_END) {
-                Assert.assertNotEquals("Parallel event with illegally null parallel start node ID: " + ce, -1, ce.ids[0]);
+                assertNotEquals(-1, ce.ids[0], "Parallel event with illegally null parallel start node ID: " + ce);
             }
         }
     }
@@ -256,7 +263,7 @@ public class TestVisitor implements SimpleChunkVisitor {
         }
         for (FlowNode f : nodes) {
             if(!ids.contains(f.getId())) {
-                Assert.fail("No chunk callbacks for flownode: "+f);
+                fail("No chunk callbacks for flownode: "+f);
             }
         }
     }
@@ -290,10 +297,10 @@ public class TestVisitor implements SimpleChunkVisitor {
                 List<Integer> ends = branchEndIds.get(startEntry.getKey());
                 // Branch start without branch end is legal due to incomplete flows, but not when complete!
                 if (this.isFromCompleteRun != null  && this.isFromCompleteRun) {
-                    Assert.assertNotNull(ends);
+                    assertNotNull(ends);
                 } else if (ends != null) {  // Can have starts without ends due to single-branch parallels with incomplete branches that are unterminated
-                    Assert.assertEquals("Parallels must have matching numbers of start and end events, but don't -- for parallel starting with: " +
-                            startEntry.getKey(), startEntry.getValue().size(), ends.size());
+                    assertEquals(startEntry.getValue().size(), ends.size(), "Parallels must have matching numbers of start and end events, but don't -- for parallel starting with: " +
+                            startEntry.getKey());
                 }
             }
         }
@@ -301,7 +308,7 @@ public class TestVisitor implements SimpleChunkVisitor {
         // Verify the reverse is true: if we have a branch end, there are branch starts (count equality was checked above)
         for (Map.Entry<Integer, List<Integer>> endEntry : branchEndIds.entrySet()) {
             List<Integer> starts = branchStartIds.get(endEntry.getKey());
-            Assert.assertNotNull("Parallels with a branch end event(s) but no matching branch start event(s), parallel start node id: "+endEntry.getKey(), starts);
+            assertNotNull(starts, "Parallels with a branch end event(s) but no matching branch start event(s), parallel start node id: "+endEntry.getKey());
         }
     }
 
@@ -314,25 +321,24 @@ public class TestVisitor implements SimpleChunkVisitor {
             if (ce.type == CallType.PARALLEL_END) {
                 openParallelStarts.push(ce.ids[0]);
             } else if (ce.type == CallType.PARALLEL_START) {
-                if (openParallelStarts.size() > 0) {
-                    Assert.assertEquals("Parallel start and end events must point to the same parallel start node ID",
-                            openParallelStarts.peekFirst(), Integer.valueOf(ce.ids[0])
+                if (!openParallelStarts.isEmpty()) {
+                    assertEquals(openParallelStarts.peekFirst(), Integer.valueOf(ce.ids[0]), "Parallel start and end events must point to the same parallel start node ID"
                     );
                     openParallelStarts.pop();
                 } else if (isFromCompleteRun != null && isFromCompleteRun) {
                     // For a complete flow, every start must have an end, for an incomplete one we may have
                     //  an incomplete block (still running)
-                    Assert.fail("Found a parallel start without a matching end, with CallEntry: "+ce);
+                    fail("Found a parallel start without a matching end, with CallEntry: "+ce);
                 }
             }
         }
 
-        if (openParallelStarts.size() > 0) {
+        if (!openParallelStarts.isEmpty()) {
             StringBuilder sb = new StringBuilder();
             for (Integer parallelStartId : openParallelStarts) {
                 sb.append(parallelStartId).append(',');
             }
-            Assert.fail("Parallel ends with no starts, for parallel(s) with start nodes IDs: " + sb);
+            fail("Parallel ends with no starts, for parallel(s) with start nodes IDs: " + sb);
         }
     }
 }
