@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.workflow.log.configuration;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -11,6 +12,7 @@ import io.jenkins.plugins.casc.ConfiguratorException;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
 import java.io.File;
+import org.htmlunit.html.HtmlForm;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
@@ -64,6 +66,16 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
                 LogStorage.of(workflowJob.getLastBuild().asFlowExecutionOwner()),
                 instanceOf(RemoteCustomFileLogStorage.class));
 
+        checkNoPipelineLoggingCasCConfiguration();
+    }
+
+    @Test
+    public void custom_default_factory_ui() throws Throwable {
+        HtmlForm form = form = r.createWebClient().goTo("configure").getFormByName("config");
+        // not sure if there's a simpler way to get the select, as no `name` or `id` attribute is available
+        var selectedText =
+                form.getFirstByXPath("//*[@id='pipeline-logging']/../descendant::select/option[@selected]/text()");
+        assertThat(selectedText.toString(), is("My Custom Log"));
         checkNoPipelineLoggingCasCConfiguration();
     }
 
@@ -141,10 +153,9 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
             }
         }
 
-        @TestExtension("custom_default_factory")
+        @TestExtension({"custom_default_factory", "custom_default_factory_ui"})
         @Symbol("logCustom")
-        public static final class DescriptorImpl
-                extends LogStorageFactoryDescriptor<PipelineLoggingGlobalConfigurationTest.LogStorageFactoryCustom> {
+        public static final class DescriptorImpl extends LogStorageFactoryDescriptor<LogStorageFactoryCustom> {
             @NonNull
             @Override
             public String getDisplayName() {
@@ -153,7 +164,7 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
 
             @Override
             public LogStorageFactory getDefaultInstance() {
-                return new PipelineLoggingGlobalConfigurationTest.LogStorageFactoryCustom();
+                return new LogStorageFactoryCustom();
             }
         }
     }
