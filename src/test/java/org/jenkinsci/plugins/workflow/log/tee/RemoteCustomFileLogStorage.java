@@ -96,7 +96,7 @@ public class RemoteCustomFileLogStorage implements LogStorage {
 
         @Override
         public void close() throws IOException {
-            listenerOut.close();
+            getLogger().close();
         }
 
         private Object writeReplace() throws IOException {
