@@ -40,8 +40,10 @@ public class PipelineLoggingGlobalConfigurationTest {
             r.configRoundtrip();
         });
         sessions.then(r -> {
-            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(FileLogStorageFactory.class));
-            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(FileLogStorageFactory.class));
+            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), nullValue());
+            assertThat(
+                    PipelineLoggingGlobalConfiguration.get().getFactoryOrDefault(),
+                    instanceOf(FileLogStorageFactory.class));
         });
     }
 
@@ -55,8 +57,7 @@ public class PipelineLoggingGlobalConfigurationTest {
             r.configRoundtrip();
         });
         sessions.then(r -> {
-            assertThat(
-                    PipelineLoggingGlobalConfiguration.get().getFactory(), instanceOf(LogStorageFactoryCustom.class));
+            assertThat(PipelineLoggingGlobalConfiguration.get().getFactory(), nullValue());
             assertThat(
                     PipelineLoggingGlobalConfiguration.get().getFactoryOrDefault(),
                     instanceOf(LogStorageFactoryCustom.class));
@@ -91,7 +92,8 @@ public class PipelineLoggingGlobalConfigurationTest {
         });
         sessions.then(r -> {
             var configuration = PipelineLoggingGlobalConfiguration.get();
-            assertThat(configuration.getFactory(), instanceOf(FileLogStorageFactory.class));
+            assertThat(configuration.getFactory(), nullValue());
+            assertThat(configuration.getFactoryOrDefault(), instanceOf(FileLogStorageFactory.class));
         });
     }
 
@@ -106,7 +108,8 @@ public class PipelineLoggingGlobalConfigurationTest {
         });
         sessions.then(r -> {
             var configuration = PipelineLoggingGlobalConfiguration.get();
-            assertThat(configuration.getFactory(), instanceOf(FileLogStorageFactory.class));
+            assertThat(configuration.getFactory(), nullValue());
+            assertThat(configuration.getFactoryOrDefault(), instanceOf(FileLogStorageFactory.class));
         });
     }
 

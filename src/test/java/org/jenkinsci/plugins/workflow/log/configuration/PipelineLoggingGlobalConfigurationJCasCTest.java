@@ -75,7 +75,9 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
         // not sure if there's a simpler way to get the select, as no `name` or `id` attribute is available
         var selectedText =
                 form.getFirstByXPath("//*[@id='pipeline-logging']/../descendant::select/option[@selected]/text()");
-        assertThat(selectedText.toString(), is("My Custom Log"));
+        assertThat(selectedText, nullValue());
+        var description = form.getFirstByXPath("//*[@id='pipeline-logging']/../descendant::div[@colspan]/text()");
+        assertThat(description.toString(), containsString("My Custom Log"));
         checkNoPipelineLoggingCasCConfiguration();
     }
 
@@ -134,6 +136,7 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
     public void duplicate() throws Throwable {}
 
     private void checkNoPipelineLoggingCasCConfiguration() throws Exception {
+        r.configRoundtrip();
         // check exported CasC
         String content = r.exportToString(true);
         assertThat(content, not(containsString("pipelineLogging")));
