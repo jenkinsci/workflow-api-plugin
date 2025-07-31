@@ -1,0 +1,16 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:section title="${%Tee Log Storage Factory}">
+    <f:block>
+      ${%description}
+    </f:block>
+    <f:dropdownDescriptorSelector
+        field="primary" title="${%Primary}"
+        descriptors="${descriptor.getPrimaryDescriptors()}"
+    />
+    <f:dropdownDescriptorSelector
+        field="secondary" title="${%Secondary}"
+        descriptors="${descriptor.getSecondaryDescriptors()}"
+    />
+  </f:section>
+</j:jelly>

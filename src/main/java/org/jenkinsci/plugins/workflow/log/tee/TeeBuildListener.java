@@ -1,0 +1,77 @@
+package org.jenkinsci.plugins.workflow.log.tee;
+
+import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.BuildListener;
+import hudson.model.TaskListener;
+import java.io.OutputStream;
+import java.io.Serial;
+import java.util.List;
+import org.jenkinsci.plugins.workflow.log.OutputStreamTaskListener;
+
+class TeeBuildListener extends OutputStreamTaskListener.Default
+        implements BuildListener, OutputStreamTaskListener, AutoCloseable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    private final TaskListener primary;
+
+    private final List<TaskListener> secondaries;
+
+    private transient OutputStream outputStream;
+
+    TeeBuildListener(TaskListener primary, TaskListener... secondaries) {
+        if (!(primary instanceof OutputStreamTaskListener)) {
+            throw new ClassCastException("Primary is not an instance of OutputStreamTaskListener: " + primary);
+        }
+        List.of(secondaries).forEach(secondary -> {
+            if (!(secondary instanceof OutputStreamTaskListener)) {
+                throw new ClassCastException("Secondary is not an instance of OutputStreamTaskListener: " + secondary);
+            }
+        });
+        this.primary = primary;
+        this.secondaries = List.of(secondaries);
+    }
+
+    @NonNull
+    @Override
+    public synchronized OutputStream getOutputStream() {
+        if (outputStream == null) {
+            outputStream = new TeeOutputStream(
+                    OutputStreamTaskListener.getOutputStream(primary),
+                    secondaries.stream()
+                            .map(OutputStreamTaskListener::getOutputStream)
+                            .toArray(OutputStream[]::new));
+        }
+        return outputStream;
+    }
+
+    @Override
+    public void close() throws Exception {
+        getLogger().close();
+        Exception exception = null;
+        if (primary instanceof AutoCloseable) {
+            try {
+                ((AutoCloseable) primary).close();
+            } catch (Exception e) {
+                exception = e;
+            }
+        }
+        for (TaskListener secondary : secondaries) {
+            if (secondary instanceof AutoCloseable) {
+                try {
+                    ((AutoCloseable) secondary).close();
+                } catch (Exception e) {
+                    if (exception == null) {
+                        exception = e;
+                    } else {
+                        exception.addSuppressed(e);
+                    }
+                }
+            }
+        }
+        if (exception != null) {
+            throw exception;
+        }
+    }
+}

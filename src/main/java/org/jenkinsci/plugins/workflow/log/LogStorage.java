@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.log;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import hudson.ExtensionList;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.model.BuildListener;
@@ -39,6 +38,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.actions.LogAction;
+import org.jenkinsci.plugins.workflow.log.configuration.PipelineLoggingGlobalConfiguration;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -160,8 +160,9 @@ public interface LogStorage {
      */
     static @NonNull LogStorage of(@NonNull FlowExecutionOwner b) {
         try {
-            for (LogStorageFactory factory : ExtensionList.lookup(LogStorageFactory.class)) {
-                LogStorage storage = factory.forBuild(b);
+            PipelineLoggingGlobalConfiguration config = PipelineLoggingGlobalConfiguration.get();
+            if (config.getFactoryOrDefault() != null) {
+                LogStorage storage = config.getFactoryOrDefault().forBuild(b);
                 if (storage != null) {
                     // Pending integration with JEP-207 / JEP-212, this choice is not persisted.
                     return storage;

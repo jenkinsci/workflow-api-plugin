@@ -24,9 +24,11 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
-import hudson.ExtensionPoint;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.Describable;
+import java.util.List;
+import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
@@ -35,7 +37,7 @@ import org.kohsuke.accmod.restrictions.Beta;
  * Factory interface for {@link LogStorage}.
  */
 @Restricted(Beta.class)
-public interface LogStorageFactory extends ExtensionPoint {
+public interface LogStorageFactory extends Describable<LogStorageFactory> {
 
     /**
      * Checks whether we should handle a given build.
@@ -44,4 +46,24 @@ public interface LogStorageFactory extends ExtensionPoint {
      */
     @CheckForNull LogStorage forBuild(@NonNull FlowExecutionOwner b);
 
+    default LogStorageFactoryDescriptor<?> getDescriptor() {
+        return (LogStorageFactoryDescriptor<?>) Jenkins.get().getDescriptorOrDie(this.getClass());
+    }
+
+    static List<LogStorageFactoryDescriptor<?>> all() {
+        return Jenkins.get().getDescriptorList(LogStorageFactory.class);
+    }
+
+    /**
+     * Returns the default {@link LogStorageFactory} based on the descriptor {@code @Extension#ordinal} order and the {@link LogStorageFactoryDescriptor#getDefaultInstance()} implmentations.
+     */
+    static LogStorageFactory getDefaultFactory() {
+        for (LogStorageFactoryDescriptor<?> descriptor : all()) {
+            var instance = descriptor.getDefaultInstance();
+            if (instance != null) {
+                return instance;
+            }
+        }
+        return new FileLogStorageFactory();
+    }
 }
