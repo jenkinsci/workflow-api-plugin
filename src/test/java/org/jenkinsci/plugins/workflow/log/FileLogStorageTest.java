@@ -24,29 +24,38 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.model.TaskListener;
 import java.io.File;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.CleanupMode;
+import org.junit.jupiter.api.io.TempDir;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class FileLogStorageTest extends LogStorageTestBase {
+@WithJenkins
+class FileLogStorageTest extends LogStorageTestBase {
 
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    @TempDir(cleanup = CleanupMode.NEVER)
+    private File tmp;
     private File log;
 
-    @Before public void log() throws Exception {
-        log = tmp.newFile();
+    @BeforeEach
+    @Override
+    void setUp(JenkinsRule rule) throws Exception {
+        super.setUp(rule);
+        log = File.createTempFile("junit", null, tmp);
     }
 
-    @Override protected LogStorage createStorage() {
+    @Override
+    protected LogStorage createStorage() {
         return FileLogStorage.forFile(log);
     }
 
-    @Test public void oldFormat() throws Exception {
+    @Test
+    void oldFormat() throws Exception {
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("stuff");
@@ -55,7 +64,8 @@ public class FileLogStorageTest extends LogStorageTestBase {
         assertOverallLog(0, lines("stuff"), true);
     }
 
-    @Test public void interruptionDoesNotCloseStream() throws Exception {
+    @Test
+    void interruptionDoesNotCloseStream() throws Exception {
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("overall 1");

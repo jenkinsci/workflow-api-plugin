@@ -80,7 +80,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
         HttpServer server = ServerBootstrap.bootstrap().
             registerHandler("*", (HttpRequest request, HttpResponse response, HttpContext _context) -> {
                 String method = request.getRequestLine().getMethod();
-                String contents = URLDecoder.decode(request.getRequestLine().getUri().substring(1), "UTF-8");
+                String contents = URLDecoder.decode(request.getRequestLine().getUri().substring(1), StandardCharsets.UTF_8);
                 switch (method) {
                     case "GET": {
                         response.setStatusCode(200);
@@ -183,7 +183,7 @@ public final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
                 try (InputStream is = delegate.open()) {
                     contents = IOUtils.toString(is, StandardCharsets.UTF_8);
                 }
-                return new URL(null, baseURL + URLEncoder.encode(contents, "UTF-8"), new URLStreamHandler() {
+                return new URL(null, baseURL + URLEncoder.encode(contents, StandardCharsets.UTF_8), new URLStreamHandler() {
                     @Override protected URLConnection openConnection(URL u) throws IOException {
                         throw new IOException("not allowed to open " + u + " from this JVM");
                     }
