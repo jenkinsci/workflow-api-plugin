@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import jenkins.model.GlobalConfiguration;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.log.LogStorageFactory;
@@ -64,6 +65,11 @@ public class PipelineLoggingGlobalConfiguration extends GlobalConfiguration {
 
     public LogStorageFactoryDescriptor<?> getDefaultFactoryDescriptor() {
         return LogStorageFactory.getDefaultFactory().getDescriptor();
+    }
+    
+    public String getDefaultFactoryPlugin() {
+        var pluginWrapper = Jenkins.get().getPluginManager().whichPlugin(LogStorageFactory.getDefaultFactory().getClass());
+        return pluginWrapper != null ? pluginWrapper.getShortName() : "unknown";
     }
 
     public static PipelineLoggingGlobalConfiguration get() {
