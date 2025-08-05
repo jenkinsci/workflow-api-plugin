@@ -87,7 +87,7 @@ public class PipelineLoggingGlobalConfigurationTest {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
                 new TeeLogStorageFactory(null, new LogStorageFactoryMock2());
             });
-            assertThat(exception.getMessage(), is("Primary LogStorageFactory cannot be null"));
+            assertThat(exception.getMessage(), is("Primary Pipeline logger cannot be null"));
             r.configRoundtrip();
         });
         sessions.then(r -> {
@@ -103,7 +103,7 @@ public class PipelineLoggingGlobalConfigurationTest {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
                 new TeeLogStorageFactory(new LogStorageFactoryMock1(), null);
             });
-            assertThat(exception.getMessage(), is("Secondary LogStorageFactory cannot be null"));
+            assertThat(exception.getMessage(), is("Secondary Pipeline logger cannot be null"));
             r.configRoundtrip();
         });
         sessions.then(r -> {
