@@ -133,7 +133,7 @@ public class PipelineLoggingGlobalConfigurationTest {
             @NonNull
             @Override
             public String getDisplayName() {
-                return "My Custom Log";
+                return "My custom log";
             }
 
             @Override

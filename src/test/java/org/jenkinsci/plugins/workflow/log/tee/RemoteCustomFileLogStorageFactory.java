@@ -32,7 +32,7 @@ public class RemoteCustomFileLogStorageFactory implements LogStorageFactory {
         @NonNull
         @Override
         public String getDisplayName() {
-            return "Remote custom file log storage factory";
+            return "Remote custom file logger";
         }
     }
 }

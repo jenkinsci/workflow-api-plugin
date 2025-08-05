@@ -77,7 +77,7 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
                 form.getFirstByXPath("//*[@id='pipeline-logging']/../descendant::select/option[@selected]/text()");
         assertThat(selectedText, nullValue());
         var description = form.getFirstByXPath("//*[@id='pipeline-logging']/../descendant::div[@colspan]/text()");
-        assertThat(description.toString(), containsString("My Custom Log"));
+        assertThat(description.toString(), containsString("My custom log"));
         checkNoPipelineLoggingCasCConfiguration();
     }
 
@@ -162,7 +162,7 @@ public class PipelineLoggingGlobalConfigurationJCasCTest {
             @NonNull
             @Override
             public String getDisplayName() {
-                return "My Custom Log";
+                return "My custom log";
             }
 
             @Override

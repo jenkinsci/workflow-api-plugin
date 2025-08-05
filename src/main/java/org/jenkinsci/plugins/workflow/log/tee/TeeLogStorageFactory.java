@@ -27,13 +27,13 @@ public class TeeLogStorageFactory implements LogStorageFactory {
     @DataBoundConstructor
     public TeeLogStorageFactory(LogStorageFactory primary, LogStorageFactory secondary) {
         if (primary == null) {
-            throw new IllegalArgumentException("Primary LogStorageFactory cannot be null");
+            throw new IllegalArgumentException("Primary Pipeline logger cannot be null");
         }
         if (secondary == null) {
-            throw new IllegalArgumentException("Secondary LogStorageFactory cannot be null");
+            throw new IllegalArgumentException("Secondary Pipeline logger cannot be null");
         }
         if (primary.getClass() == secondary.getClass()) {
-            throw new IllegalArgumentException("Primary and secondary LogStorageFactory must be distinct, but both were " + primary.getClass());
+            throw new IllegalArgumentException("Primary and secondary Pipeline loggers must be distinct, but both were " + primary.getClass());
         }
         this.primary = primary;
         this.secondary = secondary;
@@ -54,13 +54,13 @@ public class TeeLogStorageFactory implements LogStorageFactory {
         var primaryLogStorage = this.primary.forBuild(b);
         if (primaryLogStorage == null) {
             return new BrokenLogStorage(new IllegalArgumentException(String.format(
-                    "The primary TeeLogStorageFactory of type %s returned null",
+                    "The primary Pipeline logger of type %s returned null",
                     primary.getClass().getName())));
         }
         var secondaryLogStorage = this.secondary.forBuild(b);
         if (secondaryLogStorage == null) {
             return new BrokenLogStorage(new IllegalArgumentException(String.format(
-                    "The secondary TeeLogStorageFactory of type %s returned null",
+                    "The secondary Pipeline logger of type %s returned null",
                     primary.getClass().getName())));
         }
         return new TeeLogStorage(primaryLogStorage, secondaryLogStorage);
@@ -72,7 +72,7 @@ public class TeeLogStorageFactory implements LogStorageFactory {
         @NonNull
         @Override
         public String getDisplayName() {
-            return "Tee Log Storage Factory";
+            return "Multiple loggers";
         }
 
         @Override

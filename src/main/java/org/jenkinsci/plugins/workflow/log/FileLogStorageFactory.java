@@ -31,7 +31,7 @@ public class FileLogStorageFactory implements LogStorageFactory {
         @NonNull
         @Override
         public String getDisplayName() {
-            return "File Log Storage Factory";
+            return "Standard file logger";
         }
     }
 }
