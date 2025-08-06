@@ -33,7 +33,8 @@ public class TeeLogStorageFactory implements LogStorageFactory {
             throw new IllegalArgumentException("Secondary Pipeline logger cannot be null");
         }
         if (primary.getClass() == secondary.getClass()) {
-            throw new IllegalArgumentException("Primary and secondary Pipeline loggers must be distinct, but both were " + primary.getClass());
+            throw new IllegalArgumentException(
+                    "Primary and secondary Pipeline loggers must be distinct, but both were " + primary.getClass());
         }
         this.primary = primary;
         this.secondary = secondary;
@@ -76,32 +77,28 @@ public class TeeLogStorageFactory implements LogStorageFactory {
         }
 
         @Override
-        public boolean isConfigurableAsPrimaryTeeLogStorageFactory() {
-            return false;
-        }
-
-        @Override
-        public boolean isConfigurableAsSecondaryTeeLogStorageFactory() {
+        public boolean isWriteOnly() {
             return false;
         }
 
         /**
          * Return the selectable descriptors for the primary dropdown in the UI.
-         * Filter on the {@link LogStorageFactoryDescriptor#isConfigurableAsPrimaryTeeLogStorageFactory()} implementations
+         * Filter on the {@link LogStorageFactoryDescriptor#isReadWrite()} implementations
          */
         public List<LogStorageFactoryDescriptor<?>> getPrimaryDescriptors() {
             return LogStorageFactory.all().stream()
-                    .filter(LogStorageFactoryDescriptor::isConfigurableAsPrimaryTeeLogStorageFactory)
+                    .filter(LogStorageFactoryDescriptor::isReadWrite)
+                    .filter(d -> !(d instanceof TeeLogStorageFactory.DescriptorImpl))
                     .toList();
         }
 
         /**
          * Return the selectable descriptors for the secondary dropdown in the UI.
-         * Filter on the {@link LogStorageFactoryDescriptor#isConfigurableAsSecondaryTeeLogStorageFactory()} implementations
+         * Filter on the {@link LogStorageFactoryDescriptor#isWriteOnly()} implementations
          */
         public List<LogStorageFactoryDescriptor<?>> getSecondaryDescriptors() {
             return LogStorageFactory.all().stream()
-                    .filter(LogStorageFactoryDescriptor::isConfigurableAsSecondaryTeeLogStorageFactory)
+                    .filter(LogStorageFactoryDescriptor::isWriteOnly)
                     .toList();
         }
     }

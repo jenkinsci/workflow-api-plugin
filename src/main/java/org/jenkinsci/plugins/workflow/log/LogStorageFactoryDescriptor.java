@@ -8,15 +8,15 @@ import org.kohsuke.accmod.restrictions.Beta;
 public abstract class LogStorageFactoryDescriptor<T extends LogStorageFactory> extends Descriptor<LogStorageFactory> {
 
     /**
-     * States if the factory descriptor is configurable as primary TeeLogStorage.
+     * States if the factory descriptor is used to read and write logs.
      */
-    public boolean isConfigurableAsPrimaryTeeLogStorageFactory() {
+    public boolean isReadWrite() {
         return true;
     }
     /**
-     * States if the factory descriptor is configurable as secondary TeeLogStorage.
+     * States if the factory descriptor is used to write only logs.
      */
-    public boolean isConfigurableAsSecondaryTeeLogStorageFactory() {
+    public boolean isWriteOnly() {
         return true;
     }
 

@@ -59,8 +59,14 @@ public class PipelineLoggingGlobalConfiguration extends GlobalConfiguration {
     public List<LogStorageFactoryDescriptor<?>> getLogStorageFactoryDescriptors() {
         List<LogStorageFactoryDescriptor<?>> result = new ArrayList<>();
         result.add(null); // offer the option to use the default factory without any explicit configuration
-        result.addAll(LogStorageFactory.all());
+        result.addAll(getFilteredLogStorageFactoryDescriptors());
         return result;
+    }
+    
+    private List<LogStorageFactoryDescriptor<?>> getFilteredLogStorageFactoryDescriptors() {
+        return LogStorageFactory.all().stream()
+                                .filter(LogStorageFactoryDescriptor::isReadWrite)
+                                .toList();
     }
 
     public LogStorageFactoryDescriptor<?> getDefaultFactoryDescriptor() {
