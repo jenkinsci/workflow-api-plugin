@@ -1,7 +1,10 @@
 package org.jenkinsci.plugins.workflow.log;
 
 import hudson.model.Descriptor;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.Beta;
 
+@Restricted(Beta.class)
 public abstract class LogStorageFactoryDescriptor<T extends LogStorageFactory> extends Descriptor<LogStorageFactory> {
 
     /**
