@@ -40,9 +40,9 @@ import org.kohsuke.accmod.restrictions.Beta;
 public interface LogStorageFactory extends Describable<LogStorageFactory> {
 
     /**
-     * Checks whether we should handle a given build.
+     * When the current factory has been configured or is considered a default factory {@link #getDefaultFactory()}, returns the expected log storage instance to handle the build.
      * @param b a build about to start
-     * @return a mechanism for handling this build, or null to fall back to the next implementation or the default
+     * @return a mechanism for handling this build, see {@link LogStorage#of(FlowExecutionOwner)}
      */
     @CheckForNull LogStorage forBuild(@NonNull FlowExecutionOwner b);
 
