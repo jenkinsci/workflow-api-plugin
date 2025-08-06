@@ -13,12 +13,14 @@ Plugin](https://plugins.jenkins.io/workflow-aggregator).
 
 # JEP-210: External log storage for Pipeline
 ## Implementation
-This plugin supports [https://github.com/jenkinsci/jep/tree/master/jep/210](JEP-210) which allows using one logger at a time: the pipeline logs are written and read from the same storage. The pipeline logger is automatically selected during startup through the `@Extension` annotation `ordinal` value.
+This plugin provides APIs for [https://github.com/jenkinsci/jep/tree/master/jep/210](JEP-210), which allow plugins to take over Pipeline build logging.
+The default logging implementation is the `@Extension LogStorageFactoryDescriptor` with the highest `ordinal` value that implements `LogStorageFactoryDescriptor.getDefaultInstance`.
+You can override the default implementation by configuring a logger explicitly under "Pipeline logger" on the Jenkins system configuration page.
 
-## Multiple log storages
-A new "Pipeline logger" section is now configurable through UI or CasC, instead of relying only on the `@Extension ordinal` value, a specific logger can be selected.
-
-A new "Multiple loggers" log storage implementation following JEP-210 has been introduced, allowing to configure a "Primary" (for read/writes) and a "Secondary" (for writes-only) logger. This acts as a "tee" command.
+## Multiple loggers
+In some cases, you may want to use a logging implementation that sends logs to an external system, while also preserving logs in Jenkins for other use cases.
+You can accomplish by configuring the "Multiple loggers" implementation in the "Pipeline logger" section on the Jenkins system configuration page.
+This implementation allows you to select a "Primary" logger that handles reads and writes, as well as a "Secondary" logger which receives copies of all writes, similarly to the Unix `tee` command.
 
 # Changelog
 
