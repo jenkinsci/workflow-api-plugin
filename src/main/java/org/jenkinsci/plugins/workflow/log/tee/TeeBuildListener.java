@@ -21,14 +21,6 @@ class TeeBuildListener extends OutputStreamTaskListener.Default
     private transient OutputStream outputStream;
 
     TeeBuildListener(TaskListener primary, TaskListener... secondaries) {
-        if (!(primary instanceof OutputStreamTaskListener)) {
-            throw new ClassCastException("Primary is not an instance of OutputStreamTaskListener: " + primary);
-        }
-        List.of(secondaries).forEach(secondary -> {
-            if (!(secondary instanceof OutputStreamTaskListener)) {
-                throw new ClassCastException("Secondary is not an instance of OutputStreamTaskListener: " + secondary);
-            }
-        });
         this.primary = primary;
         this.secondaries = List.of(secondaries);
     }
