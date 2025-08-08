@@ -8,13 +8,13 @@ import org.kohsuke.accmod.restrictions.Beta;
 public abstract class LogStorageFactoryDescriptor<T extends LogStorageFactory> extends Descriptor<LogStorageFactory> {
 
     /**
-     * States if the factory descriptor is used to read and write logs.
+     * Indicates whether the factory supports being used in read/write mode (e.g. as a top-level logger, or as a primary for {@link org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory})
      */
     public boolean isReadWrite() {
         return true;
     }
     /**
-     * States if the factory descriptor is used to write only logs.
+     * Indicates whether the factory supports being used in write-only mode (as a secondary for {@link org.jenkinsci.plugins.workflow.log.tee.TeeLogStorageFactory}).
      */
     public boolean isWriteOnly() {
         return true;
