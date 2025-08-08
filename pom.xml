@@ -28,7 +28,7 @@
     <parent>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>plugin</artifactId>
-      <version>5.9</version>
+      <version>5.19</version>
       <relativePath />
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -68,8 +68,6 @@
         <jenkins.version>${jenkins.baseline}.1</jenkins.version>
         <no-test-jar>false</no-test-jar>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-        <!-- https://github.com/jenkinsci/jenkins-test-harness/pull/988 -->
-        <jenkins-test-harness.version>2486.v14ec80488532</jenkins-test-harness.version>
     </properties>
     <dependencyManagement>
         <dependencies>
