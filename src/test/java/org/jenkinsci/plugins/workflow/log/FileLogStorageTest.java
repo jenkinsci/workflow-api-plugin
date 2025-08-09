@@ -28,6 +28,8 @@ import static org.junit.Assert.assertTrue;
 
 import hudson.model.TaskListener;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,6 +55,48 @@ public class FileLogStorageTest extends LogStorageTestBase {
         close(overall);
         assertTrue(new File(log + "-index").delete());
         assertOverallLog(0, lines("stuff"), true);
+    }
+
+    @Test public void corruptIndex() throws Exception {
+        FileUtils.writeStringToFile(log, "before\n1\nbetween1\n2\nbetween2\n3\nafter", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n?\n18 2\n20\n29 3\n31", StandardCharsets.UTF_8);
+        assertStepLog("1", 0, "", false);
+        assertStepLog("2", 0, "2\n", false);
+        assertStepLog("3", 0, "3\n", false);
+    }
+
+    @Test public void samePositionInIndex() throws Exception {
+        FileUtils.writeStringToFile(log, "before\n1\nbetween1\n2\nbetween2\n3\nafter", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n7\n18 2\n20\n29 3\n31", StandardCharsets.UTF_8);
+        assertStepLog("1", 0, "", false);
+        assertStepLog("2", 0, "2\n", false);
+        assertStepLog("3", 0, "3\n", false);
+    }
+
+    @Test public void decrementedPositionInIndex() throws Exception {
+        FileUtils.writeStringToFile(log, "before\n1\nbetween1\n2\nbetween2\n3\nafter", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n0\n18 2\n20\n29 3\n31", StandardCharsets.UTF_8);
+        assertStepLog("1", 0, "", false);
+        assertStepLog("2", 0, "2\n", false);
+        assertStepLog("3", 0, "3\n", false);
+    }
+
+    @Test public void corruptIndexAtEnd() throws Exception {
+        FileUtils.writeStringToFile(log, "before\n1\nafter", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n?", StandardCharsets.UTF_8);
+        assertStepLog("1", 0, "", false);
+    }
+
+    @Test public void samePositionInIndexAtEnd() throws Exception {
+        FileUtils.writeStringToFile(log, "before\n1\nafter", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n7", StandardCharsets.UTF_8);
+        assertStepLog("1", 0, "", false);
+    }
+
+    @Test public void decrementedPositionInIndexAtEnd() throws Exception {
+        FileUtils.writeStringToFile(log, "before\n1\nafter", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n0", StandardCharsets.UTF_8);
+        assertStepLog("1", 0, "", false);
     }
 
     @Test public void interruptionDoesNotCloseStream() throws Exception {
