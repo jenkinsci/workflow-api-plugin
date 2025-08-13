@@ -292,6 +292,7 @@ public final class FileLogStorage implements LogStorage {
                     // Note that NumberFormatException is nonfatal in the case of the overall build log:
                     // the whole-build HTML output always includes exactly what is in the main log file,
                     // at worst with some missing or inaccurate startStep/endStep annotations.
+                    pos = -1;
                     continue;
                 }
                 if (pos == -1) {
@@ -317,7 +318,10 @@ public final class FileLogStorage implements LogStorage {
                     raf.readFully(data);
                     buf.write(data);
                     pos = -1;
-                } // else some sort of mismatch
+                } else {
+                    // Some sort of mismatch. Do not emit this section.
+                    pos = -1;
+                }
             }
             if (pos != -1 && /* otherwise race condition? */ end > pos) {
                 // In case the build is ongoing and we are still actively writing content for this step,
