@@ -33,7 +33,7 @@ public class LogStorageFactoryMock2 implements LogStorageFactory {
         @NonNull
         @Override
         public String getDisplayName() {
-            return "Another Log Storage Factory Mock 2";
+            return "Another mock Pipeline logger";
         }
     }
 }
