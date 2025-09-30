@@ -49,6 +49,7 @@ import java.util.Objects;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -213,6 +214,8 @@ class FlowExecutionListTest {
 
     @Test
     void stepExecutionIteratorDoesNotLeakBuildsWhenCpsVmIsStuck() throws Throwable {
+        // Make sure ForkJoinPool is not initialized on a thread where its inheritedAccessControlContext would point to a CpsGroovyShell$CleanGroovyClassLoader
+        ForkJoinPool.commonPool().execute(() -> {});
         sessions.then(r -> {
             var notStuck = r.createProject(WorkflowJob.class, "not-stuck");
             notStuck.setDefinition(new CpsFlowDefinition("semaphore 'wait'", true));
@@ -230,10 +233,11 @@ class FlowExecutionListTest {
             // Let notStuckBuild complete and clean up all references.
             SemaphoreStep.success("wait/1", null);
             r.waitForCompletion(notStuckBuild);
+            notStuck.getLazyBuildMixIn().removeRun(notStuckBuild);
             notStuckBuild = null; // Clear out the local variable in this thread.
             Jenkins.get().getQueue().clearLeftItems(); // Otherwise we'd have to wait 5 minutes for the cache to be cleared.
             // Make sure that the reference can be GC'd.
-            MemoryAssert.assertGC(notStuckBuildRef, true);
+            MemoryAssert.assertGC(notStuckBuildRef, false);
             // Allow stuck #1 to complete so the test can be cleaned up promptly.
             SynchronousBlockingStep.unblock("stuck");
             r.waitForCompletion(stuckBuild);
@@ -242,6 +246,8 @@ class FlowExecutionListTest {
 
     @Test
     void stepExecutionIteratorDoesNotLeakBuildsWhenProgramPromiseIsStuck() throws Throwable {
+        // Make sure ForkJoinPool is not initialized on a thread where its inheritedAccessControlContext would point to a CpsGroovyShell$CleanGroovyClassLoader
+        ForkJoinPool.commonPool().execute(() -> {});
         sessions.then(r -> {
             var stuck = r.createProject(WorkflowJob.class, "stuck");
             stuck.setDefinition(new CpsFlowDefinition(
@@ -266,10 +272,11 @@ class FlowExecutionListTest {
             // Let notStuckBuild complete and clean up all references.
             SemaphoreStep.success("wait/1", null);
             r.waitForCompletion(notStuckBuild);
+            notStuck.getLazyBuildMixIn().removeRun(notStuckBuild);
             notStuckBuild = null; // Clear out the local variable in this thread.
             Jenkins.get().getQueue().clearLeftItems(); // Otherwise we'd have to wait 5 minutes for the cache to be cleared.
             // Make sure that the reference can be GC'd.
-            MemoryAssert.assertGC(notStuckBuildRef, true);
+            MemoryAssert.assertGC(notStuckBuildRef, false);
             // Allow stuck #1 to complete so the test can be cleaned up promptly.
             r.waitForMessage("Still trying to load StuckPickle for", stuckBuild);
             ExtensionList.lookupSingleton(StuckPickle.Factory.class).resolved = new StuckPickle.Marker();
