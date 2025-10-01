@@ -107,14 +107,16 @@ final class BufferedBuildListener extends OutputStreamTaskListener.Default imple
         private static final long serialVersionUID = 1;
 
         private final RemoteOutputStream ros;
-        private final DelayBufferedOutputStream.Tuning tuning = DelayBufferedOutputStream.Tuning.DEFAULT; // load defaults on controller
+        // load defaults on controller
+        private final DelayBufferedOutputStream.Tuning tuning = DelayBufferedOutputStream.Tuning.DEFAULT;
+        private final boolean disableFlushOnGc = GCFlushedOutputStream.DISABLED;
 
         Replacement(BufferedBuildListener cbl) {
             this.ros = new RemoteOutputStream(new CloseProofOutputStream(cbl.out));
         }
 
         private Object readResolve() {
-            return new BufferedBuildListener(new CloseableOutputStream(new GCFlushedOutputStream(new DelayBufferedOutputStream(ros, tuning))));
+            return new BufferedBuildListener(new CloseableOutputStream(new GCFlushedOutputStream(new DelayBufferedOutputStream(ros, tuning), disableFlushOnGc)));
         }
 
     }
