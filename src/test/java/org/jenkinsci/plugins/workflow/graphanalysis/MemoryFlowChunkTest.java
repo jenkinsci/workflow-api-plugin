@@ -25,15 +25,15 @@
 package org.jenkinsci.plugins.workflow.graphanalysis;
 
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-public class MemoryFlowChunkTest {
+class MemoryFlowChunkTest {
 
     @Test
-    public void constructor() {
+    void constructor() {
         MockFlowNode start = new MockFlowNode("1");
         MockFlowNode blockStart = new MockFlowNode("2", start);
         MockFlowNode blockEnd = new MockFlowNode("3", blockStart);
