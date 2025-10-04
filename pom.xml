@@ -65,7 +65,7 @@
         <changelist>999999-SNAPSHOT</changelist>
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
         <jenkins.baseline>2.504</jenkins.baseline>
-        <jenkins.version>${jenkins.baseline}.1</jenkins.version>
+        <jenkins.version>2.531-rc37563.302edded866d</jenkins.version>
         <no-test-jar>false</no-test-jar>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
         <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
