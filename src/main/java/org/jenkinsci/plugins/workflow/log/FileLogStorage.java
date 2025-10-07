@@ -465,7 +465,7 @@ public final class FileLogStorage implements LogStorage {
 
             @Override
             public int read(@NonNull byte[] b, int off, int len) throws IOException {
-                if (stepLogPos == stepLogSize) {
+                if (stepLogPos >= stepLogSize) {
                     return -1;
                 }
                 ensureOpen();
