@@ -31,9 +31,11 @@ import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.model.BuildListener;
 import hudson.model.TaskListener;
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -54,6 +56,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.stapler.framework.io.ByteBuffer;
+import org.kohsuke.stapler.framework.io.LargeText;
 
 /**
  * Simple implementation of log storage in a single file that maintains a side file with an index indicating where node transitions occur.
@@ -268,23 +271,77 @@ public final class FileLogStorage implements LogStorage {
     @NonNull
     @Override public AnnotatedLargeText<FlowNode> stepLog(@NonNull FlowNode node, boolean complete) {
         maybeFlush();
-        String id = node.getId();
-        try (ByteBuffer buf = new ByteBuffer();
-             RandomAccessFile raf = new RandomAccessFile(log, "r");
-             BufferedReader indexBR = index.isFile() ? Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8) : new BufferedReader(new NullReader(0))) {
-            // Check this _before_ reading index-log to reduce the chance of a race condition resulting in recent content being associated with the wrong step:
-            long end = raf.length();
-            // To produce just the output for a single step (again we do not need to pay attention to ConsoleNote here since AnnotatedLargeText handles it),
-            // index-log is read looking for transitions that pertain to this step: beginning or ending its content, including at EOF if applicable.
-            // (Other transitions, such as to or from unrelated steps, are irrelevant).
-            // Once a start and end position have been identified, that block is copied to a memory buffer.
-            String line;
-            long pos = -1; // -1 if not currently in this node, start position if we are
-            while ((line = indexBR.readLine()) != null) {
+        long rawLogSize;
+        long stepLogSize = 0;
+        String nodeId = node.getId();
+        try (RandomAccessFile raf = new RandomAccessFile(log, "r")) {
+            // Check this _before_ reading index-log to reduce the chance of a race condition resulting in recent content being associated with the wrong step.
+            rawLogSize = raf.length();
+            if (index.isFile()) {
+                try (IndexReader idr = new IndexReader(rawLogSize, nodeId)) {
+                    stepLogSize = idr.getStepLogSize();
+                }
+            }
+        } catch (IOException x) {
+            return new BrokenLogStorage(x).stepLog(node, complete);
+        }
+        if (stepLogSize == 0) {
+            return new AnnotatedLargeText<>(new ByteBuffer(), StandardCharsets.UTF_8, complete, node);
+        }
+        return new AnnotatedLargeText<>(new StreamingStepLog(rawLogSize, stepLogSize, nodeId), StandardCharsets.UTF_8, complete, node);
+    }
+
+    private class IndexReader implements AutoCloseable {
+        static class Next {
+            public long start = -1;
+            public long end = -1;
+        }
+        private final String nodeId;
+        private final long rawLogSize;
+        private boolean done;
+        private BufferedReader indexBR = null;
+        private long pos = -1; // -1 if not currently in this node, start position if we are
+
+        public IndexReader(long rawLogSize, String nodeId) {
+            this.rawLogSize = rawLogSize;
+            this.nodeId = nodeId;
+        }
+
+        public void close() throws IOException {
+            if (indexBR != null) {
+                indexBR.close();
+                indexBR = null;
+            }
+        }
+
+        private void ensureOpen() throws IOException {
+            if (indexBR == null) {
+                indexBR = Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8);
+            }
+        }
+
+        public long getStepLogSize() throws IOException {
+            long stepLogSize = 0;
+            Next next = new Next();
+            while (readNext(next)) {
+                stepLogSize += (next.end - next.start);
+            }
+            return stepLogSize;
+        }
+
+        public boolean readNext(Next next) throws IOException {
+            if (done) return false;
+            ensureOpen();
+            while (!done) {
+                String line = indexBR.readLine();
+                if (line == null) {
+                    done = true;
+                    break;
+                }
                 int space = line.indexOf(' ');
-                long lastTransition = -1;
+                long nextTransition;
                 try {
-                    lastTransition = Long.parseLong(space == -1 ? line : line.substring(0, space));
+                    nextTransition = Long.parseLong(space == -1 ? line : line.substring(0, space));
                 } catch (NumberFormatException x) {
                     LOGGER.warning("Ignoring corrupt index file " + index);
                     // If index-log is corrupt for whatever reason, we given up on this step in this build;
@@ -295,48 +352,152 @@ public final class FileLogStorage implements LogStorage {
                     pos = -1;
                     continue;
                 }
+                if (nextTransition >= rawLogSize) {
+                    // Do not emit positions past the previously determined logSize.
+                    nextTransition = rawLogSize;
+                    done = true;
+                }
                 if (pos == -1) {
-                    if (space != -1 && line.substring(space + 1).equals(id)) {
-                        pos = lastTransition;
+                    if (space != -1 && line.substring(space + 1).equals(nodeId)) {
+                        pos = nextTransition;
                     }
-                } else if (lastTransition > pos) {
-                    raf.seek(pos);
-                    if (lastTransition > pos + Integer.MAX_VALUE) {
-                        throw new IOException("Cannot read more than 2Gib at a time"); // ByteBuffer does not support it anyway
-                    }
-                    // Could perhaps be done a bit more efficiently with FileChannel methods,
-                    // at least if org.kohsuke.stapler.framework.io.ByteBuffer were replaced by java.nio.[Heap]ByteBuffer.
-                    // The overall bottleneck here is however the need to use a memory buffer to begin with:
-                    // LargeText.Source/Session are not public so, pending improvements to Stapler,
-                    // we cannot lazily stream per-step content the way we do for the overall log.
-                    // (Except perhaps by extending ByteBuffer and then overriding every public method!)
-                    // LargeText also needs to be improved to support opaque (non-long) cursors
-                    // (and callers such as progressiveText.jelly and Blue Ocean updated accordingly),
-                    // which is a hard requirement for efficient rendering of cloud-backed logs,
-                    // though for this implementation we do not need it since we can work with byte offsets.
-                    byte[] data = new byte[(int) (lastTransition - pos)];
-                    raf.readFully(data);
-                    buf.write(data);
+                } else if (nextTransition > pos) {
+                    next.start = pos;
+                    next.end = nextTransition;
                     pos = -1;
+                    return true;
                 } else {
                     // Some sort of mismatch. Do not emit this section.
                     pos = -1;
                 }
             }
-            if (pos != -1 && /* otherwise race condition? */ end > pos) {
+            if (pos != -1 && rawLogSize > pos) {
                 // In case the build is ongoing and we are still actively writing content for this step,
                 // we will hit EOF before any other transition. Otherwise identical to normal case above.
-                raf.seek(pos);
-                if (end > pos + Integer.MAX_VALUE) {
-                    throw new IOException("Cannot read more than 2Gib at a time");
-                }
-                byte[] data = new byte[(int) (end - pos)];
-                raf.readFully(data);
-                buf.write(data);
+                next.start = pos;
+                next.end = rawLogSize;
+                return true;
             }
-            return new AnnotatedLargeText<>(buf, StandardCharsets.UTF_8, complete, node);
-        } catch (IOException x) {
-            return new BrokenLogStorage(x).stepLog(node, complete);
+            return false;
+        }
+    }
+
+    private class StreamingStepLog implements LargeText.Source {
+        private final String nodeId;
+        private final long rawLogSize;
+        private final long stepLogSize;
+
+        StreamingStepLog(long rawLogSize, long stepLogSize, String nodeId ) {
+            super();
+            this.rawLogSize = rawLogSize;
+            this.stepLogSize = stepLogSize;
+            this.nodeId = nodeId;
+        }
+
+        public boolean exists() {
+            return true;
+        }
+
+        public long length() {
+            return stepLogSize;
+        }
+
+        public LargeText.Session open() {
+            return new StreamingStepLogSession();
+        }
+
+        class StreamingStepLogSession extends InputStream implements LargeText.Session {
+            private RandomAccessFile rawLog;
+            private final IndexReader.Next next = new IndexReader.Next();
+            private IndexReader indexReader;
+            private long rawLogPos = next.end;
+            private long stepLogPos = 0;
+
+            @Override
+            public void close() throws IOException {
+                try {
+                    if (rawLog != null) {
+                        rawLog.close();
+                        rawLog = null;
+                    }
+                } finally {
+                    if (indexReader != null) {
+                        indexReader.close();
+                        indexReader = null;
+                    }
+                }
+            }
+
+            @Override
+            public long skip(long n) throws IOException {
+                if (stepLogPos + n > stepLogSize) {
+                    return 0;
+                }
+                if (n == 0) return 0;
+
+                ensureOpen();
+                long skipped = 0;
+                while (skipped < n) {
+                    advanceNextIfNeeded(false);
+                    long remainingInNext = next.end - rawLogPos;
+                    long remainingToSkip = n - skipped;
+                    long skip = Long.min(remainingInNext, remainingToSkip);
+                    rawLogPos += skip;
+                    stepLogPos += skip;
+                    skipped += skip;
+                }
+                rawLog.seek(rawLogPos);
+                return skipped;
+            }
+
+            @Override
+            public int read() throws IOException {
+                byte[] b = new byte[1];
+                int n = read(b, 0, 1);
+                if (n != 1) return -1;
+                return (int) b[0];
+            }
+
+            @Override
+            public int read(@NonNull byte[] b) throws IOException {
+                return read(b, 0, b.length);
+            }
+
+            @Override
+            public int read(@NonNull byte[] b, int off, int len) throws IOException {
+                if (stepLogPos >= stepLogSize) {
+                    return -1;
+                }
+                ensureOpen();
+                advanceNextIfNeeded(true);
+                long remaining = next.end - rawLogPos;
+                if (len > remaining) {
+                    // len is an int and remaining is smaller, so no overflow is possible.
+                    len = (int) remaining;
+                }
+                int n = rawLog.read(b, off, len);
+                rawLogPos += n;
+                stepLogPos += n;
+                return n;
+            }
+
+            private void advanceNextIfNeeded(boolean seek) throws IOException {
+                if (rawLogPos < next.end) return;
+                if (!indexReader.readNext(next)) {
+                    throw new EOFException("index truncated; did not reach previously discovered end of step log");
+                }
+                if (seek) rawLog.seek(next.start);
+                rawLogPos = next.start;
+            }
+
+            private void ensureOpen() throws IOException {
+                if (rawLog == null) {
+                    rawLog = new RandomAccessFile(log, "r");
+                }
+                if (indexReader == null) {
+                    indexReader = new IndexReader(rawLogSize, nodeId);
+                }
+            }
         }
     }
 
