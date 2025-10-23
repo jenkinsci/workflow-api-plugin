@@ -73,7 +73,7 @@ import org.springframework.security.core.Authentication;
  * Foundation for compliance tests of {@link LogStorage} implementations.
  */
 @WithJenkins
-abstract class LogStorageTestBase {
+public abstract class LogStorageTestBase {
 
     protected static LogRecorder logging = new LogRecorder();
 
