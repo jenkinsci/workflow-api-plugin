@@ -78,7 +78,7 @@ import test.ssh_agent.OutboundAgent;
  * {@link #artifactArchiveAndDelete} and variants allow an implementation of {@link ArtifactManager} plus {@link VirtualFile} to be run through a standard gantlet of tests.
  */
 @WithJenkins
-class ArtifactManagerTest {
+public class ArtifactManagerTest {
 
     private final LogRecorder logging = new LogRecorder();
 
