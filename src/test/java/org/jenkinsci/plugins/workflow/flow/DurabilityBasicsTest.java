@@ -6,60 +6,61 @@ import hudson.model.User;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import jenkins.model.Jenkins;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
-import org.jvnet.hudson.test.JenkinsSessionRule;
+import org.jvnet.hudson.test.junit.jupiter.JenkinsSessionExtension;
 
 import java.util.Collection;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Sam Van Oort
  */
-public class DurabilityBasicsTest {
+class DurabilityBasicsTest {
 
-    @Rule
-    public JenkinsSessionRule sessions = new JenkinsSessionRule();
+    @RegisterExtension
+    private final JenkinsSessionExtension sessions = new JenkinsSessionExtension();
 
     @Test
-    public void configRoundTrip() throws Throwable {
+    void configRoundTrip() throws Throwable {
         sessions.then(j -> {
             GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = j.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
             level.setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);
             j.configRoundtrip();
-            Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
+            assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
             level.setDurabilityHint(null);
             j.configRoundtrip();
-            Assert.assertNull(level.getDurabilityHint());
+            assertNull(level.getDurabilityHint());
 
             // Customize again so we can check for persistence
             level.setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);
-            Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
+            assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
         });
         sessions.then(j -> {
             GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = j.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
-            Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
+            assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, level.getDurabilityHint());
         });
     }
 
     @Test
-    public void defaultHandling() throws Throwable {
+    void defaultHandling() throws Throwable {
         sessions.then(j -> {
-            Assert.assertEquals(GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT, GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint());
+            assertEquals(GlobalDefaultFlowDurabilityLevel.SUGGESTED_DURABILITY_HINT, GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint());
             GlobalDefaultFlowDurabilityLevel.DescriptorImpl level = j.jenkins.getExtensionList(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class).get(0);
             level.setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);
-            Assert.assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint());
+            assertEquals(FlowDurabilityHint.PERFORMANCE_OPTIMIZED, GlobalDefaultFlowDurabilityLevel.getDefaultDurabilityHint());
         });
     }
 
     @Test
-    public void managePermissionShouldAccessGlobalConfig() throws Throwable {
+    void managePermissionShouldAccessGlobalConfig() throws Throwable {
         sessions.then(j -> {
             final String USER = "user";
             final String MANAGER = "manager";
@@ -80,7 +81,7 @@ public class DurabilityBasicsTest {
             try (ACLContext c = ACL.as(User.getById(MANAGER, true))) {
                 Collection<Descriptor> descriptors = Functions.getSortedDescriptorsForGlobalConfigUnclassified();
                 Optional<Descriptor> found = descriptors.stream().filter(descriptor -> descriptor instanceof GlobalDefaultFlowDurabilityLevel.DescriptorImpl).findFirst();
-                assertTrue("Global configuration should be accessible to MANAGE users", found.isPresent());
+                assertTrue(found.isPresent(), "Global configuration should be accessible to MANAGE users");
             }
         });
     }
