@@ -226,8 +226,9 @@ public class FlowExecutionListTest {
             notStuck.getLazyBuildMixIn().removeRun(notStuckBuild);
             notStuckBuild = null; // Clear out the local variable in this thread.
             Jenkins.get().getQueue().clearLeftItems(); // Otherwise we'd have to wait 5 minutes for the cache to be cleared.
-            // Make sure that the reference can be GC'd.
-            MemoryAssert.assertGC(notStuckBuildRef, false);
+            // Allow soft references from JVM and Groovy caches (Introspector, MetaClass)
+            // that are unrelated to the StepExecutionIterator code under test
+            MemoryAssert.assertGC(notStuckBuildRef, true);
             // Allow stuck #1 to complete so the test can be cleaned up promptly.
             SynchronousBlockingStep.unblock("stuck");
             r.waitForCompletion(stuckBuild);
@@ -263,8 +264,9 @@ public class FlowExecutionListTest {
             notStuck.getLazyBuildMixIn().removeRun(notStuckBuild);
             notStuckBuild = null; // Clear out the local variable in this thread.
             Jenkins.get().getQueue().clearLeftItems(); // Otherwise we'd have to wait 5 minutes for the cache to be cleared.
-            // Make sure that the reference can be GC'd.
-            MemoryAssert.assertGC(notStuckBuildRef, false);
+            // Allow soft references from JVM and Groovy caches (Introspector, MetaClass)
+            // that are unrelated to the StepExecutionIterator code under test
+            MemoryAssert.assertGC(notStuckBuildRef, true);
             // Allow stuck #1 to complete so the test can be cleaned up promptly.
             r.waitForMessage("Still trying to load StuckPickle for", stuckBuild);
             ExtensionList.lookupSingleton(StuckPickle.Factory.class).resolved = new StuckPickle.Marker();
