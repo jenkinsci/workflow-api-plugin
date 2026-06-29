@@ -26,7 +26,9 @@ package org.jenkinsci.plugins.workflow.log;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeThat;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.console.AnnotatedLargeText;
@@ -47,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
 import jenkins.model.CauseOfInterruption;
@@ -64,7 +67,9 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.FlagRule;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
 import org.springframework.security.core.Authentication;
@@ -77,6 +82,16 @@ public abstract class LogStorageTestBase {
     @ClassRule public static JenkinsRule r = new JenkinsRule();
 
     @ClassRule public static LoggerRule logging = new LoggerRule();
+
+    @Rule public FlagRule<Long> resetTuningMinRecurrence = new FlagRule<>(
+            () -> DelayBufferedOutputStream.Tuning.DEFAULT.minRecurrencePeriod,
+            x -> DelayBufferedOutputStream.Tuning.DEFAULT.minRecurrencePeriod = x);
+    @Rule public FlagRule<Long> resetTuningMaxRecurrence = new FlagRule<>(
+            () -> DelayBufferedOutputStream.Tuning.DEFAULT.maxRecurrencePeriod,
+            x -> DelayBufferedOutputStream.Tuning.DEFAULT.maxRecurrencePeriod = x);
+    @Rule public FlagRule<Boolean> resetGcFlushedOutputStream = new FlagRule<>(
+            () -> GCFlushedOutputStream.DISABLED,
+            x -> GCFlushedOutputStream.DISABLED = x);
 
     /** Create a new storage implementation, but potentially reusing any data initialized in the last {@link Before} setup. */
     protected abstract LogStorage createStorage();
@@ -171,9 +186,66 @@ public abstract class LogStorageTestBase {
     }
 
     @Test public void remoting() throws Exception {
+        remotingParameterized(RemotingTestVariant.Regular);
+    }
+
+    /**
+     * Verifies that flushing explicitly makes {@link BufferedBuildListener} and {@link GCFlushedOutputStream} unnecessary.
+     * Only relevant for {@link LogStorage} implementations that use {@link BufferedBuildListener}.
+     */
+    @Test public void remotingNormalFlushOnly() throws Exception {
+        remotingParameterized(RemotingTestVariant.ManualFlushOnly);
+    }
+
+    /**
+     * Verifies the behavior of {@link BufferedBuildListener}.
+     * Only relevant for {@link LogStorage} implementations that use {@link BufferedBuildListener}.
+     */
+    @Test public void remotingDelayedAutoFlushOnly() throws Exception {
+        // To make this test fail, set `DelayBufferedOutputStream.Tuning.DEFAULT.*RecurrencePeriod` to very large values.
+        remotingParameterized(RemotingTestVariant.DelayedAutoFlushOnly);
+    }
+
+    /**
+     * Verifies the behavior of {@link GCFlushedOutputStream}.
+     * Only relevant for {@link LogStorage} implementations that use {@link BufferedBuildListener}.
+     */
+    @Test public void remotingGcFlushOnly() throws Exception {
+        // To make this test fail, set `GCFlushedOutputStream.DISABLED` to true.
+        remotingParameterized(RemotingTestVariant.GcFlushOnly);
+    }
+
+    private enum RemotingTestVariant {
+        Regular(false, false, false),
+        ManualFlushOnly(true, true, false),
+        DelayedAutoFlushOnly(true, false, true),
+        GcFlushOnly(false, true, true);
+
+        boolean disableGcFlush;
+        boolean disableDelayedAutoFlush;
+        boolean disableManualFlush;
+
+        RemotingTestVariant(boolean disableGcFlush, boolean disableDelayedAutoFlush, boolean disableManualFlush) {
+            this.disableGcFlush = disableGcFlush;
+            this.disableDelayedAutoFlush = disableDelayedAutoFlush;
+            this.disableManualFlush = disableManualFlush;
+        }
+    }
+    private void remotingParameterized(RemotingTestVariant variant) throws Exception {
         logging.capture(100).record(Channel.class, Level.WARNING);
+        if (variant.disableDelayedAutoFlush) {
+            DelayBufferedOutputStream.Tuning.DEFAULT.minRecurrencePeriod = TimeUnit.HOURS.toMillis(1);
+            DelayBufferedOutputStream.Tuning.DEFAULT.maxRecurrencePeriod = TimeUnit.HOURS.toMillis(1);
+        }
+        if (variant.disableGcFlush) {
+            GCFlushedOutputStream.DISABLED = true;
+        }
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
+        if (variant != RemotingTestVariant.Regular) {
+            assumeThat("Skipping BufferedBuildListener-specific tests because listener is " + overall,
+                    overall, instanceOf(BufferedBuildListener.class));
+        }
         overall.getLogger().println("overall from controller");
         TaskListener step = ls.nodeListener(new MockNode("1"));
         step.getLogger().println("step from controller");
@@ -185,9 +257,8 @@ public abstract class LogStorageTestBase {
         DumbSlave s = r.createOnlineSlave();
         r.showAgentLogs(s, agentLoggers());
         VirtualChannel channel = s.getChannel();
-        channel.call(new RemotePrint("overall from agent", overall));
-        channel.call(new RemotePrint("step from agent", step));
-        channel.call(new GC());
+        channel.call(new RemotePrint("overall from agent", overall, variant));
+        channel.call(new RemotePrint("step from agent", step, variant));
         overallPos = assertOverallLog(overallPos, lines(
                 "overall from agent",
                 "<span class=\"pipeline-node-1\">step from agent",
@@ -202,22 +273,32 @@ public abstract class LogStorageTestBase {
     }
     private static final class RemotePrint extends MasterToSlaveCallable<Void, Exception> {
         private final String message;
-        private final TaskListener listener;
-        RemotePrint(String message, TaskListener listener) {
+        private TaskListener listener;
+        private final RemotingTestVariant variant;
+        RemotePrint(String message, TaskListener listener, RemotingTestVariant variant) {
             this.message = message;
             this.listener = listener;
+            this.variant = variant;
         }
-        @Override public Void call() {
+        @Override public Void call() throws Exception {
             listener.getLogger().println(message);
-            listener.getLogger().flush();
-            return null;
-        }
-    }
-    /** Checking behavior of {@link DelayBufferedOutputStream} garbage collection. */
-    private static final class GC extends MasterToSlaveCallable<Void, Exception> {
-        @Override public Void call() {
-            System.gc();
-            System.runFinalization();
+            if (!variant.disableManualFlush) {
+                listener.getLogger().flush();
+            }
+            switch (variant) {
+                case DelayedAutoFlushOnly -> {
+                    // TODO: It would be better to wait for `DelayBufferedOutputStream.flushBuffer` to run exactly once.
+                    Thread.sleep(DelayBufferedOutputStream.Tuning.DEFAULT.minRecurrencePeriod * 3);
+                }
+                case GcFlushOnly -> {
+                    listener = null;
+                    // Sleeping and calling `System.gc` more than once seem to be necessary for Cleaner to run reliably.
+                    for (int i = 0; i < 3; i++) {
+                        System.gc();
+                        Thread.sleep(1000);
+                    }
+                }
+            }
             return null;
         }
     }
