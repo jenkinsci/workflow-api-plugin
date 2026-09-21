@@ -24,16 +24,17 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import hudson.console.AnnotatedLargeText;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class SpanCoalescerTest {
+class SpanCoalescerTest {
 
-    @Test public void works() {
+    @Test
+    void works() {
         assertUncoalesced("plain\n");
         assertUncoalesced("<span class=\"pipeline-node-1\">one\n</span>");
         assertUncoalesced("plain\n<span class=\"pipeline-node-1\">1a\n1b\n</span><span class=\"pipeline-node-2\">2a\n2b\n</span>more plain\n");

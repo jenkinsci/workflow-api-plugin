@@ -10,6 +10,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  * All {@link FlowNode}s will this result in calling {@link SimpleChunkVisitor#atomNode(FlowNode, FlowNode, FlowNode, ForkScanner)}
  */
 public class NoOpChunkFinder implements ChunkFinder {
+
     @Override
     public boolean isStartInsideChunk() {
         return false;

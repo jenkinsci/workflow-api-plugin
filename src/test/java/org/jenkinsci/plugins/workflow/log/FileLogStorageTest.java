@@ -24,31 +24,40 @@
 
 package org.jenkinsci.plugins.workflow.log;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.model.TaskListener;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.FileUtils;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.CleanupMode;
+import org.junit.jupiter.api.io.TempDir;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class FileLogStorageTest extends LogStorageTestBase {
+@WithJenkins
+class FileLogStorageTest extends LogStorageTestBase {
 
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    @TempDir(cleanup = CleanupMode.NEVER)
+    private File tmp;
     private File log;
 
-    @Before public void log() throws Exception {
-        log = tmp.newFile();
+    @BeforeEach
+    @Override
+    void setUp(JenkinsRule rule) throws Exception {
+        super.setUp(rule);
+        log = File.createTempFile("junit", null, tmp);
     }
 
-    @Override protected LogStorage createStorage() {
+    @Override
+    protected LogStorage createStorage() {
         return FileLogStorage.forFile(log);
     }
 
-    @Test public void oldFormat() throws Exception {
+    @Test
+    void oldFormat() throws Exception {
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("stuff");
@@ -57,7 +66,8 @@ public class FileLogStorageTest extends LogStorageTestBase {
         assertOverallLog(0, lines("stuff"), true);
     }
 
-    @Test public void corruptIndex() throws Exception {
+    @Test
+    void corruptIndex() throws Exception {
         FileUtils.writeStringToFile(log, "before\n1\nbetween1\n2\nbetween2\n3\nafter", StandardCharsets.UTF_8);
         FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n?\n18 2\n20\n29 3\n31", StandardCharsets.UTF_8);
         assertStepLog("1", 0, "", false);
@@ -65,7 +75,8 @@ public class FileLogStorageTest extends LogStorageTestBase {
         assertStepLog("3", 0, "3\n", false);
     }
 
-    @Test public void samePositionInIndex() throws Exception {
+    @Test
+    public void samePositionInIndex() throws Exception {
         FileUtils.writeStringToFile(log, "before\n1\nbetween1\n2\nbetween2\n3\nafter", StandardCharsets.UTF_8);
         FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n7\n18 2\n20\n29 3\n31", StandardCharsets.UTF_8);
         assertStepLog("1", 0, "", false);
@@ -73,7 +84,8 @@ public class FileLogStorageTest extends LogStorageTestBase {
         assertStepLog("3", 0, "3\n", false);
     }
 
-    @Test public void decrementedPositionInIndex() throws Exception {
+    @Test
+    void decrementedPositionInIndex() throws Exception {
         FileUtils.writeStringToFile(log, "before\n1\nbetween1\n2\nbetween2\n3\nafter", StandardCharsets.UTF_8);
         FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n0\n18 2\n20\n29 3\n31", StandardCharsets.UTF_8);
         assertStepLog("1", 0, "", false);
@@ -81,25 +93,29 @@ public class FileLogStorageTest extends LogStorageTestBase {
         assertStepLog("3", 0, "3\n", false);
     }
 
-    @Test public void corruptIndexAtEnd() throws Exception {
+    @Test
+    void corruptIndexAtEnd() throws Exception {
         FileUtils.writeStringToFile(log, "before\n1\nafter", StandardCharsets.UTF_8);
         FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n?", StandardCharsets.UTF_8);
         assertStepLog("1", 0, "", false);
     }
 
-    @Test public void samePositionInIndexAtEnd() throws Exception {
+    @Test
+    void samePositionInIndexAtEnd() throws Exception {
         FileUtils.writeStringToFile(log, "before\n1\nafter", StandardCharsets.UTF_8);
         FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n7", StandardCharsets.UTF_8);
         assertStepLog("1", 0, "", false);
     }
 
-    @Test public void decrementedPositionInIndexAtEnd() throws Exception {
+    @Test
+    void decrementedPositionInIndexAtEnd() throws Exception {
         FileUtils.writeStringToFile(log, "before\n1\nafter", StandardCharsets.UTF_8);
         FileUtils.writeStringToFile(new File(log + "-index"), "7 1\n0", StandardCharsets.UTF_8);
         assertStepLog("1", 0, "", false);
     }
 
-    @Test public void interruptionDoesNotCloseStream() throws Exception {
+    @Test
+    void interruptionDoesNotCloseStream() throws Exception {
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("overall 1");
