@@ -10,9 +10,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 /**
  * Listens for significant status updates for a {@link FlowExecution}, such as started running or completed.
  *
- * <p>The {@code fire*} helpers notify every registered listener. An exception from one listener is logged
- * and does not prevent the remaining listeners from being notified, nor does it propagate to the caller.
- *
  * @since 2.14
  * @author Andrew Bayer
  */
