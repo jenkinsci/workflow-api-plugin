@@ -1,7 +1,7 @@
 package org.jenkinsci.plugins.workflow.flow;
 
-import hudson.ExtensionList;
 import hudson.ExtensionPoint;
+import jenkins.util.Listeners;
 import org.jenkinsci.plugins.workflow.graph.FlowEndNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
@@ -62,36 +62,27 @@ public abstract class FlowExecutionListener implements ExtensionPoint {
      * Fires the {@link #onCreated(FlowExecution)} event.
      */
     public static void fireCreated(@NonNull FlowExecution execution) {
-        // TODO Jenkins 2.325+ use Listeners.notify
-        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
-            listener.onCreated(execution);
-        }
+        Listeners.notify(FlowExecutionListener.class, true, l -> l.onCreated(execution));
     }
 
     /**
      * Fires the {@link #onRunning(FlowExecution)} event.
      */
     public static void fireRunning(@NonNull FlowExecution execution) {
-        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
-            listener.onRunning(execution);
-        }
+        Listeners.notify(FlowExecutionListener.class, true, l -> l.onRunning(execution));
     }
 
     /**
      * Fires the {@link #onResumed(FlowExecution)} event.
      */
     public static void fireResumed(@NonNull FlowExecution execution) {
-        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
-            listener.onResumed(execution);
-        }
+        Listeners.notify(FlowExecutionListener.class, true, l -> l.onResumed(execution));
     }
 
     /**
      * Fires the {@link #onCompleted(FlowExecution)} event.
      */
     public static void fireCompleted(@NonNull FlowExecution execution) {
-        for (FlowExecutionListener listener : ExtensionList.lookup(FlowExecutionListener.class)) {
-            listener.onCompleted(execution);
-        }
+        Listeners.notify(FlowExecutionListener.class, true, l -> l.onCompleted(execution));
     }
 }
