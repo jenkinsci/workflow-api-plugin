@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.log;
 import hudson.console.LineTransformationOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serial;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -36,21 +37,30 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-public final class TaskListenerDecoratorTest {
+@WithJenkins
+class TaskListenerDecoratorTest {
 
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension buildWatcher = new BuildWatcherExtension();
 
-    @Rule public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
 
-    @Test public void brokenMergedTaskListenerDecorator() throws Exception {
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @Test
+    void brokenMergedTaskListenerDecorator() throws Exception {
         var p = r.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("mask {broken {echo 'please mask s3cr3t'}}; broken {mask {echo 'please also mask s3cr3t'}}", true));
         var b = r.buildAndAssertSuccess(p);
@@ -67,6 +77,7 @@ public final class TaskListenerDecoratorTest {
             return new Execution(context);
         }
         private static final class Execution extends StepExecution {
+            @Serial
             private static final long serialVersionUID = 1L;
             Execution(StepContext context) {
                 super(context);
@@ -104,6 +115,7 @@ public final class TaskListenerDecoratorTest {
             return new Execution(context);
         }
         private static final class Execution extends StepExecution {
+            @Serial
             private static final long serialVersionUID = 1L;
             Execution(StepContext context) {
                 super(context);
