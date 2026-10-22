@@ -46,16 +46,15 @@ import javax.crypto.CipherOutputStream;
 import jenkins.model.Jenkins;
 import jenkins.security.CryptoConfidentialKey;
 import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.Beta;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.StaplerResponse2;
 
 /**
  * Some utility code extracted from {@link AnnotatedLargeText} which probably belongs in {@link ConsoleAnnotator} or {@link ConsoleAnnotationOutputStream}.
+ * @deprecated Use {@link AnnotatedLargeText#writeHtmlToFilter}.
  */
-@Restricted(Beta.class)
+@Deprecated
 public class ConsoleAnnotators {
 
     private static final CryptoConfidentialKey PASSING_ANNOTATOR = new CryptoConfidentialKey(ConsoleAnnotators.class, "consoleAnnotator");
