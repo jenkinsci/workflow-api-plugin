@@ -31,6 +31,9 @@ import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.util.RunList;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import jenkins.model.NodeBuildsProvider;
 import org.jenkinsci.plugins.workflow.actions.WorkspaceAction;
@@ -44,6 +47,8 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 @Restricted(NoExternalUse.class)
 @Extension
 public class WorkspaceNodeBuildsProvider extends NodeBuildsProvider {
+
+    private static final Logger LOGGER = Logger.getLogger(WorkspaceNodeBuildsProvider.class.getName());
 
     @NonNull
     @Override
@@ -62,8 +67,12 @@ public class WorkspaceNodeBuildsProvider extends NodeBuildsProvider {
         if (owner == null) {
             return false;
         }
-        FlowExecution execution = owner.getOrNull();
-        if (execution == null) {
+        FlowExecution execution;
+        try {
+            // getOrNull() returns null for completed runs whose execution has not been loaded yet
+            execution = owner.get();
+        } catch (IOException x) {
+            LOGGER.log(Level.FINE, null, x);
             return false;
         }
         String nodeName = node.getNodeName();

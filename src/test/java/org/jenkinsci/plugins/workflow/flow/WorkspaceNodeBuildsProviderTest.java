@@ -41,34 +41,43 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.JenkinsSessionRule;
 
 public class WorkspaceNodeBuildsProviderTest {
 
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
-    @Rule public JenkinsRule r = new JenkinsRule();
+    @Rule public JenkinsSessionRule sessions = new JenkinsSessionRule();
 
-    @Test public void listsPipelineRunsOnTheNodesTheyUsed() throws Exception {
-        DumbSlave agent = r.createOnlineSlave();
-        WorkflowJob onAgent = r.createProject(WorkflowJob.class, "onAgent");
-        onAgent.setDefinition(new CpsFlowDefinition("node('" + agent.getNodeName() + "') { echo 'hi' }", true));
-        WorkflowJob both = r.createProject(WorkflowJob.class, "both");
-        both.setDefinition(new CpsFlowDefinition("node('built-in') { echo 'one' }; node('" + agent.getNodeName() + "') { echo 'two' }", true));
-        WorkflowJob noNode = r.createProject(WorkflowJob.class, "noNode");
-        noNode.setDefinition(new CpsFlowDefinition("echo 'no node'", true));
-        FreeStyleProject freestyle = r.createFreeStyleProject("freestyle");
-        freestyle.setAssignedNode(agent);
-        r.buildAndAssertSuccess(onAgent);
-        r.buildAndAssertSuccess(noNode);
-        r.buildAndAssertSuccess(freestyle);
-        r.buildAndAssertSuccess(both);
+    @Test public void listsPipelineRunsOnTheNodesTheyUsed() throws Throwable {
+        sessions.then(r -> {
+            DumbSlave agent = r.createOnlineSlave();
+            WorkflowJob onAgent = r.createProject(WorkflowJob.class, "onAgent");
+            onAgent.setDefinition(new CpsFlowDefinition("node('" + agent.getNodeName() + "') { echo 'hi' }", true));
+            WorkflowJob both = r.createProject(WorkflowJob.class, "both");
+            both.setDefinition(new CpsFlowDefinition("node('built-in') { echo 'one' }; node('" + agent.getNodeName() + "') { echo 'two' }", true));
+            WorkflowJob noNode = r.createProject(WorkflowJob.class, "noNode");
+            noNode.setDefinition(new CpsFlowDefinition("echo 'no node'", true));
+            FreeStyleProject freestyle = r.createFreeStyleProject("freestyle");
+            freestyle.setAssignedNode(agent);
+            r.buildAndAssertSuccess(onAgent);
+            r.buildAndAssertSuccess(noNode);
+            r.buildAndAssertSuccess(freestyle);
+            r.buildAndAssertSuccess(both);
+            assertBuilds(r);
+        });
+        // completed runs whose flow executions have not been loaded since startup
+        sessions.then(WorkspaceNodeBuildsProviderTest::assertBuilds);
+    }
 
+    private static void assertBuilds(JenkinsRule r) throws Exception {
+        Computer agent = r.jenkins.getComputer("slave0");
         List<String> onAgentBuilds = List.of("both #1", "freestyle #1", "onAgent #1");
         List<String> builtInBuilds = List.of("both #1");
-        assertEquals(onAgentBuilds, names(agent.toComputer().getBuilds()));
+        assertEquals(onAgentBuilds, names(agent.getBuilds()));
         assertEquals(builtInBuilds, names(r.jenkins.toComputer().getBuilds()));
 
         JenkinsRule.WebClient wc = r.createWebClient();
-        assertEquals(onAgentBuilds, names(wc, agent.toComputer()));
+        assertEquals(onAgentBuilds, names(wc, agent));
         assertEquals(builtInBuilds, names(wc, r.jenkins.toComputer()));
     }
 
