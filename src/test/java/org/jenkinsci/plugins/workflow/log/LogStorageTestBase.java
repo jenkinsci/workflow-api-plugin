@@ -26,7 +26,7 @@ package org.jenkinsci.plugins.workflow.log;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.console.AnnotatedLargeText;
@@ -62,26 +62,33 @@ import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.springframework.security.core.Authentication;
 
 /**
  * Foundation for compliance tests of {@link LogStorage} implementations.
  */
+@WithJenkins
 public abstract class LogStorageTestBase {
 
-    @ClassRule public static JenkinsRule r = new JenkinsRule();
+    protected static LogRecorder logging = new LogRecorder();
 
-    @ClassRule public static LoggerRule logging = new LoggerRule();
+    protected JenkinsRule r;
 
-    /** Create a new storage implementation, but potentially reusing any data initialized in the last {@link Before} setup. */
+    @BeforeEach
+    void setUp(JenkinsRule rule) throws Exception {
+        r = rule;
+    }
+
+    /** Create a new storage implementation, but potentially reusing any data initialized in the last {@link BeforeEach} setup. */
     protected abstract LogStorage createStorage();
 
-    @Test public void smokes() throws Exception {
+    @Test
+    void smokes() throws Exception {
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("starting");
@@ -89,7 +96,7 @@ public abstract class LogStorageTestBase {
         step1.getLogger().println("one #1");
         TaskListener step2 = ls.nodeListener(new MockNode("2"));
         step2.getLogger().println("two #1");
-        long betweenStep2Lines = text().writeHtmlTo(0, new NullWriter());
+        long betweenStep2Lines = text().writeHtmlTo(0, NullWriter.INSTANCE);
         step2.getLogger().println("two #2");
         overall.getLogger().println("interrupting");
         /* We do not really care much whether nodes are annotated when we start display in the middle; the UI will not do anything with it anyway:
@@ -170,7 +177,8 @@ public abstract class LogStorageTestBase {
         }
     }
 
-    @Test public void remoting() throws Exception {
+    @Test
+    void remoting() throws Exception {
         logging.capture(100).record(Channel.class, Level.WARNING);
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
@@ -197,9 +205,11 @@ public abstract class LogStorageTestBase {
         assertEquals(stepPos, assertStepLog("1", stepPos, "", true));
         assertThat(logging.getMessages(), empty());
     }
+
     protected Map<String, Level> agentLoggers() {
         return Collections.singletonMap(LogStorageTestBase.class.getPackage().getName(), Level.FINER);
     }
+
     private static final class RemotePrint extends MasterToSlaveCallable<Void, Exception> {
         private final String message;
         private final TaskListener listener;
@@ -213,6 +223,7 @@ public abstract class LogStorageTestBase {
             return null;
         }
     }
+
     /** Checking behavior of {@link DelayBufferedOutputStream} garbage collection. */
     private static final class GC extends MasterToSlaveCallable<Void, Exception> {
         @Override public Void call() {
@@ -228,7 +239,8 @@ public abstract class LogStorageTestBase {
      * Failures to do this can cause output from different steps (or general build output) to be interleaved at a sub-line level.
      * This might not render well (depending on the implementation), but we need to ensure that the entire build log is not broken as a result.
      */
-    @Test public void mangledLines() throws Exception {
+    @Test
+    void mangledLines() throws Exception {
         Random r = new Random();
         BiFunction<Character, TaskListener, Thread> thread = (c, l) -> new Thread(() -> {
             for (int i = 0; i < 1000; i++) {
@@ -258,23 +270,24 @@ public abstract class LogStorageTestBase {
                 x.printStackTrace();
             }
         });
-        long pos = text().writeHtmlTo(0, new NullWriter());
+        long pos = text().writeHtmlTo(0, NullWriter.INSTANCE);
         // TODO detailed assertions would need to take into account completion flag:
         // assertLength(pos);
         // assertOverallLog(pos, "", true);
-        text().writeRawLogTo(0, new NullOutputStream());
-        pos = text("1").writeHtmlTo(0, new NullWriter());
+        text().writeRawLogTo(0, NullOutputStream.INSTANCE);
+        pos = text("1").writeHtmlTo(0, NullWriter.INSTANCE);
         // assertLength("1", pos);
         // assertStepLog("1", pos, "", true);
-        text("1").writeRawLogTo(0, new NullOutputStream());
-        pos = text("2").writeHtmlTo(0, new NullWriter());
+        text("1").writeRawLogTo(0, NullOutputStream.INSTANCE);
+        pos = text("2").writeHtmlTo(0, NullWriter.INSTANCE);
         // assertLength("2", pos);
         // assertStepLog("2", pos, "", true);
-        text("2").writeRawLogTo(0, new NullOutputStream());
+        text("2").writeRawLogTo(0, NullOutputStream.INSTANCE);
     }
 
     @SuppressWarnings("deprecation")
-    @Test public void getLogFile() throws Exception {
+    @Test
+    void getLogFile() throws Exception {
         LogStorage ls = createStorage();
         TaskListener overall = ls.overallListener();
         overall.getLogger().println("starting");
@@ -312,7 +325,7 @@ public abstract class LogStorageTestBase {
             if (html) {
                 pos = oneText.writeHtmlTo(pos, sw);
             } else {
-                pos = oneText.writeRawLogTo(pos, new WriterOutputStream(sw, StandardCharsets.UTF_8));
+                pos = oneText.writeRawLogTo(pos, WriterOutputStream.builder().setWriter(sw).setCharset(StandardCharsets.UTF_8).get());
             }
         } while (!oneText.isComplete());
         String result = sw.toString();

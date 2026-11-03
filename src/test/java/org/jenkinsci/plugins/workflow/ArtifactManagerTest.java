@@ -30,10 +30,10 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -52,6 +52,7 @@ import hudson.util.StreamTaskListener;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -66,19 +67,27 @@ import jenkins.security.MasterToSlaveCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.flow.StashManager;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import test.ssh_agent.OutboundAgent;
 
 /**
  * {@link #artifactArchiveAndDelete} and variants allow an implementation of {@link ArtifactManager} plus {@link VirtualFile} to be run through a standard gantlet of tests.
  */
+@WithJenkins
 public class ArtifactManagerTest {
 
-    @Rule public JenkinsRule r = new JenkinsRule();
-    @Rule public LoggerRule logging = new LoggerRule();
+    private final LogRecorder logging = new LogRecorder();
+
+    private JenkinsRule r;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        r = rule;
+    }
 
     /**
      * Creates an agent, in a Docker container when possible, calls {@link #setUpWorkspace}, then runs some tests.
@@ -180,7 +189,7 @@ public class ArtifactManagerTest {
     }
     private static class FindEncoding extends MasterToSlaveCallable<String, Exception> {
         @Override public String call() {
-            return System.getProperty("file.encoding") + " vs. " + System.getProperty("sun.jnu.encoding");
+            return Charset.defaultCharset().displayName() + " vs. " + System.getProperty("sun.jnu.encoding");
         }
     }
 
@@ -349,9 +358,9 @@ public class ArtifactManagerTest {
          */
         private void assertFile(VirtualFile f, String contents) throws Exception {
             System.err.println("Asserting file: " + f);
-            assertTrue("Not a file: " + f, f.isFile());
-            assertFalse("Unexpected directory: " + f, f.isDirectory());
-            assertTrue("Does not exist: " + f, f.exists());
+            assertTrue(f.isFile(), "Not a file: " + f);
+            assertFalse(f.isDirectory(), "Unexpected directory: " + f);
+            assertTrue(f.exists(), "Does not exist: " + f);
             assertEquals(contents.length(), f.length());
             assertThat(f.lastModified(), not(is(0)));
             try (InputStream is = f.open()) {
@@ -381,9 +390,9 @@ public class ArtifactManagerTest {
      */
     private static void assertDir(VirtualFile f) throws IOException {
         System.err.println("Asserting dir: " + f);
-        assertFalse("Unexpected file: " + f, f.isFile());
-        assertTrue("Not a directory: " + f, f.isDirectory());
-        assertTrue("Does not exist: " + f, f.exists());
+        assertFalse(f.isFile(), "Unexpected file: " + f);
+        assertTrue(f.isDirectory(), "Not a directory: " + f);
+        assertTrue(f.exists(), "Does not exist: " + f);
         // length & lastModified may or may not be defined
     }
 
@@ -392,9 +401,9 @@ public class ArtifactManagerTest {
      */
     private static void assertNonexistent(VirtualFile f) throws IOException {
         System.err.println("Asserting nonexistent: " + f);
-        assertFalse("Unexpected file: " + f, f.isFile());
-        assertFalse("Unexpected dir: " + f, f.isDirectory());
-        assertFalse("Unexpectedly exists: " + f, f.exists());
+        assertFalse(f.isFile(), "Unexpected file: " + f);
+        assertFalse(f.isDirectory(), "Unexpected dir: " + f);
+        assertFalse(f.exists(), "Unexpectedly exists: " + f);
         try {
             assertEquals(0, f.length());
         } catch (IOException x) {
@@ -408,7 +417,8 @@ public class ArtifactManagerTest {
     }
 
     /** Run the standard one, as a control. */
-    @Test public void standard() throws Exception {
+    @Test
+    void standard() throws Exception {
         logging.record(StandardArtifactManager.class, Level.FINE);
         // Who knows about weird characters on NTFS; also case-sensitivity could confuse things
         artifactArchiveAndDelete(r, null, !Functions.isWindows());

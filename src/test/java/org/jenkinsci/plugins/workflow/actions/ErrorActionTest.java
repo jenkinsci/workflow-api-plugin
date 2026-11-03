@@ -25,8 +25,8 @@
 package org.jenkinsci.plugins.workflow.actions;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,12 +39,9 @@ import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.JenkinsSessionRule;
 
 import groovy.lang.MissingMethodException;
 import hudson.FilePath;
@@ -65,25 +62,28 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepExecutions;
-import org.jvnet.hudson.test.InboundAgentRule;
-import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.LogRecorder;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.InboundAgentExtension;
+import org.jvnet.hudson.test.junit.jupiter.JenkinsSessionExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Tests for {@link ErrorAction}
  */
-public class ErrorActionTest {
+class ErrorActionTest {
 
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension buildWatcher = new BuildWatcherExtension();
 
-    @Rule
-    public JenkinsSessionRule rr = new JenkinsSessionRule();
+    @RegisterExtension
+    private final JenkinsSessionExtension rr = new JenkinsSessionExtension();
 
-    @Rule public InboundAgentRule agents = new InboundAgentRule();
+    @RegisterExtension
+    private final InboundAgentExtension agents = new InboundAgentExtension();
 
-    @Rule public LoggerRule logging = new LoggerRule().record(ErrorAction.class, Level.FINE);
+    private final LogRecorder logging = new LogRecorder().record(ErrorAction.class, Level.FINE);
 
     private List<ErrorAction> extractErrorActions(FlowExecution exec) {
         List<ErrorAction> ret = new ArrayList<>();
@@ -99,14 +99,15 @@ public class ErrorActionTest {
     }
 
     @Test
-    public void simpleException() throws Throwable {
+    void simpleException() throws Throwable {
         rr.then(r -> {
             final String EXPECTED = "For testing purpose";
             WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
             job.setDefinition(new CpsFlowDefinition(String.format(
-                    "node {\n"
-                            + "throw new Exception('%s');\n"
-                    + "}"
+                    """
+                            node {
+                              throw new Exception('%s');
+                            }"""
                     , EXPECTED
             ), true));
             WorkflowRun b = r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get());
@@ -121,16 +122,17 @@ public class ErrorActionTest {
 
     @Issue("JENKINS-34488")
     @Test
-    public void unserializableForSecurityReason() throws Throwable {
+    void unserializableForSecurityReason() throws Throwable {
         rr.then(r -> {
             final String FAILING_EXPRESSION = "(2 + 2) == 5";
             WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "p");
             // "assert false" throws org.codehaus.groovy.runtime.powerassert.PowerAssertionError,
             // which is rejected by remoting.
             job.setDefinition(new CpsFlowDefinition(String.format(
-                    "node {\n"
-                            + "assert %s;\n"
-                    + "}",
+                    """
+                            node {
+                              assert %s;
+                            }""",
                     FAILING_EXPRESSION
             ), true));
             WorkflowRun b = r.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get());
@@ -144,7 +146,8 @@ public class ErrorActionTest {
     }
 
     @Issue("JENKINS-39346")
-    @Test public void wrappedUnserializableException() throws Throwable {
+    @Test
+    void wrappedUnserializableException() throws Throwable {
         rr.then(r -> {
             WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
             p.setDefinition(new CpsFlowDefinition(
@@ -167,7 +170,8 @@ public class ErrorActionTest {
     }
 
     @Issue("JENKINS-49025")
-    @Test public void nestedFieldUnserializable() throws Throwable {
+    @Test
+    void nestedFieldUnserializable() throws Throwable {
         rr.then(r -> {
             WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
             p.setDefinition(new CpsFlowDefinition(
@@ -189,21 +193,25 @@ public class ErrorActionTest {
         final NullObject nil = NullObject.getNullObject();
     }
 
-    @Test public void userDefinedError() throws Throwable {
+    @Test
+    void userDefinedError() throws Throwable {
         rr.then(r -> {
             WorkflowJob p = r.createProject(WorkflowJob.class);
             p.setDefinition(new CpsFlowDefinition(
-                    "class MyException extends Exception {\n" +
-                    "  MyException(String message) { super(message) }\n" +
-                    "}\n" +
-                    "throw new MyException('test')\n",
+                    """
+                            class MyException extends Exception {
+                              MyException(String message) { super(message) }
+                            }
+                            throw new MyException('test')
+                            """,
                     true));
             WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
             assertThat(b.getExecution().getCauseOfFailure(), Matchers.instanceOf(ProxyException.class));
         });
     }
 
-    @Test public void missingPropertyExceptionMemoryLeak() throws Throwable {
+    @Test
+    void missingPropertyExceptionMemoryLeak() throws Throwable {
         rr.then(r -> {
             WorkflowJob p = r.createProject(WorkflowJob.class);
             p.setDefinition(new CpsFlowDefinition("FOO", false));
@@ -212,7 +220,8 @@ public class ErrorActionTest {
         });
     }
 
-    @Test public void findOriginOfAsyncErrorAcrossRestart() throws Throwable {
+    @Test
+    void findOriginOfAsyncErrorAcrossRestart() throws Throwable {
         String name = "restart";
         AtomicReference<String> origin = new AtomicReference<>();
         rr.then(r -> {
@@ -232,7 +241,8 @@ public class ErrorActionTest {
         });
     }
 
-    @Test public void findOriginOfSyncErrorAcrossRestart() throws Throwable {
+    @Test
+    void findOriginOfSyncErrorAcrossRestart() throws Throwable {
         String name = "restart";
         AtomicReference<String> origin = new AtomicReference<>();
         rr.then(r -> {
@@ -251,7 +261,8 @@ public class ErrorActionTest {
         });
     }
 
-    @Test public void findOriginFromBodyExecutionCallback() throws Throwable {
+    @Test
+    void findOriginFromBodyExecutionCallback() throws Throwable {
         rr.then(r -> {
             agents.createAgent(r, "remote");
             var p = r.createProject(WorkflowJob.class);
@@ -263,6 +274,7 @@ public class ErrorActionTest {
             r.assertLogContains("Found in: fails", b);
         });
     }
+
     public static final class WrapperStep extends Step {
         @DataBoundConstructor public WrapperStep() {}
         @Override public StepExecution start(StepContext context) throws Exception {
@@ -305,6 +317,7 @@ public class ErrorActionTest {
             }
         }
     }
+
     public static final class FailingStep extends Step {
         @DataBoundConstructor public FailingStep() {}
         @Override public StepExecution start(StepContext context) throws Exception {
@@ -332,7 +345,8 @@ public class ErrorActionTest {
         }
     }
 
-    @Test public void cyclicErrorsAreSupported() throws Throwable {
+    @Test
+    void cyclicErrorsAreSupported() throws Throwable {
         Exception cyclic1 = new Exception();
         Exception cyclic2 = new Exception(cyclic1);
         cyclic1.initCause(cyclic2);
@@ -340,7 +354,8 @@ public class ErrorActionTest {
         assertNotNull(new ErrorAction(cyclic2));
     }
 
-    @Test public void unserializableCyclicErrorsAreSupported() throws Throwable {
+    @Test
+    void unserializableCyclicErrorsAreSupported() throws Throwable {
         Exception unserializable = new MissingMethodException("thisMethodDoesNotExist", String.class, new Object[0]);
         Exception cyclic = new Exception(unserializable);
         unserializable.initCause(cyclic);
