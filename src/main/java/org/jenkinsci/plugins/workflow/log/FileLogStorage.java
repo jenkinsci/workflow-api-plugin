@@ -213,10 +213,10 @@ public final class FileLogStorage implements LogStorage {
     @Override public AnnotatedLargeText<FlowExecutionOwner.Executable> overallLog(@NonNull FlowExecutionOwner.Executable build, boolean complete) {
         maybeFlush();
         return new AnnotatedLargeText<FlowExecutionOwner.Executable>(log, StandardCharsets.UTF_8, complete, build) {
-            @Override public long writeHtmlTo(long start, Writer w) throws IOException {
+            @Override
+            protected long writeHtmlToFilter(long start, Writer w, ConsoleAnnotationOutputStream<FlowExecutionOwner.Executable> caos) throws IOException {
                 try (BufferedReader indexBR = index.isFile() ? Files.newBufferedReader(index.toPath(), StandardCharsets.UTF_8) : new BufferedReader(new NullReader(0))) {
-                    ConsoleAnnotationOutputStream<FlowExecutionOwner.Executable> caos = new ConsoleAnnotationOutputStream<>(w, ConsoleAnnotators.createAnnotator(build), build, StandardCharsets.UTF_8);
-                    long r = this.writeRawLogTo(start, new FilterOutputStream(caos) {
+                    return super.writeRawLogTo(start, new FilterOutputStream(caos) {
                         // To insert startStep/endStep annotations into the overall log, we need to simultaneously read index-log.
                         // We use the standard LargeText.FileSession to get the raw log text (we need not think about ConsoleNote here), having seeked to the start position.
                         // Then we read index-log in order, looking for transitions from one step to the next (or to or from non-step overall output).
@@ -261,8 +261,6 @@ public final class FileLogStorage implements LogStorage {
                             super.flush();
                         }
                     });
-                    ConsoleAnnotators.setAnnotator(caos.getConsoleAnnotator());
-                    return r;
                 }
             }
         };
