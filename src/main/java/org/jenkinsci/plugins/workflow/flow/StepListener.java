@@ -28,7 +28,9 @@ import hudson.ExtensionPoint;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
@@ -42,4 +44,19 @@ public interface StepListener extends ExtensionPoint {
      * Listeners can make the step fail by calling {@link StepContext#onFailure}.
      */
     void notifyOfNewStep(@NonNull Step step, @NonNull StepContext context);
+
+    /**
+     * Called on the thread that starts a {@link Step}, right before it calls {@link Step#start} and
+     * {@link StepExecution#start}, after {@link #notifyOfNewStep} if no listener made the step fail. That thread closes
+     * the returned object as soon as {@link StepExecution#start} returns or either method throws, whether or not the
+     * step has completed. This lets a listener set up state for the code of the step's start only, such as a
+     * thread-local tracing context: afterward the thread runs other steps, of this build or of others.
+     *
+     * @return what to close once the step has started, or {@code null}
+     * @since TODO
+     */
+    @CheckForNull
+    default AutoCloseable aroundStart(@NonNull Step step, @NonNull StepContext context) {
+        return null;
+    }
 }
